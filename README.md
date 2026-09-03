@@ -15,8 +15,8 @@ Die neueste Version der App findest du immer auf unserer GitHub Releases Seite:
 
 Lade einfach die `CareerCenter-...-Windows.zip` Datei herunter, entpacke sie in einen beliebigen Ordner und starte die `career_center.exe`. Es ist keine Installation nötig!
 
-### Nightly Builds (Beta-Versionen)
-Für Beta-Tester steht auch immer der aktuellste Entwicklungsstand (Nightly Build) zur Verfügung. Dieser wird automatisch bei jedem Update des Codes neu generiert.
+### Nightly Builds (Alpha-Versionen)
+Für Alpha-Tester steht auch immer der aktuellste Entwicklungsstand (Nightly Build) zur Verfügung. Dieser wird automatisch bei jedem Update des Codes neu generiert.
 [Nightly Build herunterladen](https://github.com/MrBrackhaus/career_center/releases/tag/nightly)
 
 ---

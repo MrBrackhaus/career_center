@@ -74,6 +74,7 @@ final appRouter = GoRouter(
                 return ApplicationFormScreen(
                   initialUrl: extra?['url'] as String?,
                   initialHtml: extra?['html'] as String?,
+                  initialScreenshotBase64: extra?['screenshot'] as String?,
                 );
               },
             ),
@@ -135,7 +136,8 @@ class ScaffoldWithTopBar extends ConsumerWidget {
              // For now, let's just route to Add and show a snackbar!
              context.go('/applications/add', extra: {
                'url': url,
-               'html': next.payload['html']
+               'html': next.payload['html'],
+               'screenshot': next.payload['screenshot'],
              });
           }
         } else if (next.type == 'autofill_request') {

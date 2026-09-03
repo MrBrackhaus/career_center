@@ -36,9 +36,9 @@ class ApplicationNotifier {
 
   ApplicationNotifier(this._ref);
 
-  Future<void> addApplication(ApplicationsCompanion app) async {
+  Future<int> addApplication(ApplicationsCompanion app) async {
     final repository = _ref.read(applicationsRepositoryProvider);
-    await repository.addApplication(app);
+    return await repository.addApplication(app);
   }
 
   Future<void> updateApplication(ApplicationsCompanion app) async {

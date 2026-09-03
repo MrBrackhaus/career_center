@@ -35,8 +35,8 @@ class ApplicationsRepository {
     return _dao.getApplicationById(id);
   }
 
-  Future<void> addApplication(ApplicationsCompanion app) async {
-    await _dao.insertApplication(app);
+  Future<int> addApplication(ApplicationsCompanion app) async {
+    return await _dao.insertApplication(app);
   }
 
   Future<void> updateApplication(ApplicationsCompanion app) async {

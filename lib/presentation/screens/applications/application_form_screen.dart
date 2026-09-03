@@ -51,12 +51,14 @@ class ApplicationFormScreen extends ConsumerStatefulWidget {
   final int? applicationId;
   final String? initialUrl;
   final String? initialHtml;
+  final String? initialScreenshotBase64;
 
   const ApplicationFormScreen({
     Key? key,
     this.applicationId,
     this.initialUrl,
     this.initialHtml,
+    this.initialScreenshotBase64,
   }) : super(key: key);
 
   @override
@@ -97,10 +99,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   String? _loadedWebContent;
   String? _loadedWebUrl;
   String? _activeMarkerField; // Which field is waiting for text selection
+  String? _pendingScreenshotBase64;
 
   @override
   void initState() {
     super.initState();
+    _pendingScreenshotBase64 = widget.initialScreenshotBase64;
     _loadCustomColumns();
     if (widget.applicationId != null) {
       _loadApplication();
@@ -845,11 +849,41 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       customFields: drift.Value(customFieldsJson),
     );
 
+    int insertedId;
     if (widget.applicationId != null) {
+      insertedId = widget.applicationId!;
       await ref.read(applicationNotifierProvider).updateApplication(
-            companion.copyWith(id: drift.Value(widget.applicationId!)));
+            companion.copyWith(id: drift.Value(insertedId)));
     } else {
-      await ref.read(applicationNotifierProvider).addApplication(companion);
+      insertedId = await ref.read(applicationNotifierProvider).addApplication(companion);
+    }
+
+    // Save pending screenshot if it exists
+    if (_pendingScreenshotBase64 != null) {
+      try {
+        final bytes = base64Decode(_pendingScreenshotBase64!.split(',').last);
+        final dir = await getApplicationDocumentsDirectory();
+        final path = p.join(dir.path, 'career_center_docs', 'screenshot_$insertedId.png');
+        final file = File(path);
+        if (!await file.parent.exists()) {
+          await file.parent.create(recursive: true);
+        }
+        await file.writeAsBytes(bytes);
+
+        // Add to database
+        await ref.read(databaseProvider).documentsDao.insertDocument(
+          DocumentsCompanion(
+            applicationId: drift.Value(insertedId),
+            fileName: drift.Value('Stellenanzeige_Screenshot.png'),
+            filePath: drift.Value(path),
+            fileType: drift.Value('png'),
+            uploadedAt: drift.Value(DateTime.now()),
+          )
+        );
+        _pendingScreenshotBase64 = null; // Clear it so it won't be saved again if edited
+      } catch (e) {
+        debugPrint('Failed to save screenshot: $e');
+      }
     }
 
     if (mounted) context.pop();

@@ -335,7 +335,7 @@ class ImapService {
         }
       }
 
-      await db.settingsDao.saveSetting('last_imap_sync', DateTime.now().toIso8601String());
+      await db.settingsDao.insertOrUpdateSetting(Setting(key: 'last_imap_sync', value: DateTime.now().toIso8601String()));
     } catch (e) {
       print('IMAP Sync Error: $e');
     } finally {

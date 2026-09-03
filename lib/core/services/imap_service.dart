@@ -149,114 +149,118 @@ class ImapService {
 
       // ── 1. SENT FOLDER ────────────────────────────────────────────────────
       final mailboxes = await client.listMailboxes();
-      final sentBox = mailboxes.firstWhere(
-        (b) => b.name.toLowerCase().contains('sent') || b.name.toLowerCase().contains('gesendet'),
-        orElse: () => mailboxes.first,
-      );
+      Mailbox? sentBox;
+      try {
+        sentBox = mailboxes.firstWhere(
+          (b) => b.isSent || b.name.toLowerCase().contains('sent') || b.name.toLowerCase().contains('gesendet') || b.name.toLowerCase().contains('postausgang') || b.name.toLowerCase().contains('outbox')
+        );
+      } catch (_) {}
 
-      await client.selectMailbox(sentBox);
-      final fetchResult = await client.fetchRecentMessages(messageCount: 200, criteria: 'BODY.PEEK[]');
-      final sentMessages = fetchResult.messages;
+      if (sentBox != null) {
+        await client.selectMailbox(sentBox);
+        final fetchResult = await client.fetchRecentMessages(messageCount: 200, criteria: 'BODY.PEEK[]');
+        final sentMessages = fetchResult.messages;
 
-      for (final msg in sentMessages) {
-        final rawToAddresses = msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
-        final toAddresses = rawToAddresses.where((e) => e != email.toLowerCase()).toList();
-        final subject = msg.decodeSubject() ?? '';
-        final body = msg.decodeTextPlainPart() ?? '';
-        final sentDate = msg.decodeDate() ?? DateTime.now();
-        final subjectLower = subject.toLowerCase();
-        final bodyLower = body.toLowerCase();
+        for (final msg in sentMessages) {
+          final rawToAddresses = msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
+          final toAddresses = rawToAddresses.where((e) => e != email.toLowerCase()).toList();
+          final subject = msg.decodeSubject() ?? '';
+          final body = msg.decodeTextPlainPart() ?? '';
+          final sentDate = msg.decodeDate() ?? DateTime.now();
+          final subjectLower = subject.toLowerCase();
+          final bodyLower = body.toLowerCase();
 
-        // a) Update existing "offen" → "versendet"
-        for (final app in applications) {
-          if (app.status == 'offen') {
-            final appEmail = app.contactEmail?.toLowerCase() ?? '';
-            final appCompany = app.company.toLowerCase();
-            bool matched = false;
-            
-            if (appEmail.isNotEmpty && toAddresses.contains(appEmail)) {
-              matched = true;
-            } else if (appCompany.isNotEmpty && appCompany.length > 2) {
-              final companyRegex = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
-              if (companyRegex.hasMatch(subjectLower) || companyRegex.hasMatch(bodyLower)) {
+          // a) Update existing "offen" → "versendet"
+          for (final app in applications) {
+            if (app.status == 'offen') {
+              final appEmail = app.contactEmail?.toLowerCase() ?? '';
+              final appCompany = app.company.toLowerCase();
+              bool matched = false;
+              
+              if (appEmail.isNotEmpty && toAddresses.contains(appEmail)) {
                 matched = true;
+              } else if (appCompany.isNotEmpty && appCompany.length > 2) {
+                final companyRegex = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
+                if (companyRegex.hasMatch(subjectLower) || companyRegex.hasMatch(bodyLower)) {
+                  matched = true;
+                }
               }
-            }
-            if (matched) {
-              await db.applicationsDao.updateApplication(app.copyWith(
-                status: 'versendet',
-                appliedDate: drift.Value(sentDate),
-              ));
-              final msgId = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
-              final existingEmail = await db.emailsDao.getEmailByMessageId(msgId);
-              if (existingEmail == null) {
-                await db.emailsDao.insertEmail(EmailsCompanion.insert(
-                  applicationId: app.id,
-                  messageId: msgId,
-                  subject: subject.isNotEmpty ? subject : 'Kein Betreff',
-                  sender: toAddresses.isNotEmpty ? 'An: ${toAddresses.first}' : 'Gesendet',
-                  bodySnippet: body.length > 200 ? '${body.substring(0, 200)}...' : body,
-                  receivedAt: sentDate,
-                  isRead: drift.Value(true),
+              if (matched) {
+                await db.applicationsDao.updateApplication(app.copyWith(
+                  status: 'versendet',
+                  appliedDate: drift.Value(sentDate),
                 ));
+                final msgId = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
+                final existingEmail = await db.emailsDao.getEmailByMessageId(msgId);
+                if (existingEmail == null) {
+                  await db.emailsDao.insertEmail(EmailsCompanion.insert(
+                    applicationId: app.id,
+                    messageId: msgId,
+                    subject: subject.isNotEmpty ? subject : 'Kein Betreff',
+                    sender: toAddresses.isNotEmpty ? 'An: ${toAddresses.first}' : 'Gesendet',
+                    bodySnippet: body.length > 200 ? '${body.substring(0, 200)}...' : body,
+                    receivedAt: sentDate,
+                    isRead: drift.Value(true),
+                  ));
+                }
               }
             }
           }
+
+          // b) Auto-import new applications
+          final detectedStatus = _detectApplicationStatus(subject, body);
+          if (detectedStatus == null) continue;
+
+          final cleanSubject = _stripReplyPrefix(subject);
+          final recipientEmail = toAddresses.isNotEmpty ? toAddresses.first : '';
+          if (recipientEmail.isNotEmpty) {
+            final emailAlreadyLinked = applications.any(
+              (app) => app.contactEmail?.toLowerCase() == recipientEmail,
+            );
+            if (emailAlreadyLinked) continue;
+          }
+
+          final position = _extractPosition(cleanSubject);
+          final alreadyExists = applications.any((app) {
+            final samePos = app.position.toLowerCase() == position.toLowerCase();
+            final sameDate = app.appliedDate != null &&
+                sentDate.difference(app.appliedDate!).abs().inHours < 12;
+            return samePos && sameDate;
+          });
+          if (alreadyExists) continue;
+
+          String company = _extractCompanyFromBody(body);
+          if (company.isEmpty && recipientEmail.isNotEmpty) {
+            company = _extractCompanyFromDomain(recipientEmail);
+          }
+          if (company.isEmpty) company = 'Unbekannte Firma';
+
+          final contactName = _extractContact(body);
+
+          final appId = await db.applicationsDao.insertApplication(ApplicationsCompanion.insert(
+            company: company,
+            position: position,
+            status: drift.Value(detectedStatus),
+            appliedDate: drift.Value(sentDate),
+            contactName: drift.Value(contactName.isNotEmpty ? contactName : null),
+            contactEmail: drift.Value(recipientEmail.isNotEmpty ? recipientEmail : null),
+            notes: drift.Value('Automatisch importiert am ${sentDate.day}.${sentDate.month}.${sentDate.year}'),
+            createdAt: drift.Value(DateTime.now()),
+            updatedAt: drift.Value(DateTime.now()),
+          ));
+
+          await db.emailsDao.insertEmail(EmailsCompanion.insert(
+            applicationId: appId,
+            messageId: msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString(),
+            subject: subject.isNotEmpty ? subject : 'Kein Betreff',
+            sender: recipientEmail.isNotEmpty ? 'An: $recipientEmail' : 'Gesendet',
+            bodySnippet: body.length > 200 ? '${body.substring(0, 200)}...' : body,
+            receivedAt: sentDate,
+            isRead: drift.Value(true),
+          ));
+
+          newlyImported++;
         }
-
-        // b) Auto-import new applications
-        final detectedStatus = _detectApplicationStatus(subject, body);
-        if (detectedStatus == null) continue;
-
-        final cleanSubject = _stripReplyPrefix(subject);
-        final recipientEmail = toAddresses.isNotEmpty ? toAddresses.first : '';
-        if (recipientEmail.isNotEmpty) {
-          final emailAlreadyLinked = applications.any(
-            (app) => app.contactEmail?.toLowerCase() == recipientEmail,
-          );
-          if (emailAlreadyLinked) continue;
-        }
-
-        final position = _extractPosition(cleanSubject);
-        final alreadyExists = applications.any((app) {
-          final samePos = app.position.toLowerCase() == position.toLowerCase();
-          final sameDate = app.appliedDate != null &&
-              sentDate.difference(app.appliedDate!).abs().inHours < 12;
-          return samePos && sameDate;
-        });
-        if (alreadyExists) continue;
-
-        String company = _extractCompanyFromBody(body);
-        if (company.isEmpty && recipientEmail.isNotEmpty) {
-          company = _extractCompanyFromDomain(recipientEmail);
-        }
-        if (company.isEmpty) company = 'Unbekannte Firma';
-
-        final contactName = _extractContact(body);
-
-        final appId = await db.applicationsDao.insertApplication(ApplicationsCompanion.insert(
-          company: company,
-          position: position,
-          status: drift.Value(detectedStatus),
-          appliedDate: drift.Value(sentDate),
-          contactName: drift.Value(contactName.isNotEmpty ? contactName : null),
-          contactEmail: drift.Value(recipientEmail.isNotEmpty ? recipientEmail : null),
-          notes: drift.Value('Bewerbung automatisch importiert.'),
-          createdAt: drift.Value(DateTime.now()),
-          updatedAt: drift.Value(DateTime.now()),
-        ));
-
-        await db.emailsDao.insertEmail(EmailsCompanion.insert(
-          applicationId: appId,
-          messageId: msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString(),
-          subject: subject.isNotEmpty ? subject : 'Kein Betreff',
-          sender: recipientEmail.isNotEmpty ? 'An: $recipientEmail' : 'Gesendet',
-          bodySnippet: body.length > 200 ? '${body.substring(0, 200)}...' : body,
-          receivedAt: sentDate,
-          isRead: drift.Value(true),
-        ));
-
-        newlyImported++;
       }
 
       // ── 2. INBOX ──────────────────────────────────────────────────────────
@@ -356,45 +360,50 @@ class ImapService {
     try {
       // ── Sent folder ──────────────────────────────────────────────────────
       final mailboxes = await client.listMailboxes();
-      final sentBox = mailboxes.firstWhere(
-        (b) => b.name.toLowerCase().contains('sent') || b.name.toLowerCase().contains('gesendet'),
-        orElse: () => mailboxes.first,
-      );
-      await client.selectMailbox(sentBox);
-      final sentFetch = await client.fetchRecentMessages(messageCount: 200, criteria: 'BODY.PEEK[]');
+      Mailbox? sentBox;
+      try {
+        sentBox = mailboxes.firstWhere(
+          (b) => b.isSent || b.name.toLowerCase().contains('sent') || b.name.toLowerCase().contains('gesendet') || b.name.toLowerCase().contains('postausgang') || b.name.toLowerCase().contains('outbox')
+        );
+      } catch (_) {}
 
-      for (final msg in sentFetch.messages) {
-        final rawTo = msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
-        final toAddresses = rawTo.where((e) => e != email.toLowerCase()).toList();
-        final subject = msg.decodeSubject() ?? '';
-        final body = msg.decodeTextPlainPart() ?? '';
-        final date = msg.decodeDate() ?? DateTime.now();
-        final uid = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
-        final recipientEmail = toAddresses.isNotEmpty ? toAddresses.first : '';
+      if (sentBox != null) {
+        await client.selectMailbox(sentBox);
+        final sentFetch = await client.fetchRecentMessages(messageCount: 200, criteria: 'BODY.PEEK[]');
 
-        final detectedStatus = _detectApplicationStatus(subject, body);
+        for (final msg in sentFetch.messages) {
+          final rawTo = msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
+          final toAddresses = rawTo.where((e) => e != email.toLowerCase()).toList();
+          final subject = msg.decodeSubject() ?? '';
+          final body = msg.decodeTextPlainPart() ?? '';
+          final date = msg.decodeDate() ?? DateTime.now();
+          final uid = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
+          final recipientEmail = toAddresses.isNotEmpty ? toAddresses.first : '';
 
-        // Try to resolve company name
-        String company = _extractCompanyFromBody(body);
-        if (company.isEmpty && recipientEmail.isNotEmpty) {
-          company = _extractCompanyFromDomain(recipientEmail);
+          final detectedStatus = _detectApplicationStatus(subject, body);
+
+          // Try to resolve company name
+          String company = _extractCompanyFromBody(body);
+          if (company.isEmpty && recipientEmail.isNotEmpty) {
+            company = _extractCompanyFromDomain(recipientEmail);
+          }
+
+          final alreadyImported = existingContactEmails.contains(recipientEmail) ||
+              existingEmails.any((e) => e.messageId == uid);
+          final cleanSubject = _stripReplyPrefix(subject);
+
+          result.add(ScannableEmail(
+            uid: uid,
+            subject: cleanSubject.isNotEmpty ? cleanSubject : subject,
+            fromTo: recipientEmail.isNotEmpty ? 'An: $recipientEmail' : 'Gesendet',
+            date: date,
+            bodySnippet: body.length > 180 ? '${body.substring(0, 180)}...' : body,
+            detectedStatus: detectedStatus,
+            isAlreadyImported: alreadyImported,
+            folder: 'sent',
+            company: company,
+          ));
         }
-
-        final alreadyImported = existingContactEmails.contains(recipientEmail) ||
-            existingEmails.any((e) => e.messageId == uid);
-        final cleanSubject = _stripReplyPrefix(subject);
-
-        result.add(ScannableEmail(
-          uid: uid,
-          subject: cleanSubject.isNotEmpty ? cleanSubject : subject,
-          fromTo: recipientEmail.isNotEmpty ? 'An: $recipientEmail' : 'Gesendet',
-          date: date,
-          bodySnippet: body.length > 180 ? '${body.substring(0, 180)}...' : body,
-          detectedStatus: detectedStatus,
-          isAlreadyImported: alreadyImported,
-          folder: 'sent',
-          company: company,
-        ));
       }
 
       // ── Inbox ────────────────────────────────────────────────────────────

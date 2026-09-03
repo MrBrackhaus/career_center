@@ -54,7 +54,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
         ]
       });
 
-      request.write(payload);
+      request.add(utf8.encode(payload));
       final response = await request.close();
       client.close();
 

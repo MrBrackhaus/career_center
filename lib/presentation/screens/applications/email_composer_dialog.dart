@@ -7,7 +7,6 @@ import '../../providers/database_provider.dart';
 import 'package:drift/drift.dart' as drift;
 import '../../providers/smtp_provider.dart';
 import '../../providers/applications_provider.dart';
-import '../../../core/services/generative_ai_service.dart';
 
 class EmailComposerDialog extends ConsumerStatefulWidget {
   final Application application;

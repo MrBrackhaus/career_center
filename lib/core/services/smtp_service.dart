@@ -36,18 +36,7 @@ class SmtpService {
 
       for (final file in attachments) {
         if (await file.exists()) {
-          final mimeType = lookupMimeType(file.path) ?? 'application/octet-stream';
-          final mimeParts = mimeType.split('/');
-          
-          final primaryType = MediaPrimaryType.values.firstWhere(
-            (e) => e.name == mimeParts[0],
-            orElse: () => MediaPrimaryType.application,
-          );
-          
-          builder.addFile(
-            file,
-            MediaSubtype(primaryType, mimeParts[1]),
-          );
+          builder.addFile(file);
         }
       }
 

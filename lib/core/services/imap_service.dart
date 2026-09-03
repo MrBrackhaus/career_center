@@ -146,6 +146,11 @@ class ImapService {
 
     try {
       final applications = await db.applicationsDao.getAllApplications();
+      
+      // Check if this is the first sync
+      final lastSyncSetting = await db.settingsDao.getSettingByKey('last_imap_sync');
+      final isFirstSync = lastSyncSetting == null;
+      final fetchCount = isFirstSync ? 500 : 50;
 
       // ── 1. SENT FOLDER ────────────────────────────────────────────────────
       final mailboxes = await client.listMailboxes(recursive: true);
@@ -158,7 +163,7 @@ class ImapService {
 
       if (sentBox != null) {
         await client.selectMailbox(sentBox);
-        final fetchResult = await client.fetchRecentMessages(messageCount: 200, criteria: 'BODY.PEEK[]');
+        final fetchResult = await client.fetchRecentMessages(messageCount: fetchCount, criteria: 'BODY.PEEK[]');
         final sentMessages = fetchResult.messages;
 
         for (final msg in sentMessages) {
@@ -266,7 +271,7 @@ class ImapService {
       // ── 2. INBOX ──────────────────────────────────────────────────────────
       final updatedApps = await db.applicationsDao.getAllApplications();
       await client.selectInbox();
-      final inboxResult = await client.fetchRecentMessages(messageCount: 50, criteria: 'BODY.PEEK[]');
+      final inboxResult = await client.fetchRecentMessages(messageCount: fetchCount, criteria: 'BODY.PEEK[]');
 
       for (final msg in inboxResult.messages) {
         final fromAddress = msg.from?.first.email.toLowerCase() ?? '';
@@ -329,6 +334,8 @@ class ImapService {
           }
         }
       }
+
+      await db.settingsDao.saveSetting('last_imap_sync', DateTime.now().toIso8601String());
     } catch (e) {
       print('IMAP Sync Error: $e');
     } finally {

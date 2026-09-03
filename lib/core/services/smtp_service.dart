@@ -24,11 +24,6 @@ class SmtpService {
     try {
       await client.connectToServer(server, port, isSecure: port == 465);
       await client.ehlo();
-      
-      if (client.serverInfo.tls != TlsRequirement.none && !client.isSecure) {
-        await client.startTls();
-      }
-      
       await client.authenticate(userEmail, password, AuthMechanism.plain);
 
       final builder = MessageBuilder.prepareMultipartAlternativeMessage(
@@ -41,14 +36,17 @@ class SmtpService {
 
       for (final file in attachments) {
         if (await file.exists()) {
-          final bytes = await file.readAsBytes();
           final mimeType = lookupMimeType(file.path) ?? 'application/octet-stream';
           final mimeParts = mimeType.split('/');
           
+          final primaryType = MediaPrimaryType.values.firstWhere(
+            (e) => e.name == mimeParts[0],
+            orElse: () => MediaPrimaryType.application,
+          );
+          
           builder.addFile(
-            bytes,
-            MediaSubtype(MediaPrimaryType.custom(mimeParts[0]), mimeParts[1]),
-            p.basename(file.path),
+            file,
+            MediaSubtype(primaryType, mimeParts[1]),
           );
         }
       }

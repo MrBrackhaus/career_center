@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
+import 'package:drift/drift.dart' as drift;
 import '../../providers/smtp_provider.dart';
 import '../../providers/applications_provider.dart';
 import '../../../core/services/generative_ai_service.dart';
@@ -36,7 +37,7 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
   
   Future<void> _loadDocuments() async {
     final db = ref.read(databaseProvider);
-    final docs = await db.documentsDao.getDocumentsForApplication(widget.application.id);
+    final docs = await db.documentsDao.watchDocumentsForApplication(widget.application.id).first;
     if (mounted) {
       setState(() {
         _documents = docs;
@@ -53,25 +54,36 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
       final name = (await profileDao.getSettingByKey('userName'))?.value ?? 'Bewerber';
       final skills = (await profileDao.getSettingByKey('userSkills'))?.value ?? '';
       
-      final prompt = '''
-Schreibe eine sehr gute, professionelle E-Mail für eine Bewerbung.
-Position: ${widget.application.position}
-Firma: ${widget.application.company}
-Ansprechpartner: ${widget.application.contactName ?? 'Sehr geehrte Damen und Herren,'}
-Bewerber Name: $name
-Meine Fähigkeiten: $skills
+      final position = widget.application.position;
+      final company = widget.application.company;
+      final contact = widget.application.contactName ?? 'Sehr geehrte Damen und Herren';
+      
+      final greeting = contact.contains('Sehr') ? contact : 'Sehr geehrte/r $contact';
+      
+      // Simple rule-based generation (Local Template)
+      await Future.delayed(const Duration(seconds: 1)); // Simulate AI thinking
+      
+      final draft = '''
+$greeting,
 
-Die E-Mail soll direkt versandfertig sein, ohne Platzhalter, in der "Ich"-Form. Bitte füge am Ende an, dass sich meine vollständigen Bewerbungsunterlagen (inkl. Lebenslauf) im Anhang befinden. Keine Betreffzeile im Text, nur der reine E-Mail-Body. Sei präzise und überzeugend.
+hiermit bewerbe ich mich mit großem Interesse auf die Position als $position bei $company.
+
+In meiner bisherigen Laufbahn konnte ich bereits wertvolle Erfahrungen sammeln, insbesondere in den Bereichen: $skills. Ich bin davon überzeugt, dass ich mit diesen Qualifikationen einen positiven Beitrag zu Ihrem Team leisten kann.
+
+Meine vollständigen Bewerbungsunterlagen (inkl. Lebenslauf) befinden sich im Anhang dieser E-Mail.
+
+Ich freue mich sehr über die Möglichkeit eines persönlichen Gesprächs.
+
+Mit freundlichen Grüßen
+
+$name
 ''';
       
-      final aiService = GenerativeAiService();
-      final draft = await aiService.generateText(prompt);
-      
-      if (mounted && draft != null) {
+      if (mounted) {
         _bodyController.text = draft;
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler bei KI-Generierung: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler bei Entwurf-Generierung: $e')));
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }

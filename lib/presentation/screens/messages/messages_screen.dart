@@ -98,7 +98,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
         final emails = snapshot.data!;
-        emails.sort((a, b) => a.date.compareTo(b.date)); // Älteste zuerst
+        emails.sort((a, b) => a.receivedAt.compareTo(b.receivedAt)); // Älteste zuerst
 
         return Column(
           children: [
@@ -108,8 +108,8 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 itemCount: emails.length,
                 itemBuilder: (context, index) {
                   final email = emails[index];
-                  // Sehr einfache Heuristik: Wenn 'fromTo' mit "An:" anfängt, ist es von uns gesendet.
-                  final isSentByUs = email.fromTo.startsWith('An:') || email.fromTo.startsWith('Gesendet');
+                  // Sehr einfache Heuristik: Wenn 'sender' mit "An:" anfängt, ist es von uns gesendet.
+                  final isSentByUs = email.sender.startsWith('An:') || email.sender.startsWith('Gesendet');
 
                   return Align(
                     alignment: isSentByUs ? Alignment.centerRight : Alignment.centerLeft,
@@ -139,7 +139,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                           Text(email.bodySnippet),
                           const SizedBox(height: 8),
                           Text(
-                            DateFormat('dd.MM.yyyy HH:mm').format(email.date),
+                            DateFormat('dd.MM.yyyy HH:mm').format(email.receivedAt),
                             style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
                           ),
                         ],

@@ -32,13 +32,12 @@ Für Alpha-Tester steht auch immer der aktuellste Entwicklungsstand (Nightly Bui
 
 ## AI Transparency Notice / KI-Transparenzhinweis
 
-**Menschliche Konzeption & KI-assistierte Entwicklung**
+**KI-assistierte Entwicklung & Haftungsausschluss**
 
-Dieses Projekt wird von einem menschlichen Entwickler konzipiert, architektonisch geleitet und qualitätsgesichert. Der menschliche Maintainer trägt die volle Verantwortung für die Logik, die Fehlerfreiheit, die Einhaltung von Urheberrechten sowie die FLOS-Lizenzierung (Free/Libre/Open Source) dieses Projekts.
+Dieses Open-Source-Projekt wird experimentell entwickelt. Zur Beschleunigung der Entwicklung und als Pair-Programming-Partner werden generative KI-Modelle (wie Google Gemini) eingesetzt. Die KI unterstützt insbesondere bei:
+- Generierung von Code und Logik
+- UI-Komponenten und Layouts
+- Problemlösung und Bugfixing
 
-Zur Beschleunigung der Entwicklung und als Pair-Programming-Partner werden generative KI-Modelle (wie Google Gemini) eingesetzt. Die KI unterstützt insbesondere bei:
-- Generierung von Boilerplate-Code
-- Vorschlägen für UI-Komponenten und Layouts
-- Erstellung von Dokumentation
-
-**Verantwortlichkeit:** Jede von der KI vorgeschlagene Codezeile wird vom menschlichen Entwickler geprüft und freigegeben.
+**WICHTIG (Haftungsausschluss):** 
+Die Nutzung dieser Software erfolgt auf eigene Gefahr ("as-is"). Der menschliche Maintainer sichtet den generierten Code zwar, übernimmt aber **keinerlei Haftung oder Garantie** für die Fehlerfreiheit, Sicherheit, Datenintegrität oder Funktionstüchtigkeit der App. Wie bei den meisten Open-Source-Lizenzen üblich, sind sämtliche Gewährleistungsansprüche ausgeschlossen. Bitte prüfe den Code selbst und mache regelmäßig Backups deiner lokalen Datenbank!

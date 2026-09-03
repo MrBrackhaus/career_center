@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../core/router/app_router.dart'; // for jobcenterModeProvider
+import 'bug_report_dialog.dart';
 
 class ResponsiveShell extends ConsumerWidget {
   Widget _buildAppLogo(BuildContext context, {double size = 32}) {
@@ -139,10 +140,26 @@ class ResponsiveShell extends ConsumerWidget {
                               alignment: Alignment.bottomCenter,
                               child: Padding(
                                 padding: const EdgeInsets.only(bottom: 16.0),
-                                child: IconButton(
-                                  icon: const Icon(Icons.settings_outlined),
-                                  onPressed: () => context.go('/settings'),
-                                  tooltip: loc?.navSettings ?? 'Einstellungen',
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.bug_report_outlined),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => const BugReportDialog(),
+                                        );
+                                      },
+                                      tooltip: 'Bug melden',
+                                    ),
+                                    const SizedBox(height: 8),
+                                    IconButton(
+                                      icon: const Icon(Icons.settings_outlined),
+                                      onPressed: () => context.go('/settings'),
+                                      tooltip: loc?.navSettings ?? 'Einstellungen',
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -190,31 +207,59 @@ class ResponsiveShell extends ConsumerWidget {
                             ),
                           ),
                           trailing: Expanded(
-                            child: Align(
-                              alignment: Alignment.bottomLeft,
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: InkWell(
-                                  onTap: () => context.go('/settings'),
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16.0,
-                                      vertical: 12.0,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.settings_outlined),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          loc?.navSettings ?? 'Einstellungen',
+                              child: Align(
+                                alignment: Alignment.bottomLeft,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => const BugReportDialog(),
+                                          );
+                                        },
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16.0,
+                                            vertical: 12.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.bug_report_outlined),
+                                              const SizedBox(width: 12),
+                                              const Text('Bug melden'),
+                                            ],
+                                          ),
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      InkWell(
+                                        onTap: () => context.go('/settings'),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16.0,
+                                            vertical: 12.0,
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.settings_outlined),
+                                              const SizedBox(width: 12),
+                                              Text(
+                                                loc?.navSettings ?? 'Einstellungen',
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
-                            ),
                           ),
                           destinations: navItems.map((item) {
                             return NavigationRailDestination(

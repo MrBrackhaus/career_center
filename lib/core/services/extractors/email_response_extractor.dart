@@ -137,42 +137,40 @@ class EmailResponseExtractor {
     final lowerSubject = subject.toLowerCase();
     final lowerBody = body.toLowerCase();
 
-    // Bewerbungsübersicht / Jobcenter-Spam ignorieren
+    // Spam / irrelevant ignorieren
     if (lowerSubject.contains('bewerbungsübersicht') ||
         lowerSubject.contains('eigenbemühungen') ||
         lowerSubject.contains('nachweis') ||
-        lowerSubject.contains('antrag')) {
+        lowerSubject.contains('antrag') ||
+        lowerSubject.contains('newsletter') ||
+        lowerSubject.contains('werbung')) {
       return null;
     }
 
+    // Wenn es eine direkte Antwort (Reply) ist oder bestimmte Keywords im Betreff hat
+    final isRep = isReply(subject);
     final cleanSubject = stripReplyPrefix(subject).toLowerCase();
-    final subjectOk = cleanSubject.contains('bewerbung als') ||
-        cleanSubject.contains('bewerbung auf') ||
-        cleanSubject.contains('ihre bewerbung') ||
-        cleanSubject.contains('initiativbewerbung') ||
-        cleanSubject.startsWith('bewerbung -') ||
-        cleanSubject.startsWith('bewerbung:') ||
-        cleanSubject.startsWith('bewerbung ');
-    if (!subjectOk) return null;
+    final subjectIsApplication = cleanSubject.contains('bewerbung') ||
+        cleanSubject.contains('ihre unterlagen') ||
+        cleanSubject.contains('kennenlernen') ||
+        cleanSubject.contains('vorstellungsgespräch') ||
+        cleanSubject.contains('interview') ||
+        cleanSubject.contains('absage') ||
+        cleanSubject.contains('zusage');
 
-    if (isReply(subject)) {
-      // Absage
-      if (_isRejection(lowerBody)) return 'absage';
-      // Interview-Einladung
-      if (_isInterview(lowerBody)) return 'interview';
-      // Eingangsbestätigung
-      if (_isConfirmation(lowerBody)) return 'bestaetigung';
-      return null;
-    } else {
-      // Eigene Bewerbung (Sent folder)
-      final hasCoverLetterSigns = lowerBody.contains('sehr geehrte') ||
-          lowerBody.contains('ich bewerbe mich') ||
-          lowerBody.contains('hiermit bewerbe') ||
-          lowerBody.contains('meine bewerbung') ||
-          lowerBody.contains('auf die ausgeschriebene');
-      if (!hasCoverLetterSigns) return null;
-      return 'versendet';
+    if (isRep || subjectIsApplication) {
+      if (_isRejection(lowerBody) || lowerSubject.contains('absage')) return 'absage';
+      if (_isInterview(lowerBody) || lowerSubject.contains('einladung')) return 'interview';
+      if (_isConfirmation(lowerBody) || lowerSubject.contains('eingangsbestätigung')) return 'bestaetigung';
     }
+
+    // Falls gar nichts im Body erkannt wurde, es aber sicher eine gesendete Bewerbung ist (Sent Folder logic):
+    final hasCoverLetterSigns = lowerBody.contains('sehr geehrte') &&
+        (lowerBody.contains('bewerbe') || lowerBody.contains('bewerbung auf') || lowerBody.contains('interesse'));
+    
+    if (hasCoverLetterSigns && subjectIsApplication) return 'versendet';
+
+    return null;
   }
 
   // ── Hilfsmethoden (öffentlich für DocumentIntelligenceService) ──────────────

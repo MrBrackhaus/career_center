@@ -173,8 +173,15 @@ class ImapService {
             final appEmail = app.contactEmail?.toLowerCase() ?? '';
             final appCompany = app.company.toLowerCase();
             bool matched = false;
-            if (appEmail.isNotEmpty && toAddresses.contains(appEmail)) matched = true;
-            if (appCompany.isNotEmpty && (subjectLower.contains(appCompany) || bodyLower.contains(appCompany))) matched = true;
+            
+            if (appEmail.isNotEmpty && toAddresses.contains(appEmail)) {
+              matched = true;
+            } else if (appCompany.isNotEmpty && appCompany.length > 2) {
+              final companyRegex = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
+              if (companyRegex.hasMatch(subjectLower) || companyRegex.hasMatch(bodyLower)) {
+                matched = true;
+              }
+            }
             if (matched) {
               await db.applicationsDao.updateApplication(app.copyWith(
                 status: 'versendet',
@@ -270,9 +277,21 @@ class ImapService {
           final appEmail = app.contactEmail?.toLowerCase() ?? '';
           final appCompany = app.company.toLowerCase();
           bool matched = false;
-          if (appEmail.isNotEmpty && fromAddress.contains(appEmail)) matched = true;
-          if (appCompany.isNotEmpty && fromAddress.contains(appCompany.replaceAll(' ', ''))) matched = true;
-          if (appCompany.isNotEmpty && (subject.contains(appCompany) || body.contains(appCompany))) matched = true;
+          
+          if (appEmail.isNotEmpty && fromAddress.contains(appEmail)) {
+            matched = true;
+          } else if (appCompany.isNotEmpty && appCompany.length > 2) {
+            final companyNoSpaces = appCompany.replaceAll(' ', '');
+            if (fromAddress.contains(companyNoSpaces)) {
+              matched = true;
+            } else {
+              // Word boundary check to prevent "it" matching "mit"
+              final companyRegex = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
+              if (companyRegex.hasMatch(subject) || companyRegex.hasMatch(body)) {
+                matched = true;
+              }
+            }
+          }
 
           if (matched) {
             await db.emailsDao.insertEmail(EmailsCompanion.insert(
@@ -285,12 +304,12 @@ class ImapService {
             ));
 
             String newStatus = app.status;
-            if (body.contains('leider') || body.contains('bedauern') ||
-                body.contains('absage') || body.contains('anderweitig entschieden')) {
-              newStatus = 'absage';
-            } else if (body.contains('einladung') || body.contains('gesprach') ||
-                body.contains('kennenlernen') || body.contains('interview')) {
-              newStatus = 'interview';
+            final extracted = EmailResponseExtractor.detectStatus(msg.decodeSubject() ?? '', msg.decodeTextPlainPart() ?? '');
+            
+            if (extracted == 'absage' || extracted == 'interview') {
+               newStatus = extracted!;
+            } else if (extracted == 'bestaetigung' && app.status == 'offen') {
+               newStatus = 'versendet';
             }
 
             if (newStatus != app.status) {
@@ -298,7 +317,7 @@ class ImapService {
                 status: newStatus,
                 responseDate: drift.Value(msg.decodeDate()),
                 rejectionReason: newStatus == 'absage'
-                    ? drift.Value('Automatisch erkannt')
+                    ? drift.Value('Automatisch aus E-Mail erkannt')
                     : const drift.Value.absent(),
               ));
             }

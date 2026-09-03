@@ -1,0 +1,8 @@
+﻿{
+  "mcpServers": {
+    "jobtracker": {
+      "command": "node",
+      "args": ["S:\\Projekte\\JobTracker\\mcp-server\\index.js"]
+    }
+  }
+}

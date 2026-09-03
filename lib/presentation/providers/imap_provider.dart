@@ -26,7 +26,7 @@ class ImapSyncNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref ref;
   ImapSyncNotifier(this.ref) : super(const AsyncValue.data(null));
 
-  Future<void> syncEmails() async {
+  Future<int> syncEmails() async {
     state = const AsyncValue.loading();
     try {
       final db = ref.read(databaseProvider);
@@ -66,8 +66,10 @@ class ImapSyncNotifier extends StateNotifier<AsyncValue<void>> {
       ref.invalidate(imapLastSyncProvider);
       
       state = const AsyncValue.data(null);
+      return imported;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
 }

@@ -11,6 +11,7 @@ import '../../providers/custom_columns_provider.dart';
 import '../../../data/database/app_database.dart';
 import '../onboarding/tutorial_flow.dart';
 import 'widgets/application_card.dart';
+import 'email_scanner_dialog.dart';
 
 class ApplicationsScreen extends ConsumerStatefulWidget {
   const ApplicationsScreen({super.key});
@@ -79,11 +80,44 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       ),
                     ),
                   TextButton.icon(
-                    onPressed: syncState.isLoading
-                        ? null
-                        : () => ref.read(imapSyncProvider.notifier).syncEmails(),
-                    icon: const Icon(Icons.sync),
-                    label: const Text('Posteingang checken'),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => const EmailScannerDialog(),
+                      );
+                    },
+                    icon: const Icon(Icons.manage_search),
+                    label: const Text('E-Mail Scanner'),
+                  ),
+                  const SizedBox(width: 8),
+                  Tooltip(
+                    message: 'Auto-Sync (Hintergrund)',
+                    child: IconButton(
+                      onPressed: syncState.isLoading
+                          ? null
+                          : () async {
+                              try {
+                                final count = await ref.read(imapSyncProvider.notifier).syncEmails();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(count > 0
+                                          ? 'Sync abgeschlossen! $count neue/aktualisierte Bewerbungen gefunden.'
+                                          : 'Sync abgeschlossen! Keine neuen Antworten gefunden.'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Fehler beim Sync: $e'), backgroundColor: Colors.red),
+                                  );
+                                }
+                              }
+                            },
+                      icon: const Icon(Icons.sync),
+                    ),
                   ),
                 ],
               );

@@ -24,10 +24,27 @@ document.getElementById('btn-import').addEventListener('click', async () => {
 
     const html = results[0].result;
 
+    // Screenshot der aktuellen Ansicht aufnehmen
+    let screenshot = null;
+    try {
+      screenshot = await new Promise((resolve) => {
+        getBrowser().tabs.captureVisibleTab(tab.windowId, { format: 'png', quality: 80 }, (dataUrl) => {
+          if (getBrowser().runtime.lastError) {
+            console.error(getBrowser().runtime.lastError);
+            resolve(null);
+          } else {
+            resolve(dataUrl); // Dies ist ein Base64 String: "data:image/png;base64,..."
+          }
+        });
+      });
+    } catch (e) {
+      console.warn('Screenshot fehlgeschlagen', e);
+    }
+
     const response = await fetch(`${SERVER_URL}/import`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: tab.url, html })
+      body: JSON.stringify({ url: tab.url, html, screenshot })
     });
 
     if (response.ok) {

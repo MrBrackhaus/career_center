@@ -30,6 +30,7 @@ import '../../providers/locale_provider.dart';
 import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/custom_columns_provider.dart';
+import '../../providers/imap_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/pdf_generator.dart';
 import '../../../core/utils/csv_generator.dart';
@@ -662,6 +663,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         controller: _imapPasswordController,
                         decoration: InputDecoration(labelText: AppLocalizations.of(context)!.settingsImapPassword, border: OutlineInputBorder()),
                         obscureText: true,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () async {
+                              final server = _imapServerController.text;
+                              final port = int.tryParse(_imapPortController.text) ?? 993;
+                              final email = _imapEmailController.text;
+                              final pass = _imapPasswordController.text;
+                              
+                              if (server.isEmpty || email.isEmpty || pass.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Bitte Server, E-Mail und Passwort ausfüllen.')),
+                                );
+                                return;
+                              }
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Verbindung wird getestet...')),
+                              );
+                              
+                              try {
+                                String actualPass = pass;
+                                if (pass == '********') {
+                                  actualPass = await ImapService.getPassword();
+                                }
+                                
+                                final client = await ref.read(imapServiceProvider).connect(server, port, email, actualPass);
+                                if (client != null) {
+                                  await client.disconnect();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Erfolgreich verbunden!'), backgroundColor: Colors.green),
+                                    );
+                                  }
+                                } else {
+                                  throw Exception('Fehler bei der Anmeldung.');
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Verbindung fehlgeschlagen: $e'), backgroundColor: Colors.red),
+                                  );
+                                }
+                              }
+                            },
+                            icon: const Icon(Icons.cable),
+                            label: const Text('Verbindung testen'),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       Align(

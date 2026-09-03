@@ -46,5 +46,6 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
-flutter/
+/flutter/
 assets/tools/build/extract_pdf/extract_pdf.pkg
+lib/core/secrets.dart

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>JobTracker Companion</title>
+  <style>
+    body {
+      width: 250px;
+      padding: 16px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      text-align: center;
+      background-color: #1e1e2e;
+      color: #cdd6f4;
+      margin: 0;
+    }
+    h2 {
+      margin-top: 0;
+      font-size: 16px;
+      color: #89b4fa;
+    }
+    p {
+      font-size: 13px;
+      color: #a6adc8;
+      margin-bottom: 20px;
+    }
+    button {
+      background-color: #89b4fa;
+      color: #11111b;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 10px;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #74c7ec;
+    }
+    button.secondary {
+      background-color: #313244;
+      color: #cdd6f4;
+    }
+    button.secondary:hover {
+      background-color: #45475a;
+    }
+    #status {
+      font-size: 12px;
+      margin-top: 10px;
+      height: 16px;
+      color: #a6e3a1;
+    }
+  </style>
+</head>
+<body>
+  <h2>JobTracker Companion</h2>
+  <p>Lokal. Sicher. Privat.</p>
+  
+  <button id="btn-import">📥 An App senden</button>
+  <button id="btn-autofill" class="secondary">⚡ Profil einfÃ¼gen</button>
+  
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

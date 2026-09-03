@@ -148,7 +148,7 @@ class ImapService {
       final applications = await db.applicationsDao.getAllApplications();
 
       // ── 1. SENT FOLDER ────────────────────────────────────────────────────
-      final mailboxes = await client.listMailboxes();
+      final mailboxes = await client.listMailboxes(recursive: true);
       Mailbox? sentBox;
       try {
         sentBox = mailboxes.firstWhere(
@@ -359,7 +359,7 @@ class ImapService {
 
     try {
       // ── Sent folder ──────────────────────────────────────────────────────
-      final mailboxes = await client.listMailboxes();
+      final mailboxes = await client.listMailboxes(recursive: true);
       Mailbox? sentBox;
       try {
         sentBox = mailboxes.firstWhere(

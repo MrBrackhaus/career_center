@@ -1,0 +1,51 @@
+name: Windows Nightly Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Create secrets.dart
+        shell: bash
+        run: |
+          mkdir -p lib/core
+          echo "class Secrets {" > lib/core/secrets.dart
+          echo "  static const String discordWebhookUrl = '${{ secrets.DISCORD_WEBHOOK }}';" >> lib/core/secrets.dart
+          echo "}" >> lib/core/secrets.dart
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows App
+        run: flutter build windows
+
+      - name: Compress Release
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath CareerCenter-Nightly-Windows.zip
+
+      - name: Publish Nightly Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: nightly
+          name: "Nightly Build"
+          body: "Automatisierter Entwicklungs-Build (immer auf dem neuesten Stand)."
+          artifacts: "CareerCenter-Nightly-Windows.zip"
+          allowUpdates: true
+          replacesArtifacts: true
+          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}

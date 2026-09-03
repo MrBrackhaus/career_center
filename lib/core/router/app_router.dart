@@ -29,6 +29,7 @@ import '../../presentation/screens/reports/jobcenter_report_screen.dart';
 import '../../presentation/screens/reports/weekly_report_screen.dart';
 import '../../presentation/screens/templates/templates_screen.dart';
 import '../../presentation/screens/calendar/calendar_screen.dart';
+import '../../presentation/screens/messages/messages_screen.dart';
 import '../../presentation/providers/database_provider.dart';
 import '../../presentation/providers/companion_provider.dart';
 import '../services/companion_server_service.dart';
@@ -98,6 +99,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/calendar',
           pageBuilder: (context, state) => _fadeTransitionPage(context, state, const CalendarScreen()),
+        ),
+        GoRoute(
+          path: '/messages',
+          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const MessagesScreen()),
         ),
         GoRoute(
           path: '/dashboard',

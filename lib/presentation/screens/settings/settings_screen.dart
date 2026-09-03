@@ -59,9 +59,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   String _customColumns = '';
   final _customColumnsController = TextEditingController();
   
-  // IMAP
+  // IMAP & SMTP
   final _imapServerController = TextEditingController();
   final _imapPortController = TextEditingController();
+  final _smtpServerController = TextEditingController();
+  final _smtpPortController = TextEditingController();
   final _imapEmailController = TextEditingController();
   final _imapPasswordController = TextEditingController();
   String _selectedMailProvider = 'Manuell';
@@ -102,6 +104,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final imapProviderSetting = await dao.getSettingByKey('imapProvider');
     final imapServerSetting = await dao.getSettingByKey('imapServer');
     final imapPortSetting = await dao.getSettingByKey('imapPort');
+    final smtpServerSetting = await dao.getSettingByKey('smtpServer');
+    final smtpPortSetting = await dao.getSettingByKey('smtpPort');
     final imapEmailSetting = await dao.getSettingByKey('imapEmail');
     
     if (mounted) {
@@ -125,6 +129,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _selectedMailProvider = imapProviderSetting?.value ?? 'Manuell';
         _imapServerController.text = imapServerSetting?.value ?? '';
         _imapPortController.text = imapPortSetting?.value ?? '993';
+        _smtpServerController.text = smtpServerSetting?.value ?? '';
+        _smtpPortController.text = smtpPortSetting?.value ?? '465';
         _imapEmailController.text = imapEmailSetting?.value ?? '';
         _imapPasswordController.text = '********'; // Fake password indicator
         
@@ -152,6 +158,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await dao.insertOrUpdateSetting(Setting(key: 'imapProvider', value: _selectedMailProvider));
     await dao.insertOrUpdateSetting(Setting(key: 'imapServer', value: _imapServerController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'imapPort', value: _imapPortController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'smtpServer', value: _smtpServerController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'smtpPort', value: _smtpPortController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'imapEmail', value: _imapEmailController.text));
     
     if (_imapPasswordController.text != '********' && _imapPasswordController.text.isNotEmpty) {
@@ -606,11 +614,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           if (val != null) {
                             setState(() {
                               _selectedMailProvider = val;
-                              if (val == 'Gmail') { _imapServerController.text = 'imap.gmail.com'; _imapPortController.text = '993'; }
-                              if (val == 'GMX') { _imapServerController.text = 'imap.gmx.net'; _imapPortController.text = '993'; }
-                              if (val == 'Web.de') { _imapServerController.text = 'imap.web.de'; _imapPortController.text = '993'; }
-                              if (val == 'Outlook') { _imapServerController.text = 'outlook.office365.com'; _imapPortController.text = '993'; }
-                              if (val == 'iCloud') { _imapServerController.text = 'imap.mail.me.com'; _imapPortController.text = '993'; }
+                              if (val == 'Gmail') { 
+                                _imapServerController.text = 'imap.gmail.com'; _imapPortController.text = '993'; 
+                                _smtpServerController.text = 'smtp.gmail.com'; _smtpPortController.text = '465';
+                              }
+                              if (val == 'GMX') { 
+                                _imapServerController.text = 'imap.gmx.net'; _imapPortController.text = '993'; 
+                                _smtpServerController.text = 'mail.gmx.net'; _smtpPortController.text = '465';
+                              }
+                              if (val == 'Web.de') { 
+                                _imapServerController.text = 'imap.web.de'; _imapPortController.text = '993'; 
+                                _smtpServerController.text = 'smtp.web.de'; _smtpPortController.text = '465';
+                              }
+                              if (val == 'Outlook') { 
+                                _imapServerController.text = 'outlook.office365.com'; _imapPortController.text = '993'; 
+                                _smtpServerController.text = 'smtp.office365.com'; _smtpPortController.text = '587';
+                              }
+                              if (val == 'iCloud') { 
+                                _imapServerController.text = 'imap.mail.me.com'; _imapPortController.text = '993'; 
+                                _smtpServerController.text = 'smtp.mail.me.com'; _smtpPortController.text = '587';
+                              }
                             });
                           }
                         },
@@ -630,6 +653,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         )
                       ],
                       const SizedBox(height: 16),
+                      const Text('Eingangsserver (IMAP)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                      const SizedBox(height: 8),
                       Row(
                         children: [
                           Expanded(
@@ -652,6 +677,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 16),
+                      const Text('Ausgangsserver (SMTP)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 3,
+                            child: TextField(
+                              controller: _smtpServerController,
+                              decoration: InputDecoration(labelText: 'SMTP Server (Versand)', border: OutlineInputBorder()),
+                              enabled: _selectedMailProvider == 'Manuell',
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 1,
+                            child: TextField(
+                              controller: _smtpPortController,
+                              decoration: InputDecoration(labelText: 'SMTP Port', border: OutlineInputBorder()),
+                              keyboardType: TextInputType.number,
+                              enabled: _selectedMailProvider == 'Manuell',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Zugangsdaten', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                      const SizedBox(height: 8),
                       const SizedBox(height: 16),
                       TextField(
                         controller: _imapEmailController,

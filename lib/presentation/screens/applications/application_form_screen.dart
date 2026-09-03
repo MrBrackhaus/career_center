@@ -24,6 +24,7 @@ import 'package:html/parser.dart' as html_parser;
 import 'package:file_selector/file_selector.dart';
 import '../../../core/utils/pdf_generator.dart';
 import '../../../data/database/app_database.dart';
+import 'email_composer_dialog.dart';
 import '../../../core/utils/file_picker_web.dart' if (dart.library.io) 'package:file_selector/file_selector.dart';
 import '../../../core/services/document_intelligence_service.dart';
 import '../../../domain/enums/document_type.dart';
@@ -579,6 +580,29 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(isEditing ? 'Bewerbung bearbeiten' : 'Neue Bewerbung'),
+          actions: [
+            if (isEditing)
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final app = await ref.read(databaseProvider).applicationsDao.getApplicationById(widget.applicationId!);
+                    if (app != null && context.mounted) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (ctx) => EmailComposerDialog(application: app),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.send),
+                  label: const Text('Bewerbung senden'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C6AF7),
+                  ),
+                ),
+              ),
+          ],
           bottom: TabBar(
             isScrollable: true,
             tabs: [

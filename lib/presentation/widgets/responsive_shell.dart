@@ -43,6 +43,12 @@ class ResponsiveShell extends ConsumerWidget {
         selectedIcon: Icons.work,
         path: '/applications',
       ),
+      _NavItem(
+        label: 'Postfach',
+        icon: Icons.mail_outline,
+        selectedIcon: Icons.mail,
+        path: '/messages',
+      ),
       if (jobcenterMode)
         _NavItem(
           label: loc?.navJobcenter ?? 'Jobcenter-Nachweis',

@@ -373,15 +373,12 @@ class ImapService {
         final recipientEmail = toAddresses.isNotEmpty ? toAddresses.first : '';
 
         final detectedStatus = _detectApplicationStatus(subject, body);
-        // For the scanner: only show emails we're confident about
-        if (detectedStatus == null) continue;
 
-        // Try to resolve company name — skip if we can't
+        // Try to resolve company name
         String company = _extractCompanyFromBody(body);
         if (company.isEmpty && recipientEmail.isNotEmpty) {
           company = _extractCompanyFromDomain(recipientEmail);
         }
-        if (company.isEmpty) continue; // Skip if no company found
 
         final alreadyImported = existingContactEmails.contains(recipientEmail) ||
             existingEmails.any((e) => e.messageId == uid);
@@ -412,7 +409,6 @@ class ImapService {
         final uid = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
 
         final detectedStatus = _detectApplicationStatus(subject, body);
-        if (detectedStatus == null) continue;
 
         String company = _extractCompanyFromDomain(from);
         if (company.isEmpty) company = _extractCompanyFromBody(body);
@@ -452,7 +448,7 @@ class ImapService {
     final applications = await db.applicationsDao.getAllApplications();
     int count = 0;
     for (final scanMail in emails) {
-      if (scanMail.detectedStatus == null) continue;
+      final status = scanMail.detectedStatus ?? 'versendet';
 
       final recipientEmail = scanMail.folder == 'sent'
           ? (scanMail.fromTo.startsWith('An: ') ? scanMail.fromTo.substring(4) : '')
@@ -473,7 +469,7 @@ class ImapService {
       final appId = await db.applicationsDao.insertApplication(ApplicationsCompanion.insert(
         company: company,
         position: _extractPosition(scanMail.subject),
-        status: drift.Value(scanMail.detectedStatus!),
+        status: drift.Value(status),
         appliedDate: drift.Value(scanMail.date),
         contactName: drift.Value(contact.isNotEmpty ? contact : null),
         contactEmail: drift.Value(recipientEmail.isNotEmpty ? recipientEmail : null),

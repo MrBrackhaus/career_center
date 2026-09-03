@@ -21,6 +21,25 @@ Für Alpha-Tester steht auch immer der aktuellste Entwicklungsstand (Nightly Bui
 
 ---
 
+## 🧩 Browser-Erweiterung installieren
+
+In der heruntergeladenen ZIP-Datei findest du neben der `.exe` auch einen Ordner namens `browser_extension`. Mit dieser Erweiterung kannst du Stellenanzeigen per Klick in die App importieren.
+
+Da die Erweiterung noch in der Alpha-Phase ist, wird sie manuell installiert:
+
+**Für Google Chrome / Brave / Edge:**
+1. Öffne die Erweiterungsseite deines Browsers (z.B. `chrome://extensions/` oder `edge://extensions/`).
+2. Aktiviere oben rechts den **"Entwicklermodus"** (Developer mode).
+3. Klicke oben links auf **"Entpackte Erweiterung laden"** (Load unpacked).
+4. Wähle den Ordner `browser_extension` aus, den du gerade entpackt hast. Fertig!
+
+**Für Mozilla Firefox:**
+1. Gib in die Adresszeile `about:debugging#/runtime/this-firefox` ein.
+2. Klicke auf **"Temporäres Add-on laden..."**.
+3. Wähle die Datei `manifest.json` aus dem Ordner `browser_extension` aus. Fertig!
+
+---
+
 ## 🌟 Features
 
 * **Intelligenter Auto-Fill:** Automatische Datenextraktion aus Job-Websites oder PDF-Stellenanzeigen per KI.

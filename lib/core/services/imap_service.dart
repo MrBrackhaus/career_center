@@ -369,7 +369,7 @@ class ImapService {
 
       if (sentBox != null) {
         await client.selectMailbox(sentBox);
-        final sentFetch = await client.fetchRecentMessages(messageCount: 200, criteria: 'BODY.PEEK[]');
+        final sentFetch = await client.fetchRecentMessages(messageCount: 50, criteria: 'BODY.PEEK[]');
 
         for (final msg in sentFetch.messages) {
           final rawTo = msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
@@ -408,7 +408,7 @@ class ImapService {
 
       // ── Inbox ────────────────────────────────────────────────────────────
       await client.selectInbox();
-      final inboxFetch = await client.fetchRecentMessages(messageCount: 100, criteria: 'BODY.PEEK[]');
+      final inboxFetch = await client.fetchRecentMessages(messageCount: 50, criteria: 'BODY.PEEK[]');
 
       for (final msg in inboxFetch.messages) {
         final from = msg.from?.first.email.toLowerCase() ?? '';
@@ -441,12 +441,8 @@ class ImapService {
       await client.disconnect();
     }
 
-    // Sort: detected applications first, then by date descending
-    result.sort((a, b) {
-      if (a.detectedStatus != null && b.detectedStatus == null) return -1;
-      if (a.detectedStatus == null && b.detectedStatus != null) return 1;
-      return b.date.compareTo(a.date);
-    });
+    // Sort strictly by date descending
+    result.sort((a, b) => b.date.compareTo(a.date));
 
     return result;
   }

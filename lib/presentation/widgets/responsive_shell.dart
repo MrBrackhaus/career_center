@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../core/router/app_router.dart'; // for jobcenterModeProvider
-import 'bug_report_dialog.dart';
+import 'feedback_dialog.dart';
 
 class ResponsiveShell extends ConsumerWidget {
   Widget _buildAppLogo(BuildContext context, {double size = 32}) {

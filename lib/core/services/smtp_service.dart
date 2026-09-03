@@ -36,7 +36,8 @@ class SmtpService {
 
       for (final file in attachments) {
         if (await file.exists()) {
-          builder.addFile(file);
+          final mimeType = lookupMimeType(file.path) ?? 'application/octet-stream';
+          builder.addFile(file, MediaType.fromText(mimeType));
         }
       }
 

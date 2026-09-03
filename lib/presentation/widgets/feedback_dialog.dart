@@ -3,16 +3,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../core/secrets.dart';
 
-class BugReportDialog extends StatefulWidget {
-  const BugReportDialog({super.key});
+class FeedbackDialog extends StatefulWidget {
+  const FeedbackDialog({super.key});
 
   @override
-  State<BugReportDialog> createState() => _BugReportDialogState();
+  State<FeedbackDialog> createState() => _FeedbackDialogState();
 }
 
-class _BugReportDialogState extends State<BugReportDialog> {
+class _FeedbackDialogState extends State<FeedbackDialog> {
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
+  String _feedbackType = 'Bug'; // 'Bug', 'Idee', 'Feedback'
   bool _isSending = false;
 
   Future<void> _sendReport() async {
@@ -28,7 +29,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
 
     if (Secrets.discordWebhookUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bug-Tracker ist noch nicht konfiguriert (Webhook URL fehlt).')),
+        const SnackBar(content: Text('Tracker ist noch nicht konfiguriert (Webhook URL fehlt).')),
       );
       return;
     }
@@ -40,12 +41,23 @@ class _BugReportDialogState extends State<BugReportDialog> {
       final request = await client.postUrl(Uri.parse(Secrets.discordWebhookUrl));
       request.headers.set('Content-Type', 'application/json');
 
+      int color = 15158332; // Red (Bug)
+      String prefix = "🐛 Neuer Bug-Report";
+      
+      if (_feedbackType == 'Idee') {
+        color = 3066993; // Green
+        prefix = "💡 Neue Idee/Vorschlag";
+      } else if (_feedbackType == 'Feedback') {
+        color = 3447003; // Blue
+        prefix = "💬 Neues Feedback";
+      }
+
       final payload = jsonEncode({
         "embeds": [
           {
-            "title": "🐛 Neuer Bug-Report: $title",
+            "title": "$prefix: $title",
             "description": desc,
-            "color": 15158332, // Red
+            "color": color,
             "footer": {
               "text": "Gesendet aus der Bewerbungszentrale App"
             },
@@ -62,7 +74,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
         if (mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Bug erfolgreich gemeldet! Vielen Dank!')),
+            const SnackBar(content: Text('Nachricht erfolgreich gesendet! Vielen Dank!')),
           );
         }
       } else {
@@ -86,17 +98,34 @@ class _BugReportDialogState extends State<BugReportDialog> {
     return AlertDialog(
       title: const Row(
         children: [
-          Icon(Icons.bug_report, color: Colors.red),
+          Icon(Icons.rate_review, color: Colors.blueAccent),
           SizedBox(width: 8),
-          Text('Bug melden'),
+          Text('Feedback & Bugs'),
         ],
       ),
       content: SizedBox(
         width: 400,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Ist dir ein Fehler aufgefallen? Beschreibe ihn hier, damit er behoben werden kann.'),
+            const Text('Hast du einen Fehler gefunden oder eine tolle Idee für die App? Lass es uns wissen!'),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _feedbackType,
+              decoration: const InputDecoration(
+                labelText: 'Art der Meldung',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'Bug', child: Text('🐛 Fehler / Bug')),
+                DropdownMenuItem(value: 'Idee', child: Text('💡 Idee / Vorschlag')),
+                DropdownMenuItem(value: 'Feedback', child: Text('💬 Allgemeines Feedback')),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => _feedbackType = val);
+              },
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _titleController,
@@ -110,7 +139,7 @@ class _BugReportDialogState extends State<BugReportDialog> {
               controller: _descController,
               maxLines: 5,
               decoration: const InputDecoration(
-                labelText: 'Was genau ist passiert?',
+                labelText: 'Was genau ist passiert bzw. was ist deine Idee?',
                 border: OutlineInputBorder(),
               ),
             ),

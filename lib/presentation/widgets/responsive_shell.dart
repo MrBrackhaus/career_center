@@ -144,14 +144,14 @@ class ResponsiveShell extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.bug_report_outlined),
+                                      icon: const Icon(Icons.rate_review_outlined),
                                       onPressed: () {
                                         showDialog(
                                           context: context,
-                                          builder: (context) => const BugReportDialog(),
+                                          builder: (context) => const FeedbackDialog(),
                                         );
                                       },
-                                      tooltip: 'Bug melden',
+                                      tooltip: 'Feedback & Bugs',
                                     ),
                                     const SizedBox(height: 8),
                                     IconButton(
@@ -218,7 +218,7 @@ class ResponsiveShell extends ConsumerWidget {
                                         onTap: () {
                                           showDialog(
                                             context: context,
-                                            builder: (context) => const BugReportDialog(),
+                                            builder: (context) => const FeedbackDialog(),
                                           );
                                         },
                                         borderRadius: BorderRadius.circular(8),

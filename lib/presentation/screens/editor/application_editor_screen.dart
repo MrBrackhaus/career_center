@@ -4,6 +4,7 @@ import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:drift/drift.dart' as drift;
 import 'dart:convert';
+import 'dart:async';
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
 import '../../../core/utils/keyword_extractor.dart';
@@ -21,6 +22,8 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
   late quill.QuillController _controller;
   bool _isLoading = true;
   bool _hasChanges = false;
+  bool _isSaving = false;
+  Timer? _autoSaveTimer;
   Application? _application;
   
   List<String> _missingKeywords = [];
@@ -62,6 +65,11 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
     _controller.addListener(() {
       if (!_hasChanges) setState(() => _hasChanges = true);
       _runAtsAnalysis();
+      
+      _autoSaveTimer?.cancel();
+      _autoSaveTimer = Timer(const Duration(seconds: 1), () {
+        if (_hasChanges) _save();
+      });
     });
 
     setState(() {
@@ -87,6 +95,7 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     if (!_isLoading) {
       _controller.dispose();
     }
@@ -94,6 +103,7 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
   }
 
   Future<void> _save() async {
+    setState(() => _isSaving = true);
     final content = jsonEncode(_controller.document.toDelta().toJson());
     final db = ref.read(databaseProvider);
     
@@ -103,8 +113,10 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
     );
     
     await db.applicationsDao.updateApplication(companion);
-    setState(() => _hasChanges = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Anschreiben gespeichert.')));
+    setState(() {
+      _hasChanges = false;
+      _isSaving = false;
+    });
   }
 
   @override
@@ -120,8 +132,29 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
       appBar: AppBar(
         title: Text('Anschreiben: ${_application?.company}'),
         actions: [
-          if (_hasChanges)
-            IconButton(icon: const Icon(Icons.save), onPressed: _save, tooltip: 'Speichern'),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  if (_isSaving) 
+                    const SizedBox(
+                      width: 16, height: 16, 
+                      child: CircularProgressIndicator(strokeWidth: 2)
+                    )
+                  else if (_hasChanges)
+                    const Icon(Icons.sync, color: Colors.grey, size: 16)
+                  else
+                    const Icon(Icons.cloud_done, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    _isSaving ? 'Speichert...' : (_hasChanges ? 'Ungespeichert' : 'Gespeichert'),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
       body: Row(
@@ -149,6 +182,7 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
   }
 
   Widget _buildLeftSidebar(ColorScheme colorScheme) {
+    final db = ref.read(databaseProvider);
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -159,16 +193,56 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
         children: [
           const Padding(
             padding: EdgeInsets.all(16.0),
-            child: Text('Bausteine & Lebenslauf', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Text('Bausteine', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           const Divider(height: 1),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(8),
-              children: [
-                _buildDraggableBlock('Starke Einleitung', 'Hiermit bewerbe ich mich...'),
-                _buildDraggableBlock('Gehaltsvorstellung', 'Meine Gehaltsvorstellung liegt bei...'),
-              ],
+            child: StreamBuilder<List<Template>>(
+              stream: db.templatesDao.watchTemplatesByType('textbaustein'),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final templates = snapshot.data ?? [];
+                if (templates.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Keine Textbausteine gefunden.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.add_to_photos),
+                            label: const Text('Beispiele laden'),
+                            onPressed: () async {
+                              final samples = [
+                                TemplatesCompanion.insert(name: 'Einleitung Klassisch', type: 'textbaustein', content: drift.Value('[{"insert":"Sehr geehrte Damen und Herren,\\n\\nhiermit bewerbe ich mich mit großem Interesse auf die ausgeschriebene Position.\\n"}]')),
+                                TemplatesCompanion.insert(name: 'Einleitung Dynamisch', type: 'textbaustein', content: drift.Value('[{"insert":"Sehr geehrte Damen und Herren,\\n\\nIhre Unternehmenswerte haben mich sofort begeistert, weshalb ich mich freue, mich Ihnen als engagierter Kandidat vorzustellen.\\n"}]')),
+                                TemplatesCompanion.insert(name: 'Gehaltsvorstellung', type: 'textbaustein', content: drift.Value('[{"insert":"Meine Gehaltsvorstellungen liegen bei einem Bruttojahresgehalt von 55.000 Euro. Ein Einstieg ist ab dem 01.12. möglich.\\n"}]')),
+                                TemplatesCompanion.insert(name: 'Teamfähigkeit', type: 'textbaustein', content: drift.Value('[{"insert":"In meinen bisherigen Projekten konnte ich stets durch eine starke Teamfähigkeit und lösungsorientierte Arbeitsweise überzeugen.\\n"}]')),
+                                TemplatesCompanion.insert(name: 'Call to Action', type: 'textbaustein', content: drift.Value('[{"insert":"Ich freue mich sehr auf die Gelegenheit, Sie in einem persönlichen Gespräch von meiner Eignung zu überzeugen.\\n\\nMit freundlichen Grüßen\\n"}]')),
+                              ];
+                              for (final t in samples) {
+                                await db.templatesDao.insertTemplate(t);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.all(8),
+                  itemCount: templates.length,
+                  itemBuilder: (context, index) {
+                    final t = templates[index];
+                    return _buildDraggableBlock(t);
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -176,16 +250,62 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
     );
   }
   
-  Widget _buildDraggableBlock(String title, String contentPreview) {
+  Widget _buildDraggableBlock(Template template) {
+    // Generate a short preview of the text
+    String preview = '...';
+    try {
+      if (template.content != null && template.content!.isNotEmpty) {
+        final List<dynamic> ops = jsonDecode(template.content!);
+        final doc = quill.Document.fromJson(ops);
+        preview = doc.toPlainText().replaceAll('\n', ' ').trim();
+      }
+    } catch (_) {}
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        subtitle: Text(contentPreview, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
-        trailing: const Icon(Icons.drag_indicator),
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceVariant,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
         onTap: () {
-          // Implement insertion on tap
+          if (template.content != null) {
+            try {
+              final ops = jsonDecode(template.content!);
+              final docToInsert = quill.Document.fromJson(ops);
+              final length = docToInsert.length;
+              final currentSelection = _controller.selection;
+              
+              _controller.document.insert(currentSelection.baseOffset, docToInsert.toPlainText());
+              _controller.updateSelection(
+                TextSelection.collapsed(offset: currentSelection.baseOffset + length - 1),
+                quill.ChangeSource.local,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Baustein eingefügt.')));
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Einfügen: $e')));
+            }
+          }
         },
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text(template.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold))),
+                  const Icon(Icons.add_circle_outline, size: 16),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -237,38 +357,61 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
           ),
         ),
         
-        // A4 Editor Area
+        // Google Docs Style Canvas
         Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: AspectRatio(
-                aspectRatio: 1 / 1.414,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface, // Adapts to light/dark mode
-                    borderRadius: BorderRadius.circular(4),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 15,
-                        spreadRadius: 2,
-                        offset: const Offset(0, 4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                  child: Container(
+                    width: 794, // A4 width at 96 DPI
+                    constraints: BoxConstraints(
+                      minHeight: 1123, // A4 height at 96 DPI
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    // DIN 5008 Margins: Top: 45mm/27mm, Bottom: 20mm, Left: 25mm, Right: 20mm
+                    // 1mm ~= 3.78 pixels
+                    padding: const EdgeInsets.only(
+                      left: 94, // 25mm
+                      right: 75, // 20mm
+                      top: 170, // 45mm (first page)
+                      bottom: 75, // 20mm
+                    ),
+                    child: DefaultTextStyle(
+                      style: const TextStyle(
+                        fontFamily: 'Arial', // Default professional font
+                        fontSize: 14,
+                        color: Colors.black,
+                        height: 1.5,
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 48),
-                  child: quill.QuillEditor.basic(
-                    controller: _controller,
-                    config: quill.QuillEditorConfig(
-                      placeholder: 'Schreibe hier dein Anschreiben...',
-                      padding: EdgeInsets.zero,
-                      embedBuilders: FlutterQuillEmbeds.editorBuilders(),
+                      child: quill.QuillEditor.basic(
+                        controller: _controller,
+                        config: quill.QuillEditorConfig(
+                          placeholder: 'Schreibe hier dein Anschreiben...',
+                          padding: EdgeInsets.zero,
+                          embedBuilders: FlutterQuillEmbeds.editorBuilders(),
+                          autoFocus: false,
+                          expands: false,
+                          scrollable: false, // Let the SingleChildScrollView handle scrolling!
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            }
           ),
         ),
       ],

@@ -840,7 +840,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const ListTile(
                         leading: Icon(Icons.info_outline),
                         title: Text('Version'),
-                        trailing: Text('0.6.0 Alpha', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        trailing: Text('0.6.1 Alpha', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                       ListTile(
                         leading: const Icon(Icons.new_releases),

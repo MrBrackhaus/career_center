@@ -25,6 +25,6 @@ final databaseProvider = Provider<AppDatabase>((ref) {
 
 final applicationsRepositoryProvider = Provider<ApplicationsRepository>((ref) {
   final db = ref.watch(databaseProvider);
-  return ApplicationsRepository(db.applicationsDao);
+  return ApplicationsRepository(db);
 });
 

@@ -389,7 +389,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               children: [
                 Expanded(
                   child: FilledButton.tonalIcon(
-                    onPressed: () => context.go('/applications/${app.id}'),
+                    onPressed: () => context.go('/applications/edit/${app.id}'),
                     icon: const Icon(Icons.edit_document),
                     label: const Text('Komplett bearbeiten'),
                   ),
@@ -620,7 +620,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5))),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.go('/applications/${app.id}'),
+        onTap: () => context.go('/applications/edit/${app.id}'),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(

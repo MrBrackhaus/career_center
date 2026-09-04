@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../data/database/app_database.dart';
@@ -111,7 +111,7 @@ class _ApplicationCardState extends State<ApplicationCard> {
                   icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
                   onSelected: (value) {
                     if (value == 'edit') {
-                      context.go('/applications/${app.id}');
+                      context.go('/applications/edit/${app.id}');
                     } else if (value == 'delete') {
                       widget.onDelete();
                     }

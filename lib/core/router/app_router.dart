@@ -58,6 +58,10 @@ final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/applications',
   routes: [
+    GoRoute(
+      path: '/',
+      redirect: (context, state) => '/applications',
+    ),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) {

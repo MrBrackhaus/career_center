@@ -49,3 +49,13 @@ app.*.map.json
 /flutter/
 assets/tools/build/extract_pdf/extract_pdf.pkg
 lib/core/secrets.dart
+
+# AI & Scratch Files
+scripts/
+scratch/
+.agents/
+
+# Large Data & Releases
+*.zip
+training_data/
+

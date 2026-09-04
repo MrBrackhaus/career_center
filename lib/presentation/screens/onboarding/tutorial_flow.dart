@@ -34,6 +34,12 @@ class _TutorialFlowState extends State<TutorialFlow> {
       'color': Colors.orange,
     },
     {
+      'icon': Icons.mark_email_read_outlined,
+      'title': 'Intelligenter E-Mail Sync',
+      'text': 'Verbinde dein IMAP/SMTP-Postfach: Sende Bewerbungen direkt aus der App und lass Antworten (wie Einladungen oder Absagen) automatisch erkennen und einsortieren!',
+      'color': Colors.redAccent,
+    },
+    {
       'icon': Icons.rocket_launch_outlined,
       'title': 'Startklar!',
       'text': 'Bist du bereit? Lege jetzt deine erste Bewerbung an oder importiere Jobs mit der Chrome-Erweiterung.',

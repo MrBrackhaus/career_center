@@ -1,7 +1,7 @@
 # Bewerbungszentrale (Career Center)
 
 [![Latest Release](https://img.shields.io/github/v/release/MrBrackhaus/career_center?color=success&label=Download%20Latest)](https://github.com/MrBrackhaus/career_center/releases/latest)
-[![Nightly Build](https://img.shields.io/github/v/release/MrBrackhaus/career_center?include_prereleases&label=Download%20Nightly&color=orange)](https://github.com/MrBrackhaus/career_center/releases/tag/nightly)
+[![Nightly Build](https://img.shields.io/badge/Download-Nightly-orange)](https://github.com/MrBrackhaus/career_center/releases/tag/nightly)
 
 Die Bewerbungszentrale ist eine smarte, datenschutzfreundliche Open-Source-Desktop-App (Flutter) für Windows, die Arbeitssuchenden dabei hilft, ihre Bewerbungen zu organisieren, Nachweise für das Jobcenter zu verwalten und ihre Chancen auf dem Arbeitsmarkt zu verbessern.
 

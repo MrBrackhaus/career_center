@@ -113,8 +113,10 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.grey[200],
+      backgroundColor: colorScheme.surfaceVariant, // The 'Desk' background
       appBar: AppBar(
         title: Text('Anschreiben: ${_application?.company}'),
         actions: [
@@ -127,28 +129,31 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
           // LEFT COLUMN: Structure & Resume Palette
           Expanded(
             flex: 2,
-            child: _buildLeftSidebar(),
+            child: _buildLeftSidebar(colorScheme),
           ),
           
           // MIDDLE COLUMN: Editor
           Expanded(
-            flex: 5,
-            child: _buildEditorArea(),
+            flex: 6,
+            child: _buildEditorArea(colorScheme),
           ),
           
           // RIGHT COLUMN: ATS Scanner & Analysis
           Expanded(
             flex: 2,
-            child: _buildRightSidebar(),
+            child: _buildRightSidebar(colorScheme),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLeftSidebar() {
+  Widget _buildLeftSidebar(ColorScheme colorScheme) {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(right: BorderSide(color: colorScheme.outlineVariant)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -185,12 +190,15 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
     );
   }
 
-  Widget _buildEditorArea() {
+  Widget _buildEditorArea(ColorScheme colorScheme) {
     return Column(
       children: [
         // Restricted Toolbar
         Container(
-          color: Colors.white,
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: quill.QuillSimpleToolbar(
             controller: _controller,
@@ -238,12 +246,14 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
                 aspectRatio: 1 / 1.414,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: colorScheme.surface, // Adapts to light/dark mode
+                    borderRadius: BorderRadius.circular(4),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 15,
                         spreadRadius: 2,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -265,9 +275,12 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
     );
   }
 
-  Widget _buildRightSidebar() {
+  Widget _buildRightSidebar(ColorScheme colorScheme) {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(left: BorderSide(color: colorScheme.outlineVariant)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -295,8 +308,8 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
                   if (_foundKeywords.isEmpty && _missingKeywords.isEmpty)
                     const Text('Keine Keywords gefunden.', style: TextStyle(color: Colors.grey, fontSize: 12))
                   else ...[
-                    ..._foundKeywords.map((k) => _buildKeywordChip(k, true)),
-                    ..._missingKeywords.map((k) => _buildKeywordChip(k, false)),
+                    ..._foundKeywords.map((k) => _buildKeywordChip(context, k, true)),
+                    ..._missingKeywords.map((k) => _buildKeywordChip(context, k, false)),
                   ],
                   const SizedBox(height: 24),
                   const Text('Tonalitäts-Check', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -358,18 +371,27 @@ class _ApplicationEditorScreenState extends ConsumerState<ApplicationEditorScree
     );
   }
 
-  Widget _buildKeywordChip(String keyword, bool found) {
+  Widget _buildKeywordChip(BuildContext context, String keyword, bool found) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final color = found ? Colors.green : colorScheme.onSurface.withOpacity(0.5);
+    final textColor = found ? colorScheme.onSurface : colorScheme.onSurface.withOpacity(0.5);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 4.0),
       child: Row(
         children: [
-          Icon(found ? Icons.check_circle : Icons.cancel, 
-               color: found ? Colors.green : Colors.grey, size: 16),
+          Icon(found ? Icons.check_circle : Icons.cancel, color: color, size: 16),
           const SizedBox(width: 8),
-          Text(keyword, style: TextStyle(
-            color: found ? Colors.black : Colors.grey,
-            decoration: found ? TextDecoration.none : TextDecoration.lineThrough,
-          )),
+          Expanded(
+            child: Text(
+              keyword, 
+              style: TextStyle(
+                color: textColor,
+                decoration: found ? TextDecoration.none : TextDecoration.lineThrough,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );

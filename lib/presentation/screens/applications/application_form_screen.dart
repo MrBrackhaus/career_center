@@ -84,6 +84,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final _contactEmailController = TextEditingController();
   final _contactPhoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _jobDescriptionTextController = TextEditingController();
   final Map<String, TextEditingController> _customFieldControllers = {};
 
   String _status = 'offen';
@@ -134,6 +135,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     _contactEmailController.dispose();
     _contactPhoneController.dispose();
     _addressController.dispose();
+    _jobDescriptionTextController.dispose();
     for (final c in _customFieldControllers.values) c.dispose();
     super.dispose();
   }
@@ -217,6 +219,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       _contactEmailController.text = app.contactEmail ?? '';
       _contactPhoneController.text = app.contactPhone ?? '';
       _addressController.text = app.address ?? '';
+      _jobDescriptionTextController.text = app.jobDescriptionText ?? '';
 
       if (app.customFields != null && app.customFields!.isNotEmpty) {
         try {
@@ -476,6 +479,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       }
       if (fields.applicationStatus != null) {
         _status = fields.applicationStatus!.value;
+      }
+      
+      if (result.rawText.isNotEmpty) {
+        _jobDescriptionTextController.text = result.rawText;
       }
       _isAutoFilling = false;
     });
@@ -882,6 +889,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       contactPhone: drift.Value(_contactPhoneController.text.isEmpty ? null : _contactPhoneController.text),
       address: drift.Value(_addressController.text.isEmpty ? null : _addressController.text),
       customFields: drift.Value(customFieldsJson),
+      jobDescriptionText: drift.Value(_jobDescriptionTextController.text.isEmpty ? null : _jobDescriptionTextController.text),
     );
 
     int insertedId;

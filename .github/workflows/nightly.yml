@@ -40,6 +40,11 @@ jobs:
           Copy-Item -Path browser_extension -Destination build\windows\x64\runner\Release\browser_extension -Recurse
           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath CareerCenter-Nightly-Windows.zip
 
+      - name: Update Nightly Tag
+        run: |
+          git tag -f nightly
+          git push -f origin nightly
+
       - name: Publish Nightly Release
         uses: ncipollo/release-action@v1
         with:

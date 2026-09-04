@@ -162,7 +162,7 @@ class ScaffoldWithTopBar extends ConsumerWidget {
     });
 
     final location = GoRouterState.of(context).uri.path;
-    final jobcenterMode = ref.watch(jobcenterModeProvider).valueOrNull ?? false;
+    final jobcenterMode = ref.watch(jobcenterModeProvider).value ?? false;
 
     return ResponsiveShell(child: child);
   }

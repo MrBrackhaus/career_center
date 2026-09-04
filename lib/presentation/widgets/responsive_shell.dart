@@ -31,7 +31,7 @@ class ResponsiveShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
-    final jobcenterMode = ref.watch(jobcenterModeProvider).valueOrNull ?? false;
+    final jobcenterMode = ref.watch(jobcenterModeProvider).value ?? false;
 
     final loc = AppLocalizations.of(context);
     final String title = loc?.appName ?? 'Career Center';

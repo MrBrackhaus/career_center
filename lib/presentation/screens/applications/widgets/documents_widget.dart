@@ -97,11 +97,9 @@ class DocumentsWidget extends ConsumerWidget {
     await File(file.path).copy(newPath);
 
     ref.read(documentsNotifierProvider(applicationId).notifier).addDocument(
-      applicationId,
       originalName,
       newPath,
       p.extension(originalName).replaceAll('.', ''),
     );
   }
 }
-

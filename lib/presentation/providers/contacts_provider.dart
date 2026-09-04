@@ -24,11 +24,15 @@ final contactsProvider = StreamProvider.family.autoDispose<List<Contact>, int>((
   return ref.watch(databaseProvider).contactsDao.watchContactsForApplication(applicationId);
 });
 
-class ContactsNotifier extends StateNotifier<AsyncValue<void>> {
-  final AppDatabase db;
-  ContactsNotifier(this.db) : super(const AsyncValue.data(null));
+class ContactsNotifier extends Notifier<AsyncValue<void>> {
+  final int applicationId;
+  ContactsNotifier(this.applicationId);
 
-  Future<void> addContact(int applicationId, String? name, String? email, String? phone, String? role) async {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> addContact(String? name, String? email, String? phone, String? role) async {
+    final db = ref.read(databaseProvider);
     await db.contactsDao.insertContact(ContactsCompanion.insert(
       applicationId: applicationId,
       name: drift.Value(name),
@@ -39,15 +43,15 @@ class ContactsNotifier extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> updateContact(Contact contact) async {
+    final db = ref.read(databaseProvider);
     await db.contactsDao.updateContact(contact.toCompanion(true));
   }
 
   Future<void> deleteContact(int id) async {
+    final db = ref.read(databaseProvider);
     await db.contactsDao.deleteContact(id);
   }
 }
 
-final contactsNotifierProvider = StateNotifierProvider.family.autoDispose<ContactsNotifier, AsyncValue<void>, int>((ref, applicationId) {
-  return ContactsNotifier(ref.watch(databaseProvider));
-});
+final contactsNotifierProvider = NotifierProvider.autoDispose.family<ContactsNotifier, AsyncValue<void>, int>((id) => ContactsNotifier(id));
 

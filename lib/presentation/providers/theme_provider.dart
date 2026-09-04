@@ -120,14 +120,15 @@ const obsidianDarkScheme = ColorScheme(
 
 final obsidianLightScheme = _neutralLightScheme(const Color(0xFF7C6AF7));
 
-class ThemeNotifier extends StateNotifier<ThemeState> {
-  final AppDatabase db;
-
-  ThemeNotifier(this.db) : super(ThemeState(themeMode: ThemeMode.system, seedColor: Colors.teal)) {
+class ThemeNotifier extends Notifier<ThemeState> {
+  @override
+  ThemeState build() {
     _loadTheme();
+    return ThemeState(themeMode: ThemeMode.system, seedColor: Colors.teal);
   }
 
   Future<void> _loadTheme() async {
+    final db = ref.read(databaseProvider);
     final modeStr = await db.settingsDao.getSettingByKey('themeMode');
     final colorStr = await db.settingsDao.getSettingByKey('themeColor');
     final presetStr = await db.settingsDao.getSettingByKey('themePreset');
@@ -150,6 +151,7 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
+    final db = ref.read(databaseProvider);
     state = state.copyWith(themeMode: mode);
     String modeString = 'system';
     if (mode == ThemeMode.light) modeString = 'light';
@@ -158,21 +160,20 @@ class ThemeNotifier extends StateNotifier<ThemeState> {
   }
 
   Future<void> setSeedColor(Color color) async {
+    final db = ref.read(databaseProvider);
     state = state.copyWith(seedColor: color, preset: ThemePreset.standard);
     await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themeColor', value: color.value.toString()));
     await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themePreset', value: 'standard'));
   }
 
   Future<void> setPreset(ThemePreset preset) async {
+    final db = ref.read(databaseProvider);
     state = state.copyWith(preset: preset);
     await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themePreset', value: preset.name));
   }
 }
 
-final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeState>((ref) {
-  final db = ref.watch(databaseProvider);
-  return ThemeNotifier(db);
-});
+final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(ThemeNotifier.new);
 
 // Helper exposed for use in app.dart
 ColorScheme buildDarkColorScheme(ThemeState state) {

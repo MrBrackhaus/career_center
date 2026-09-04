@@ -24,11 +24,15 @@ final documentsProvider = StreamProvider.family.autoDispose<List<Document>, int>
   return ref.watch(databaseProvider).documentsDao.watchDocumentsForApplication(applicationId);
 });
 
-class DocumentsNotifier extends StateNotifier<AsyncValue<void>> {
-  final AppDatabase db;
-  DocumentsNotifier(this.db) : super(const AsyncValue.data(null));
+class DocumentsNotifier extends Notifier<AsyncValue<void>> {
+  final int applicationId;
+  DocumentsNotifier(this.applicationId);
 
-  Future<void> addDocument(int applicationId, String fileName, String filePath, String fileType) async {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> addDocument(String fileName, String filePath, String fileType) async {
+    final db = ref.read(databaseProvider);
     await db.documentsDao.insertDocument(DocumentsCompanion.insert(
       applicationId: applicationId,
       fileName: fileName,
@@ -39,11 +43,10 @@ class DocumentsNotifier extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> deleteDocument(int id) async {
+    final db = ref.read(databaseProvider);
     await db.documentsDao.deleteDocument(id);
   }
 }
 
-final documentsNotifierProvider = StateNotifierProvider.family.autoDispose<DocumentsNotifier, AsyncValue<void>, int>((ref, applicationId) {
-  return DocumentsNotifier(ref.watch(databaseProvider));
-});
+final documentsNotifierProvider = NotifierProvider.autoDispose.family<DocumentsNotifier, AsyncValue<void>, int>((id) => DocumentsNotifier(id));
 

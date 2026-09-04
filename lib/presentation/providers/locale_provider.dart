@@ -4,20 +4,18 @@ import 'database_provider.dart';
 import '../../data/database/app_database.dart';
 import '../../data/database/daos/settings_dao.dart';
 
-final localeProvider = StateNotifierProvider<LocaleNotifier, Locale?>((ref) {
-  final db = ref.watch(databaseProvider);
-  return LocaleNotifier(db.settingsDao);
-});
+final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(LocaleNotifier.new);
 
-class LocaleNotifier extends StateNotifier<Locale?> {
-  final SettingsDao _settingsDao;
-
-  LocaleNotifier(this._settingsDao) : super(null) {
+class LocaleNotifier extends Notifier<Locale?> {
+  @override
+  Locale? build() {
     _loadLocale();
+    return null;
   }
 
   Future<void> _loadLocale() async {
-    final lang = await _settingsDao.getSettingByKey('app_language');
+    final settingsDao = ref.read(databaseProvider).settingsDao;
+    final lang = await settingsDao.getSettingByKey('app_language');
     if (lang != null && lang.value.isNotEmpty) {
       state = Locale(lang.value);
     } else {
@@ -27,12 +25,14 @@ class LocaleNotifier extends StateNotifier<Locale?> {
   }
 
   Future<void> setLocale(String languageCode) async {
-    await _settingsDao.insertOrUpdateSetting(Setting(key: 'app_language', value: languageCode));
+    final settingsDao = ref.read(databaseProvider).settingsDao;
+    await settingsDao.insertOrUpdateSetting(Setting(key: 'app_language', value: languageCode));
     state = Locale(languageCode);
   }
   
   Future<void> clearLocale() async {
-    await _settingsDao.insertOrUpdateSetting(Setting(key: 'app_language', value: ''));
+    final settingsDao = ref.read(databaseProvider).settingsDao;
+    await settingsDao.insertOrUpdateSetting(Setting(key: 'app_language', value: ''));
     state = null;
   }
 }

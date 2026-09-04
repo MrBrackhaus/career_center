@@ -47,11 +47,9 @@ class DocumentAnalysisState {
 }
 
 /// Notifier für die Dokumentenanalyse mit ML-Integration.
-class DocumentIntelligenceNotifier extends StateNotifier<DocumentAnalysisState> {
-  final DocumentIntelligenceService _service;
-
-  DocumentIntelligenceNotifier(this._service)
-      : super(const DocumentAnalysisState());
+class DocumentIntelligenceNotifier extends Notifier<DocumentAnalysisState> {
+  @override
+  DocumentAnalysisState build() => const DocumentAnalysisState();
 
   /// Analysiert ein Dokument (PDF-Text, E-Mail-Body, etc.).
   Future<ExtractionResult?> analyzeDocument(
@@ -62,7 +60,7 @@ class DocumentIntelligenceNotifier extends StateNotifier<DocumentAnalysisState> 
     state = state.copyWith(isAnalyzing: true, errorMessage: null);
 
     try {
-      final result = await _service.analyzeDocument(
+      final result = await ref.read(documentIntelligenceServiceProvider).analyzeDocument(
         text,
         source: source,
         metadata: metadata,
@@ -84,7 +82,7 @@ class DocumentIntelligenceNotifier extends StateNotifier<DocumentAnalysisState> 
     if (lastResult == null || lastResult.rawText.isEmpty) return;
 
     try {
-      await _service.learnFromCorrection(lastResult.rawText, correctType);
+      await ref.read(documentIntelligenceServiceProvider).learnFromCorrection(lastResult.rawText, correctType);
     } catch (e) {
       // Stilles Fehlschlagen – Learning ist optional
     }
@@ -92,7 +90,7 @@ class DocumentIntelligenceNotifier extends StateNotifier<DocumentAnalysisState> 
 
   /// Setzt das ML-Modell auf den Ausgangszustand zurück.
   Future<void> resetModel() async {
-    await _service.resetModel();
+    await ref.read(documentIntelligenceServiceProvider).resetModel();
   }
 }
 
@@ -103,8 +101,5 @@ final documentIntelligenceServiceProvider = Provider<DocumentIntelligenceService
 
 /// Provider für den DocumentIntelligenceNotifier.
 final documentIntelligenceProvider =
-    StateNotifierProvider<DocumentIntelligenceNotifier, DocumentAnalysisState>((ref) {
-  final service = ref.watch(documentIntelligenceServiceProvider);
-  return DocumentIntelligenceNotifier(service);
-});
+    NotifierProvider<DocumentIntelligenceNotifier, DocumentAnalysisState>(DocumentIntelligenceNotifier.new);
 

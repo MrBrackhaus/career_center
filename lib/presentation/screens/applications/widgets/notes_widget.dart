@@ -89,7 +89,7 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
 
   void _addNote() {
     if (_controller.text.trim().isEmpty) return;
-    ref.read(notesNotifierProvider(widget.applicationId).notifier).addNote(widget.applicationId, _controller.text.trim());
+    ref.read(notesNotifierProvider(widget.applicationId).notifier).addNote(_controller.text.trim());
     _controller.clear();
   }
 }

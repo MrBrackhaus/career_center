@@ -36,7 +36,7 @@ class ApplicationStats {
 }
 
 final statsProvider = Provider<ApplicationStats>((ref) {
-  final applications = ref.watch(applicationsProvider).valueOrNull ?? [];
+  final applications = ref.watch(applicationsProvider).value ?? [];
   
   int open = 0;
   int rejected = 0;

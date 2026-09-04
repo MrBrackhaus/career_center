@@ -24,11 +24,15 @@ final notesProvider = StreamProvider.family.autoDispose<List<Note>, int>((ref, a
   return ref.watch(databaseProvider).notesDao.watchNotesForApplication(applicationId);
 });
 
-class NotesNotifier extends StateNotifier<AsyncValue<void>> {
-  final AppDatabase db;
-  NotesNotifier(this.db) : super(const AsyncValue.data(null));
+class NotesNotifier extends Notifier<AsyncValue<void>> {
+  final int applicationId;
+  NotesNotifier(this.applicationId);
 
-  Future<void> addNote(int applicationId, String text) async {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
+
+  Future<void> addNote(String text) async {
+    final db = ref.read(databaseProvider);
     await db.notesDao.insertNote(NotesCompanion.insert(
       applicationId: applicationId,
       content: text,
@@ -37,11 +41,10 @@ class NotesNotifier extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> deleteNote(int id) async {
+    final db = ref.read(databaseProvider);
     await db.notesDao.deleteNote(id);
   }
 }
 
-final notesNotifierProvider = StateNotifierProvider.family.autoDispose<NotesNotifier, AsyncValue<void>, int>((ref, applicationId) {
-  return NotesNotifier(ref.watch(databaseProvider));
-});
+final notesNotifierProvider = NotifierProvider.autoDispose.family<NotesNotifier, AsyncValue<void>, int>((id) => NotesNotifier(id));
 

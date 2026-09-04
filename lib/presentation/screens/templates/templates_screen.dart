@@ -25,6 +25,7 @@ import 'dart:convert';
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../editor/template_editor_screen.dart';
 
 class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
@@ -321,11 +322,11 @@ bool _initializedTone = false;
                       }
 
                       void _createNewTemplate() {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const _TemplateEditorPage(template: null))).then((_) => _loadTemplates());
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const TemplateEditorScreen(template: null))).then((_) => _loadTemplates());
                       }
 
                       void _editTemplate(Template template) {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => _TemplateEditorPage(template: template))).then((_) => _loadTemplates());
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => TemplateEditorScreen(template: template))).then((_) => _loadTemplates());
                       }
 
                       void _deleteTemplate(Template template) async {
@@ -350,106 +351,4 @@ Tonalität: $tone''';
                       }
                     }
 
-                    class _TemplateEditorPage extends ConsumerStatefulWidget {
-                      final Template? template;
-                      const _TemplateEditorPage({this.template});
 
-                      @override
-                      ConsumerState<_TemplateEditorPage> createState() => _TemplateEditorPageState();
-                    }
-
-                    class _TemplateEditorPageState extends ConsumerState<_TemplateEditorPage> {
-                      late quill.QuillController _controller;
-                      bool _hasChanges = false;
-                      final _nameController = TextEditingController();
-
-                      @override
-                      void initState() {
-                        super.initState();
-                        _nameController.text = widget.template?.name ?? '';
-                        quill.Document document;
-                        if (widget.template?.content?.isNotEmpty == true) {
-                          try {
-                            final decoded = jsonDecode(widget.template!.content!);
-                            document = quill.Document.fromJson(decoded);
-                          } catch (e) {
-                            document = quill.Document()..insert(0, widget.template!.content!);
-                          }
-                        } else {
-                          document = quill.Document();
-                        }
-                        _controller = quill.QuillController(
-                          document: document,
-                          selection: const TextSelection.collapsed(offset: 0),
-                        );
-                        _controller.addListener(() {
-                          if (!_hasChanges) setState(() => _hasChanges = true);
-                        });
-                        _nameController.addListener(() {
-                          if (!_hasChanges) setState(() => _hasChanges = true);
-                        });
-                      }
-
-                      @override
-                      void dispose() {
-                        _controller.dispose();
-                        _nameController.dispose();
-                        super.dispose();
-                      }
-
-                      void _save() async {
-                        final content = jsonEncode(_controller.document.toDelta().toJson());
-                        final name = _nameController.text.isNotEmpty ? _nameController.text : 'Neue Vorlage';
-                        final db = ref.read(databaseProvider);
-                        if (widget.template == null) {
-                          final newTemplate = TemplatesCompanion(
-                            name: drift.Value(name),
-                            type: const drift.Value('anschreiben'),
-                            content: drift.Value(content),
-                            createdAt: drift.Value(DateTime.now()),
-                          );
-                          await db.templatesDao.insertTemplate(newTemplate);
-                        } else {
-                          final template = TemplatesCompanion(
-                            id: drift.Value(widget.template!.id),
-                            name: drift.Value(name),
-                            type: drift.Value(widget.template!.type),
-                            content: drift.Value(content),
-                          );
-                          await db.templatesDao.updateTemplate(template);
-                        }
-                        if (mounted) Navigator.pop(context);
-                      }
-
-                      @override
-                      Widget build(BuildContext context) {
-                        return Scaffold(
-                          appBar: AppBar(
-                            title: TextField(
-                              controller: _nameController,
-                              decoration: const InputDecoration(border: InputBorder.none, hintText: 'Vorlagenname'),
-                              style: const TextStyle(color: Colors.white, fontSize: 20),
-                            ),
-                            actions: [
-                              if (_hasChanges)
-                                IconButton(icon: const Icon(Icons.save), onPressed: _save),
-                            ],
-                          ),
-                          body: Column(
-                            children: [
-                              quill.QuillSimpleToolbar(
-                                controller: _controller,
-                              ),
-                              Expanded(
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  child: quill.QuillEditor.basic(
-                                    controller: _controller,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    }

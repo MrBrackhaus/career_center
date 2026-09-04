@@ -2,14 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/companion_server_service.dart';
 import '../providers/database_provider.dart';
 
-class CompanionNotifier extends StateNotifier<CompanionEvent?> {
-  final CompanionServerService _service;
-  final Ref _ref;
+class CompanionNotifier extends Notifier<CompanionEvent?> {
+  late final CompanionServerService _service;
 
-  CompanionNotifier(this._ref) 
-    : _service = CompanionServerService(), 
-      super(null) {
+  @override
+  CompanionEvent? build() {
+    _service = CompanionServerService();
     _init();
+    
+    ref.onDispose(() {
+      _service.stop();
+    });
+    
+    return null;
   }
 
   void _init() {
@@ -18,7 +23,7 @@ class CompanionNotifier extends StateNotifier<CompanionEvent?> {
     };
     // Wire up profile fetcher so /api/profile can read settings from the DB
     _service.settingsFetcher = (String key) async {
-      final db = _ref.read(databaseProvider);
+      final db = ref.read(databaseProvider);
       final setting = await db.settingsDao.getSettingByKey(key);
       return setting?.value;
     };
@@ -28,14 +33,6 @@ class CompanionNotifier extends StateNotifier<CompanionEvent?> {
   void clearEvent() {
     state = null;
   }
-  
-  @override
-  void dispose() {
-    _service.stop();
-    super.dispose();
-  }
 }
 
-final companionProvider = StateNotifierProvider<CompanionNotifier, CompanionEvent?>((ref) {
-  return CompanionNotifier(ref);
-});
+final companionProvider = NotifierProvider<CompanionNotifier, CompanionEvent?>(CompanionNotifier.new);

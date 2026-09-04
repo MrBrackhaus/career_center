@@ -48,7 +48,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
           Consumer(
             builder: (context, ref, child) {
               final syncState = ref.watch(imapSyncProvider);
-              final lastSync = ref.watch(imapLastSyncProvider).valueOrNull;
+              final lastSync = ref.watch(imapLastSyncProvider).value;
               
               String lastSyncText = '';
               if (lastSync != null) {

@@ -22,9 +22,9 @@ import '../../data/database/app_database.dart';
 
 final imapServiceProvider = Provider((ref) => ImapService());
 
-class ImapSyncNotifier extends StateNotifier<AsyncValue<void>> {
-  final Ref ref;
-  ImapSyncNotifier(this.ref) : super(const AsyncValue.data(null));
+class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() => const AsyncValue.data(null);
 
   Future<int> syncEmails() async {
     state = const AsyncValue.loading();
@@ -83,9 +83,7 @@ final imapLastSyncProvider = FutureProvider.autoDispose<DateTime?>((ref) async {
   return null;
 });
 
-final imapSyncProvider = StateNotifierProvider<ImapSyncNotifier, AsyncValue<void>>((ref) {
-  return ImapSyncNotifier(ref);
-});
+final imapSyncProvider = NotifierProvider<ImapSyncNotifier, AsyncValue<void>>(ImapSyncNotifier.new);
 
 final applicationEmailsProvider = FutureProvider.family.autoDispose((ref, int applicationId) async {
   final db = ref.watch(databaseProvider);

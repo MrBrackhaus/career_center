@@ -99,7 +99,7 @@ class ContactsWidget extends ConsumerWidget {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen')),
           TextButton(
             onPressed: () {
-              ref.read(contactsNotifierProvider(appId).notifier).addContact(appId, nameCtrl.text, emailCtrl.text, phoneCtrl.text, roleCtrl.text);
+              ref.read(contactsNotifierProvider(appId).notifier).addContact(nameCtrl.text, emailCtrl.text, phoneCtrl.text, roleCtrl.text);
               Navigator.pop(ctx);
             },
             child: Text(AppLocalizations.of(context)!.formBasicSave),

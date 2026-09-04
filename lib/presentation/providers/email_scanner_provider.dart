@@ -56,9 +56,9 @@ class EmailScannerState {
   }
 }
 
-class EmailScannerNotifier extends StateNotifier<EmailScannerState> {
-  final Ref ref;
-  EmailScannerNotifier(this.ref) : super(const EmailScannerState());
+class EmailScannerNotifier extends Notifier<EmailScannerState> {
+  @override
+  EmailScannerState build() => const EmailScannerState();
 
   Future<void> loadEmails() async {
     state = state.copyWith(isLoading: true, error: null);
@@ -165,7 +165,6 @@ class EmailScannerNotifier extends StateNotifier<EmailScannerState> {
 }
 
 final emailScannerProvider =
-    StateNotifierProvider.autoDispose<EmailScannerNotifier, EmailScannerState>((ref) {
-  return EmailScannerNotifier(ref);
-});
+    NotifierProvider.autoDispose<EmailScannerNotifier, EmailScannerState>(
+        EmailScannerNotifier.new);
 

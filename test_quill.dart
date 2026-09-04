@@ -1,0 +1,1 @@
+﻿import 'package:flutter_quill/flutter_quill.dart'; import 'package:flutter_quill_extensions/flutter_quill_extensions.dart'; void main(){ QuillSimpleToolbarConfig(embedButtons: FlutterQuillEmbeds.toolbarButtons()); }

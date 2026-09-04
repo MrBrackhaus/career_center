@@ -115,6 +115,7 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
             child: quill.QuillSimpleToolbar(
               controller: _controller,
               config: quill.QuillSimpleToolbarConfig(
+                embedButtons: FlutterQuillEmbeds.toolbarButtons(),
                 showFontFamily: false,
                 showFontSize: true,
                 showBoldButton: true,

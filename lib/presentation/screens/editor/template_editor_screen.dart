@@ -6,6 +6,7 @@ import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'dart:convert';
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
+import '../../providers/editor_provider.dart';
 
 class TemplateEditorScreen extends ConsumerStatefulWidget {
   final Template? template;
@@ -60,28 +61,24 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
   }
 
   void _save() async {
-    final content = jsonEncode(_controller.document.toDelta().toJson());
-    final name = _nameController.text.isNotEmpty ? _nameController.text : 'Neue Vorlage';
-    final db = ref.read(databaseProvider);
+    final deltaJson = _controller.document.toDelta().toJson();
+    final name = _nameController.text;
     
-    if (widget.template == null) {
-      final newTemplate = TemplatesCompanion(
-        name: drift.Value(name),
-        type: const drift.Value('anschreiben'),
-        content: drift.Value(content),
-        createdAt: drift.Value(DateTime.now()),
-      );
-      await db.templatesDao.insertTemplate(newTemplate);
-    } else {
-      final template = TemplatesCompanion(
-        id: drift.Value(widget.template!.id),
-        name: drift.Value(name),
-        type: drift.Value(widget.template!.type),
-        content: drift.Value(content),
-      );
-      await db.templatesDao.updateTemplate(template);
+    await ref.read(templateEditorProvider.notifier).saveTemplate(
+      existingId: widget.template?.id,
+      name: name,
+      type: widget.template?.type ?? 'anschreiben',
+      deltaJson: deltaJson,
+    );
+    
+    if (mounted) {
+      final state = ref.read(templateEditorProvider);
+      if (state.errorMessage == null) {
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+      }
     }
-    if (mounted) Navigator.pop(context);
   }
 
   void _insertVariable(String variable) {

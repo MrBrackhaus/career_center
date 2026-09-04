@@ -55,6 +55,8 @@ class Applications extends Table {
   TextColumn get jobUrl            => text().nullable()();
   TextColumn get companyUrl        => text().nullable()();
   TextColumn get customFields      => text().nullable()(); // JSON string for dynamic columns
+  TextColumn get coverLetterContent => text().nullable()(); // JSON string for Quill document
+  TextColumn get jobDescriptionText => text().nullable()(); // Plain text for ATS analysis
   DateTimeColumn get createdAt     => dateTime().nullable()();
   DateTimeColumn get updatedAt     => dateTime().nullable()();
 }
@@ -124,7 +126,7 @@ class AppDatabase extends _$AppDatabase {
   ContactsDao get contactsDao => ContactsDao(this);
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -147,6 +149,10 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 6) {
           await m.createTable(contacts);
+        }
+        if (from < 7) {
+          await m.addColumn(applications, applications.coverLetterContent);
+          await m.addColumn(applications, applications.jobDescriptionText);
         }
       },
     );

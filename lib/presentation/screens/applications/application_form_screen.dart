@@ -583,6 +583,17 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           actions: [
             if (isEditing)
               Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: FilledButton.tonalIcon(
+                  icon: const Icon(Icons.edit_document),
+                  label: const Text('Anschreiben'),
+                  onPressed: () {
+                    context.push('/applications/${widget.applicationId}/editor');
+                  },
+                ),
+              ),
+            if (isEditing)
+              Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: FilledButton.icon(
                   onPressed: () async {

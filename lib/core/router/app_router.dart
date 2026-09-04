@@ -25,6 +25,7 @@ import '../../presentation/screens/applications/applications_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/widgets/responsive_shell.dart';
 import '../../presentation/screens/applications/application_form_screen.dart';
+import '../../presentation/screens/editor/application_editor_screen.dart';
 import '../../presentation/screens/reports/jobcenter_report_screen.dart';
 import '../../presentation/screens/reports/weekly_report_screen.dart';
 import '../../presentation/screens/templates/templates_screen.dart';
@@ -88,6 +89,13 @@ final appRouter = GoRouter(
               builder: (context, state) {
                 final id = int.parse(state.pathParameters['id']!);
                 return ApplicationFormScreen(applicationId: id);
+              },
+            ),
+            GoRoute(
+              path: ':id/editor',
+              builder: (context, state) {
+                final id = int.parse(state.pathParameters['id']!);
+                return ApplicationEditorScreen(applicationId: id);
               },
             ),
           ],

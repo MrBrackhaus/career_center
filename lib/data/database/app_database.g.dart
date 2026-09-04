@@ -1,20 +1,3 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'app_database.dart';
@@ -277,6 +260,28 @@ class $ApplicationsTable extends Applications
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _coverLetterContentMeta =
+      const VerificationMeta('coverLetterContent');
+  @override
+  late final GeneratedColumn<String> coverLetterContent =
+      GeneratedColumn<String>(
+        'cover_letter_content',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _jobDescriptionTextMeta =
+      const VerificationMeta('jobDescriptionText');
+  @override
+  late final GeneratedColumn<String> jobDescriptionText =
+      GeneratedColumn<String>(
+        'job_description_text',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -324,6 +329,8 @@ class $ApplicationsTable extends Applications
     jobUrl,
     companyUrl,
     customFields,
+    coverLetterContent,
+    jobDescriptionText,
     createdAt,
     updatedAt,
   ];
@@ -508,6 +515,24 @@ class $ApplicationsTable extends Applications
         ),
       );
     }
+    if (data.containsKey('cover_letter_content')) {
+      context.handle(
+        _coverLetterContentMeta,
+        coverLetterContent.isAcceptableOrUnknown(
+          data['cover_letter_content']!,
+          _coverLetterContentMeta,
+        ),
+      );
+    }
+    if (data.containsKey('job_description_text')) {
+      context.handle(
+        _jobDescriptionTextMeta,
+        jobDescriptionText.isAcceptableOrUnknown(
+          data['job_description_text']!,
+          _jobDescriptionTextMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -621,6 +646,14 @@ class $ApplicationsTable extends Applications
         DriftSqlType.string,
         data['${effectivePrefix}custom_fields'],
       ),
+      coverLetterContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cover_letter_content'],
+      ),
+      jobDescriptionText: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}job_description_text'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -662,6 +695,8 @@ class Application extends DataClass implements Insertable<Application> {
   final String? jobUrl;
   final String? companyUrl;
   final String? customFields;
+  final String? coverLetterContent;
+  final String? jobDescriptionText;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   const Application({
@@ -688,6 +723,8 @@ class Application extends DataClass implements Insertable<Application> {
     this.jobUrl,
     this.companyUrl,
     this.customFields,
+    this.coverLetterContent,
+    this.jobDescriptionText,
     this.createdAt,
     this.updatedAt,
   });
@@ -752,6 +789,12 @@ class Application extends DataClass implements Insertable<Application> {
     }
     if (!nullToAbsent || customFields != null) {
       map['custom_fields'] = Variable<String>(customFields);
+    }
+    if (!nullToAbsent || coverLetterContent != null) {
+      map['cover_letter_content'] = Variable<String>(coverLetterContent);
+    }
+    if (!nullToAbsent || jobDescriptionText != null) {
+      map['job_description_text'] = Variable<String>(jobDescriptionText);
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
@@ -823,6 +866,12 @@ class Application extends DataClass implements Insertable<Application> {
       customFields: customFields == null && nullToAbsent
           ? const Value.absent()
           : Value(customFields),
+      coverLetterContent: coverLetterContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(coverLetterContent),
+      jobDescriptionText: jobDescriptionText == null && nullToAbsent
+          ? const Value.absent()
+          : Value(jobDescriptionText),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -861,6 +910,12 @@ class Application extends DataClass implements Insertable<Application> {
       jobUrl: serializer.fromJson<String?>(json['jobUrl']),
       companyUrl: serializer.fromJson<String?>(json['companyUrl']),
       customFields: serializer.fromJson<String?>(json['customFields']),
+      coverLetterContent: serializer.fromJson<String?>(
+        json['coverLetterContent'],
+      ),
+      jobDescriptionText: serializer.fromJson<String?>(
+        json['jobDescriptionText'],
+      ),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
     );
@@ -892,6 +947,8 @@ class Application extends DataClass implements Insertable<Application> {
       'jobUrl': serializer.toJson<String?>(jobUrl),
       'companyUrl': serializer.toJson<String?>(companyUrl),
       'customFields': serializer.toJson<String?>(customFields),
+      'coverLetterContent': serializer.toJson<String?>(coverLetterContent),
+      'jobDescriptionText': serializer.toJson<String?>(jobDescriptionText),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
     };
@@ -921,6 +978,8 @@ class Application extends DataClass implements Insertable<Application> {
     Value<String?> jobUrl = const Value.absent(),
     Value<String?> companyUrl = const Value.absent(),
     Value<String?> customFields = const Value.absent(),
+    Value<String?> coverLetterContent = const Value.absent(),
+    Value<String?> jobDescriptionText = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
   }) => Application(
@@ -953,6 +1012,12 @@ class Application extends DataClass implements Insertable<Application> {
     jobUrl: jobUrl.present ? jobUrl.value : this.jobUrl,
     companyUrl: companyUrl.present ? companyUrl.value : this.companyUrl,
     customFields: customFields.present ? customFields.value : this.customFields,
+    coverLetterContent: coverLetterContent.present
+        ? coverLetterContent.value
+        : this.coverLetterContent,
+    jobDescriptionText: jobDescriptionText.present
+        ? jobDescriptionText.value
+        : this.jobDescriptionText,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
     updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
   );
@@ -1007,6 +1072,12 @@ class Application extends DataClass implements Insertable<Application> {
       customFields: data.customFields.present
           ? data.customFields.value
           : this.customFields,
+      coverLetterContent: data.coverLetterContent.present
+          ? data.coverLetterContent.value
+          : this.coverLetterContent,
+      jobDescriptionText: data.jobDescriptionText.present
+          ? data.jobDescriptionText.value
+          : this.jobDescriptionText,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1038,6 +1109,8 @@ class Application extends DataClass implements Insertable<Application> {
           ..write('jobUrl: $jobUrl, ')
           ..write('companyUrl: $companyUrl, ')
           ..write('customFields: $customFields, ')
+          ..write('coverLetterContent: $coverLetterContent, ')
+          ..write('jobDescriptionText: $jobDescriptionText, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1069,6 +1142,8 @@ class Application extends DataClass implements Insertable<Application> {
     jobUrl,
     companyUrl,
     customFields,
+    coverLetterContent,
+    jobDescriptionText,
     createdAt,
     updatedAt,
   ]);
@@ -1099,6 +1174,8 @@ class Application extends DataClass implements Insertable<Application> {
           other.jobUrl == this.jobUrl &&
           other.companyUrl == this.companyUrl &&
           other.customFields == this.customFields &&
+          other.coverLetterContent == this.coverLetterContent &&
+          other.jobDescriptionText == this.jobDescriptionText &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1127,6 +1204,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
   final Value<String?> jobUrl;
   final Value<String?> companyUrl;
   final Value<String?> customFields;
+  final Value<String?> coverLetterContent;
+  final Value<String?> jobDescriptionText;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
   const ApplicationsCompanion({
@@ -1153,6 +1232,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     this.jobUrl = const Value.absent(),
     this.companyUrl = const Value.absent(),
     this.customFields = const Value.absent(),
+    this.coverLetterContent = const Value.absent(),
+    this.jobDescriptionText = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   });
@@ -1180,6 +1261,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     this.jobUrl = const Value.absent(),
     this.companyUrl = const Value.absent(),
     this.customFields = const Value.absent(),
+    this.coverLetterContent = const Value.absent(),
+    this.jobDescriptionText = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
   }) : company = Value(company),
@@ -1208,6 +1291,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     Expression<String>? jobUrl,
     Expression<String>? companyUrl,
     Expression<String>? customFields,
+    Expression<String>? coverLetterContent,
+    Expression<String>? jobDescriptionText,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
   }) {
@@ -1235,6 +1320,10 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
       if (jobUrl != null) 'job_url': jobUrl,
       if (companyUrl != null) 'company_url': companyUrl,
       if (customFields != null) 'custom_fields': customFields,
+      if (coverLetterContent != null)
+        'cover_letter_content': coverLetterContent,
+      if (jobDescriptionText != null)
+        'job_description_text': jobDescriptionText,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
     });
@@ -1264,6 +1353,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     Value<String?>? jobUrl,
     Value<String?>? companyUrl,
     Value<String?>? customFields,
+    Value<String?>? coverLetterContent,
+    Value<String?>? jobDescriptionText,
     Value<DateTime?>? createdAt,
     Value<DateTime?>? updatedAt,
   }) {
@@ -1291,6 +1382,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
       jobUrl: jobUrl ?? this.jobUrl,
       companyUrl: companyUrl ?? this.companyUrl,
       customFields: customFields ?? this.customFields,
+      coverLetterContent: coverLetterContent ?? this.coverLetterContent,
+      jobDescriptionText: jobDescriptionText ?? this.jobDescriptionText,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -1368,6 +1461,12 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     if (customFields.present) {
       map['custom_fields'] = Variable<String>(customFields.value);
     }
+    if (coverLetterContent.present) {
+      map['cover_letter_content'] = Variable<String>(coverLetterContent.value);
+    }
+    if (jobDescriptionText.present) {
+      map['job_description_text'] = Variable<String>(jobDescriptionText.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1403,6 +1502,8 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
           ..write('jobUrl: $jobUrl, ')
           ..write('companyUrl: $companyUrl, ')
           ..write('customFields: $customFields, ')
+          ..write('coverLetterContent: $coverLetterContent, ')
+          ..write('jobDescriptionText: $jobDescriptionText, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3648,6 +3749,8 @@ typedef $$ApplicationsTableCreateCompanionBuilder =
       Value<String?> jobUrl,
       Value<String?> companyUrl,
       Value<String?> customFields,
+      Value<String?> coverLetterContent,
+      Value<String?> jobDescriptionText,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
     });
@@ -3676,6 +3779,8 @@ typedef $$ApplicationsTableUpdateCompanionBuilder =
       Value<String?> jobUrl,
       Value<String?> companyUrl,
       Value<String?> customFields,
+      Value<String?> coverLetterContent,
+      Value<String?> jobDescriptionText,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
     });
@@ -3881,6 +3986,16 @@ class $$ApplicationsTableFilterComposer
 
   ColumnFilters<String> get customFields => $composableBuilder(
     column: $table.customFields,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coverLetterContent => $composableBuilder(
+    column: $table.coverLetterContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get jobDescriptionText => $composableBuilder(
+    column: $table.jobDescriptionText,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4119,6 +4234,16 @@ class $$ApplicationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get coverLetterContent => $composableBuilder(
+    column: $table.coverLetterContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get jobDescriptionText => $composableBuilder(
+    column: $table.jobDescriptionText,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4231,6 +4356,16 @@ class $$ApplicationsTableAnnotationComposer
 
   GeneratedColumn<String> get customFields => $composableBuilder(
     column: $table.customFields,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get coverLetterContent => $composableBuilder(
+    column: $table.coverLetterContent,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get jobDescriptionText => $composableBuilder(
+    column: $table.jobDescriptionText,
     builder: (column) => column,
   );
 
@@ -4397,6 +4532,8 @@ class $$ApplicationsTableTableManager
                 Value<String?> jobUrl = const Value.absent(),
                 Value<String?> companyUrl = const Value.absent(),
                 Value<String?> customFields = const Value.absent(),
+                Value<String?> coverLetterContent = const Value.absent(),
+                Value<String?> jobDescriptionText = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => ApplicationsCompanion(
@@ -4423,6 +4560,8 @@ class $$ApplicationsTableTableManager
                 jobUrl: jobUrl,
                 companyUrl: companyUrl,
                 customFields: customFields,
+                coverLetterContent: coverLetterContent,
+                jobDescriptionText: jobDescriptionText,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
@@ -4451,6 +4590,8 @@ class $$ApplicationsTableTableManager
                 Value<String?> jobUrl = const Value.absent(),
                 Value<String?> companyUrl = const Value.absent(),
                 Value<String?> customFields = const Value.absent(),
+                Value<String?> coverLetterContent = const Value.absent(),
+                Value<String?> jobDescriptionText = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
               }) => ApplicationsCompanion.insert(
@@ -4477,13 +4618,15 @@ class $$ApplicationsTableTableManager
                 jobUrl: jobUrl,
                 companyUrl: companyUrl,
                 customFields: customFields,
+                coverLetterContent: coverLetterContent,
+                jobDescriptionText: jobDescriptionText,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$ApplicationsTable, Application>(table),
                   $$ApplicationsTableReferences(db, table, e),
                 ),
               )
@@ -4782,7 +4925,16 @@ class $$TemplatesTableTableManager
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$TemplatesTable, Template>(table),
+                  BaseReferences<_$AppDatabase, $TemplatesTable, Template>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -4907,7 +5059,16 @@ class $$SettingsTableTableManager
             Value<int> rowid = const Value.absent(),
           }) => SettingsCompanion.insert(key: key, value: value, rowid: rowid),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$SettingsTable, Setting>(table),
+                  BaseReferences<_$AppDatabase, $SettingsTable, Setting>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),
@@ -5233,8 +5394,10 @@ class $$EmailsTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$EmailsTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$EmailsTable, Email>(table),
+                  $$EmailsTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback: ({applicationId = false}) {
@@ -5518,8 +5681,10 @@ class $$NotesTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$NotesTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$NotesTable, Note>(table),
+                  $$NotesTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback: ({applicationId = false}) {
@@ -5846,7 +6011,7 @@ class $$DocumentsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$DocumentsTable, Document>(table),
                   $$DocumentsTableReferences(db, table, e),
                 ),
               )
@@ -6172,7 +6337,7 @@ class $$ContactsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$ContactsTable, Contact>(table),
                   $$ContactsTableReferences(db, table, e),
                 ),
               )
@@ -6253,4 +6418,3 @@ class $AppDatabaseManager {
   $$ContactsTableTableManager get contacts =>
       $$ContactsTableTableManager(_db, _db.contacts);
 }
-

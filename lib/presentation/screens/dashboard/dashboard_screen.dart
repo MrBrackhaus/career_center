@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../../providers/streak_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/applications_provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -28,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
             body: TabBarView(
               children: [
-                _buildWeeklyTab(context, applications, stats),
+                _buildWeeklyTab(context, applications, stats, ref.watch(streakProvider)),
                 _buildOverallTab(context, applications, stats),
               ],
             ),
@@ -40,7 +41,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyTab(BuildContext context, List<Application> applications, ApplicationStats stats) {
+  Widget _buildWeeklyTab(BuildContext context, List<Application> applications, ApplicationStats stats, AsyncValue<StreakData> streakAsync) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final startOfWeek = today.subtract(Duration(days: today.weekday - 1));

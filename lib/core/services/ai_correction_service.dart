@@ -2,9 +2,9 @@
 import 'package:http/http.dart' as http;
 
 class AiCorrectionService {
-  final String _baseUrl = 'http://localhost:11434/api/generate';
+  
 
-  Future<String?> correctText(String text, String language) async {
+  Future<String?> correctText(String text, String language, String baseUrl, String modelName) async {
     if (text.trim().isEmpty) return null;
 
     String prompt;
@@ -23,10 +23,10 @@ class AiCorrectionService {
 
     try {
       final response = await http.post(
-        Uri.parse(_baseUrl),
+        Uri.parse(baseUrl),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'model': 'llama3',
+          'model': modelName,
           'prompt': prompt,
           'stream': false
         }),

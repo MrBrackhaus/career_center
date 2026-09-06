@@ -1,5 +1,6 @@
 ﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/ai_correction_service.dart';
+import '../../presentation/providers/database_provider.dart';
 
 final aiCorrectionServiceProvider = Provider<AiCorrectionService>((ref) {
   return AiCorrectionService();
@@ -29,7 +30,13 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
     final service = ref.read(aiCorrectionServiceProvider);
     state = state.copyWith(isCorrecting: true, clearError: true);
     try {
-      final corrected = await service.correctText(text, language);
+      final db = ref.read(databaseProvider);
+      final urlSetting = await db.settingsDao.getSettingByKey('aiServerUrl');
+      final modelSetting = await db.settingsDao.getSettingByKey('aiModelName');
+      final baseUrl = urlSetting?.value ?? 'http://localhost:11434/api/generate';
+      final modelName = modelSetting?.value ?? 'llama3.2';
+      
+      final corrected = await service.correctText(text, language, baseUrl, modelName);
       state = state.copyWith(isCorrecting: false);
       return corrected;
     } catch (e) {

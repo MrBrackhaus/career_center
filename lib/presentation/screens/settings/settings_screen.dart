@@ -56,6 +56,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _skillsController = TextEditingController();
   final _linkedinController = TextEditingController();
   final _websiteController = TextEditingController();
+  final _weeklyGoalController = TextEditingController();
+  final _aiUrlController = TextEditingController();
+  final _aiModelController = TextEditingController();
   String _selectedPreset = 'IT / Software';
   String _spellCheckLanguage = 'de';
   String _customColumns = '';
@@ -109,6 +112,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final imapPortSetting = await dao.getSettingByKey('imapPort');
     final smtpServerSetting = await dao.getSettingByKey('smtpServer');
     final smtpPortSetting = await dao.getSettingByKey('smtpPort');
+    final weeklyGoalSetting = await dao.getSettingByKey('weeklyApplicationGoal');
+    _weeklyGoalController.text = weeklyGoalSetting?.value ?? '5';
+    final aiUrlSetting = await dao.getSettingByKey('aiServerUrl');
+    _aiUrlController.text = aiUrlSetting?.value ?? 'http://localhost:11434/api/generate';
+    final aiModelSetting = await dao.getSettingByKey('aiModelName');
+    _aiModelController.text = aiModelSetting?.value ?? 'llama3.2';
     final imapEmailSetting = await dao.getSettingByKey('imapEmail');
     
     if (mounted) {

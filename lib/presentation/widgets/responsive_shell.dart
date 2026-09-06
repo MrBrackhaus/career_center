@@ -9,8 +9,46 @@ import 'package:go_router/go_router.dart';
 import '../../l10n/app_localizations.dart';
 import '../../core/router/app_router.dart'; // for jobcenterModeProvider
 import 'feedback_dialog.dart';
+import '../../presentation/providers/streak_provider.dart';
 
 class ResponsiveShell extends ConsumerWidget {
+  Widget _buildStreakBadge(AsyncValue<StreakData> streakAsync, bool expanded) {
+    return streakAsync.when(
+      data: (data) {
+        if (data.streakCount == 0 && data.currentWeekCount == 0) return const SizedBox.shrink();
+        return Tooltip(
+          message: 'Ziel: ${data.weeklyGoal} Bewerbungen/Woche\nAktuell: ${data.currentWeekCount} Bewerbungen',
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: data.isGoalMetThisWeek ? Colors.orange.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey.withOpacity(0.3),
+              )
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.local_fire_department, color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey, size: 20),
+                if (expanded) const SizedBox(width: 8),
+                if (expanded) Text(
+                  '${data.streakCount} Wochen',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+  
   Widget _buildAppLogo(BuildContext context, {double size = 32}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
@@ -30,6 +68,7 @@ class ResponsiveShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final streakAsync = ref.watch(streakProvider);
     final location = GoRouterState.of(context).uri.path;
     final jobcenterMode = ref.watch(jobcenterModeProvider).value ?? false;
 
@@ -155,7 +194,10 @@ class ResponsiveShell extends ConsumerWidget {
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
+                                    _buildStreakBadge(streakAsync, false),
+                                    const SizedBox(height: 16),
                                     IconButton(
+
                                       icon: const Icon(Icons.rate_review_outlined),
                                       onPressed: () {
                                         showDialog(
@@ -226,10 +268,16 @@ class ResponsiveShell extends ConsumerWidget {
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
+                                      _buildStreakBadge(streakAsync, true),
+                                      const SizedBox(height: 16),
                                       InkWell(
+
                                         onTap: () {
+
                                           showDialog(
+
                                             context: context,
+
                                             builder: (context) => const FeedbackDialog(),
                                           );
                                         },

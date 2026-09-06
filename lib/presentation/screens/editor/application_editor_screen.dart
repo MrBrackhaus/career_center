@@ -13,7 +13,9 @@ import '../../providers/database_provider.dart';
 import '../../../core/utils/keyword_extractor.dart';
 import '../../../core/utils/spell_checker.dart';
 import 'editor_ruler.dart';
-import 'package:http/http.dart' as http;
+import '../../providers/ai_correction_provider.dart';
+import '../../providers/document_template_provider.dart';
+import 'package:intl/intl.dart';
 
 class ApplicationEditorScreen extends ConsumerStatefulWidget {
   final int? applicationId;
@@ -41,7 +43,7 @@ class _ApplicationEditorScreenState
   double _marginLeft = 94.0;
   double _marginRight = 75.0;
   
-  bool _isCorrecting = false;
+  bool ref.watch(aiCorrectionProvider).isCorrecting = false;
   Timer? _spellCheckTimer;
   bool _isSpellChecking = false;
   List<Map<String, dynamic>> _grammarWarnings = [];
@@ -58,46 +60,32 @@ class _ApplicationEditorScreenState
   Future<void> _runAiCorrection() async {
     final text = _controller.document.toPlainText();
     if (text.trim().isEmpty) return;
-    setState(() => _isCorrecting = true);
-    try {
-      final url = Uri.parse('http://localhost:11434/api/generate');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'model': 'llama3', 'prompt': 'Du bist ein extrem pingeliger, professioneller Lektor für deutsche Bewerbungen. Deine EINZIGE Aufgabe ist es, ECHTE Rechtschreib- und Grammatikfehler im folgenden Text zu korrigieren. ÄNDERE NIEMALS den Schreibstil, ersetze KEINE korrekt geschriebenen Wörter durch Synonyme und erfinde keine Fakten! Behalte den originalen Text exakt so bei, bis auf die korrigierten Fehler. Antworte AUSSCHLIESSLICH mit dem korrigierten Text, ohne Einleitung, ohne Kommentare, ohne Formatierungen:\n\n' + text, 'stream': false}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final correctedText = data['response']?.toString().trim();
-        if (correctedText != null && correctedText.isNotEmpty) {
-          final length = _controller.document.length;
-          _controller.replaceText(0, length - 1, correctedText, const TextSelection.collapsed(offset: 0));
-        }
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('KI-Fehler: $e')));
-    } finally {
-      if (mounted) setState(() => _isCorrecting = false);
+    
+    final lang = SpellChecker.currentLanguage;
+    final correctedText = await ref.read(aiCorrectionProvider.notifier).correctText(text, lang);
+    
+    if (correctedText != null && correctedText.isNotEmpty && mounted) {
+      final length = _controller.document.length;
+      _controller.replaceText(0, length - 1, correctedText, const TextSelection.collapsed(offset: 0));
     }
   }
 
 
-  void _insertHeader() {
-    final date = "${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}";
-    final headerText = "Max Mustermann * Musterstrasse 1 * 12345 Musterstadt\n\n"
-        "${_application?.company ?? 'Unternehmensname'}\n"
-        "Personalabteilung\n"
-        "Musterstrasse 2\n"
-        "12345 Musterstadt\n\n\n\n"
-        "Musterstadt, den $date\n\n"
-        "Bewerbung als ${_application?.position ?? 'Position'}\n\n"
-        "Sehr geehrte Damen und Herren,\n\n";
-
+  Future<void> _insertHeader() async {
+    final lang = SpellChecker.currentLanguage;
+    final templateService = ref.read(documentTemplateServiceProvider);
+    final headerText = await templateService.generateHeader(_application, lang);
+    
     _controller.document.insert(0, headerText);
     
-    final subjectStart = headerText.indexOf('Bewerbung als');
+    String subjectPrefix = 'Bewerbung als ';
+    if (lang == 'en') subjectPrefix = 'Application for ';
+    else if (lang == 'fr') subjectPrefix = 'Candidature pour le poste de ';
+    else if (lang == 'es') subjectPrefix = 'Candidatura para el puesto de ';
+    
+    final subjectStart = headerText.indexOf(subjectPrefix);
     final subjectEnd = headerText.indexOf('\n', subjectStart);
-    if (subjectStart != -1) {
+    if (subjectStart != -1 && subjectEnd != -1) {
       _controller.formatText(subjectStart, subjectEnd - subjectStart, quill.Attribute.bold);
     }
   }
@@ -255,6 +243,12 @@ class _ApplicationEditorScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AiCorrectionState>(aiCorrectionProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.error!)));
+      }
+    });
+
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -390,7 +384,7 @@ class _ApplicationEditorScreenState
         ),
         const SizedBox(height: 8),
         FilledButton.icon(
-          onPressed: _insertHeader,
+          onPressed: () => _insertHeader(),
           icon: const Icon(Icons.contact_mail),
           label: const Text('Briefkopf einfuegen'),
           style: FilledButton.styleFrom(
@@ -775,8 +769,8 @@ class _ApplicationEditorScreenState
               ),
               const SizedBox(width: 16),
               FilledButton.icon(
-                onPressed: _isCorrecting ? null : _runAiCorrection,
-                icon: _isCorrecting 
+                onPressed: ref.watch(aiCorrectionProvider).isCorrecting ? null : _runAiCorrection,
+                icon: ref.watch(aiCorrectionProvider).isCorrecting 
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
                     : const Icon(Icons.auto_fix_high),
                 label: const Text('KI Korrektur'),

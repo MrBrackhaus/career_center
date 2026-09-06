@@ -5,12 +5,12 @@ import 'package:flutter/foundation.dart';
 class SpellChecker {
   static LinkedHashSet<String> _dictionary = LinkedHashSet<String>();
   static bool _isLoaded = false;
-  static String _currentLanguage = 'de';
+  static String _currentLanguage = 'en';
   static LinkedHashSet<String> _userDictionary = LinkedHashSet<String>();
 
   /// Available languages with display names
   static const Map<String, String> availableLanguages = {
-    'de': 'Deutsch',
+    // 'de': 'Deutsch', // Removed due to GPL license
     'en': 'English',
     'fr': 'Fran\u00e7ais',
     'es': 'Espa\u00f1ol',
@@ -38,7 +38,7 @@ class SpellChecker {
 
   static String get currentLanguage => _currentLanguage;
 
-  static Future<void> loadDictionary({String language = 'de'}) async {
+  static Future<void> loadDictionary({String language = 'en'}) async {
     if (_isLoaded && _currentLanguage == language) return;
 
     _currentLanguage = language;

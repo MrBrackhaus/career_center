@@ -57,7 +57,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _linkedinController = TextEditingController();
   final _websiteController = TextEditingController();
   String _selectedPreset = 'IT / Software';
-  String _spellCheckLanguage = 'de';
+  String _spellCheckLanguage = 'en';
   String _customColumns = '';
   final _customColumnsController = TextEditingController();
   

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:drift/drift.dart' as drift;
+import '../../data/database/app_database.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:shelf/shelf.dart';
@@ -25,6 +28,8 @@ class CompanionServerService {
   HttpServer? _server;
   Function(CompanionEvent)? onEvent;
   SettingsFetcher? settingsFetcher;
+  AppDatabase? database;
+  final List<StreamController<String>> _mcpClients = [];
   
   final int port = 47392;
 
@@ -60,6 +65,106 @@ class CompanionServerService {
           headers: _corsHeaders(),
         );
       }
+    });
+
+    // MCP SSE Endpoint
+    router.get('/mcp/sse', (Request request) {
+      final controller = StreamController<String>();
+      _mcpClients.add(controller);
+      controller.onCancel = () {
+        _mcpClients.remove(controller);
+        controller.close();
+      };
+      controller.add('event: endpoint\ndata: /mcp/message\n\n');
+      final stream = controller.stream.map((event) => utf8.encode(event));
+      return Response.ok(stream, headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      }..addAll(_corsHeaders()), context: {'shelf.io.buffer_output': false});
+    });
+
+    // MCP Message Endpoint
+    router.post('/mcp/message', (Request request) async {
+      final payload = await request.readAsString();
+      if (payload.isEmpty) return Response.ok('OK');
+      try {
+        final req = jsonDecode(payload) as Map<String, dynamic>;
+        final method = req['method'];
+        final id = req['id'];
+        
+        Map<String, dynamic>? response;
+        if (method == 'initialize') {
+          response = {
+            'jsonrpc': '2.0',
+            'id': id,
+            'result': {
+              'protocolVersion': '2024-11-05',
+              'capabilities': {'tools': {}},
+              'serverInfo': {'name': 'CareerCenterMCP', 'version': '1.0.0'}
+            }
+          };
+        } else if (method == 'tools/list') {
+          response = {
+            'jsonrpc': '2.0',
+            'id': id,
+            'result': {
+              'tools': [
+                {
+                  'name': 'get_applications',
+                  'description': 'Liest alle Bewerbungen aus der Datenbank',
+                  'inputSchema': {'type': 'object', 'properties': {}}
+                },
+                {
+                  'name': 'update_cover_letter',
+                  'description': 'Aktualisiert das Anschreiben einer Bewerbung',
+                  'inputSchema': {
+                    'type': 'object',
+                    'properties': {
+                      'app_id': {'type': 'integer'},
+                      'content': {'type': 'string'}
+                    },
+                    'required': ['app_id', 'content']
+                  }
+                }
+              ]
+            }
+          };
+        } else if (method == 'tools/call') {
+          final params = req['params'] as Map<String, dynamic>? ?? {};
+          final toolName = params['name'];
+          final args = params['arguments'] as Map<String, dynamic>? ?? {};
+          
+          if (toolName == 'get_applications' && database != null) {
+            final apps = await database!.applicationsDao.watchAllApplications().first;
+            final list = apps.map((a) => {'id': a.id, 'company': a.company, 'position': a.position}).toList();
+            response = {'jsonrpc': '2.0', 'id': id, 'result': {'content': [{'type': 'text', 'text': jsonEncode(list)}]}};
+          } else if (toolName == 'update_cover_letter' && database != null) {
+            final appId = args['app_id'] as int;
+            final content = args['content'] as String;
+            String finalContent = content;
+            if (!content.trim().startsWith('[')) finalContent = jsonEncode([{'insert': content + '\n'}]);
+            
+            final app = await database!.applicationsDao.getApplicationById(appId);
+            if (app != null) {
+              await database!.applicationsDao.updateApplication(app.toCompanion(true).copyWith(coverLetterContent: drift.Value(finalContent)));
+              response = {'jsonrpc': '2.0', 'id': id, 'result': {'content': [{'type': 'text', 'text': 'Erfolg'}]}};
+            } else {
+              response = {'jsonrpc': '2.0', 'id': id, 'error': {'code': -32601, 'message': 'Bewerbung nicht gefunden'}};
+            }
+          }
+        }
+        
+        if (response != null) {
+          final jsonStr = jsonEncode(response);
+          for (var client in _mcpClients) {
+            client.add('event: message\ndata: $jsonStr\n\n');
+          }
+        }
+      } catch (e) {
+        print('MCP Error: $e');
+      }
+      return _corsResponse('Accepted');
     });
 
     // GET /api/profile — returns user profile as JSON for browser extension autofill

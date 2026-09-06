@@ -1,3 +1,4 @@
+import 'database_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/companion_server_service.dart';
 import '../providers/database_provider.dart';
@@ -22,7 +23,8 @@ class CompanionNotifier extends Notifier<CompanionEvent?> {
       state = event;
     };
     // Wire up profile fetcher so /api/profile can read settings from the DB
-    _service.settingsFetcher = (String key) async {
+    _service.database = ref.read(databaseProvider);
+      _service.settingsFetcher = (String key) async {
       final db = ref.read(databaseProvider);
       final setting = await db.settingsDao.getSettingByKey(key);
       return setting?.value;

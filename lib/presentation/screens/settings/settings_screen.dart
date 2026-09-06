@@ -36,6 +36,7 @@ import '../../../core/utils/pdf_generator.dart';
 import '../../../core/utils/csv_generator.dart';
 import '../../../data/database/app_database.dart';
 import '../../../core/services/imap_service.dart';
+import '../../../core/utils/spell_checker.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -56,6 +57,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _linkedinController = TextEditingController();
   final _websiteController = TextEditingController();
   String _selectedPreset = 'IT / Software';
+  String _spellCheckLanguage = 'de';
   String _customColumns = '';
   final _customColumnsController = TextEditingController();
   
@@ -100,6 +102,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final presetSetting   = await dao.getSettingByKey('profilePreset');
     final colsSetting = await dao.getSettingByKey('customColumns');
     final jobcenterSetting = await dao.getSettingByKey('jobcenterMode');
+    final spellLangSetting = await dao.getSettingByKey('spellCheckLanguage');
     
     final imapProviderSetting = await dao.getSettingByKey('imapProvider');
     final imapServerSetting = await dao.getSettingByKey('imapServer');
@@ -125,6 +128,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _customColumns = colsSetting?.value ?? _presets[_selectedPreset]!;
         _customColumnsController.text = _customColumns;
         _jobcenterMode = jobcenterSetting?.value == 'true';
+        _spellCheckLanguage = spellLangSetting?.value ?? 'de';
         
         _selectedMailProvider = imapProviderSetting?.value ?? 'Manuell';
         _imapServerController.text = imapServerSetting?.value ?? '';
@@ -298,6 +302,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               }
                             },
                           );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Sprache der Rechtschreibpr\u00fcfung',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.spellcheck),
+                        ),
+                        value: _spellCheckLanguage,
+                        items: SpellChecker.availableLanguages.entries.map((e) =>
+                          DropdownMenuItem(value: e.key, child: Text(e.value)),
+                        ).toList(),
+                        onChanged: (val) async {
+                          if (val == null) return;
+                          setState(() => _spellCheckLanguage = val);
+                          final dao = ref.read(databaseProvider).settingsDao;
+                          await dao.insertOrUpdateSetting(Setting(key: 'spellCheckLanguage', value: val));
+                          // Reload dictionary in background
+                          SpellChecker.loadDictionary(language: val);
                         },
                       ),
                       const SizedBox(height: 32),

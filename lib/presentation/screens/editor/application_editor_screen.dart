@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -10,11 +11,14 @@ import 'dart:async';
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
 import '../../../core/utils/keyword_extractor.dart';
+import '../../../core/utils/spell_checker.dart';
+import 'editor_ruler.dart';
+import 'package:http/http.dart' as http;
 
 class ApplicationEditorScreen extends ConsumerStatefulWidget {
-  final int applicationId;
+  final int? applicationId;
 
-  const ApplicationEditorScreen({super.key, required this.applicationId});
+  const ApplicationEditorScreen({super.key, this.applicationId});
 
   @override
   ConsumerState<ApplicationEditorScreen> createState() =>
@@ -29,6 +33,18 @@ class _ApplicationEditorScreenState
   bool _isSaving = false;
   Timer? _autoSaveTimer;
   Application? _application;
+  final FocusNode _editorFocusNode = FocusNode();
+
+  // Margins
+  double _marginTop = 170.0;
+  double _marginBottom = 75.0;
+  double _marginLeft = 94.0;
+  double _marginRight = 75.0;
+  
+  bool _isCorrecting = false;
+  Timer? _spellCheckTimer;
+  bool _isSpellChecking = false;
+  List<Map<String, dynamic>> _grammarWarnings = [];
 
   // Design / Typography State
   String _currentFontFamily = 'Arial';
@@ -39,6 +55,59 @@ class _ApplicationEditorScreenState
   List<String> _missingKeywords = [];
   List<String> _foundKeywords = [];
 
+  Future<void> _runAiCorrection() async {
+    final text = _controller.document.toPlainText();
+    if (text.trim().isEmpty) return;
+    setState(() => _isCorrecting = true);
+    try {
+      final url = Uri.parse('http://localhost:11434/api/generate');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'model': 'llama3', 'prompt': 'Du bist ein extrem pingeliger, professioneller Lektor für deutsche Bewerbungen. Deine EINZIGE Aufgabe ist es, ECHTE Rechtschreib- und Grammatikfehler im folgenden Text zu korrigieren. ÄNDERE NIEMALS den Schreibstil, ersetze KEINE korrekt geschriebenen Wörter durch Synonyme und erfinde keine Fakten! Behalte den originalen Text exakt so bei, bis auf die korrigierten Fehler. Antworte AUSSCHLIESSLICH mit dem korrigierten Text, ohne Einleitung, ohne Kommentare, ohne Formatierungen:\n\n' + text, 'stream': false}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final correctedText = data['response']?.toString().trim();
+        if (correctedText != null && correctedText.isNotEmpty) {
+          final length = _controller.document.length;
+          _controller.replaceText(0, length - 1, correctedText, const TextSelection.collapsed(offset: 0));
+        }
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('KI-Fehler: $e')));
+    } finally {
+      if (mounted) setState(() => _isCorrecting = false);
+    }
+  }
+
+
+  void _insertHeader() {
+    final date = "${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}";
+    final headerText = "Max Mustermann * Musterstrasse 1 * 12345 Musterstadt\n\n"
+        "${_application?.company ?? 'Unternehmensname'}\n"
+        "Personalabteilung\n"
+        "Musterstrasse 2\n"
+        "12345 Musterstadt\n\n\n\n"
+        "Musterstadt, den $date\n\n"
+        "Bewerbung als ${_application?.position ?? 'Position'}\n\n"
+        "Sehr geehrte Damen und Herren,\n\n";
+
+    _controller.document.insert(0, headerText);
+    
+    final subjectStart = headerText.indexOf('Bewerbung als');
+    final subjectEnd = headerText.indexOf('\n', subjectStart);
+    if (subjectStart != -1) {
+      _controller.formatText(subjectStart, subjectEnd - subjectStart, quill.Attribute.bold);
+    }
+  }
+
+  void _insertFooter() {
+    final len = _controller.document.length;
+    final footer = "\n\nMit freundlichen Gruessen\n\n\nMax Mustermann\n\nAnlagen";
+    _controller.document.insert(len - 1, footer);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,8 +116,27 @@ class _ApplicationEditorScreenState
 
   Future<void> _loadApplication() async {
     final db = ref.read(databaseProvider);
+    final langSetting = await db.settingsDao.getSettingByKey('spellCheckLanguage');
+    SpellChecker.loadDictionary(language: langSetting?.value ?? 'de');
+
+    if (widget.applicationId == null) {
+      _application = null;
+      _controller = quill.QuillController(
+        document: quill.Document(),
+        selection: const TextSelection.collapsed(offset: 0),
+        config: const quill.QuillControllerConfig(
+          clipboardConfig: quill.QuillClipboardConfig(
+            enableExternalRichPaste: false,
+          ),
+        ),
+      );
+      _attachControllerListener();
+      setState(() { _isLoading = false; });
+      _runAtsAnalysis();
+      return;
+    }
     final app = await db.applicationsDao.getApplicationById(
-      widget.applicationId,
+      widget.applicationId!,
     );
 
     if (app == null) {
@@ -72,17 +160,14 @@ class _ApplicationEditorScreenState
     _controller = quill.QuillController(
       document: document,
       selection: const TextSelection.collapsed(offset: 0),
+      config: const quill.QuillControllerConfig(
+        clipboardConfig: quill.QuillClipboardConfig(
+          enableExternalRichPaste: false,
+        ),
+      ),
     );
 
-    _controller.addListener(() {
-      if (!_hasChanges) setState(() => _hasChanges = true);
-      _runAtsAnalysis();
-
-      _autoSaveTimer?.cancel();
-      _autoSaveTimer = Timer(const Duration(seconds: 1), () {
-        if (_hasChanges) _save();
-      });
-    });
+    _attachControllerListener();
 
     setState(() {
       _isLoading = false;
@@ -92,29 +177,55 @@ class _ApplicationEditorScreenState
     _runAtsAnalysis();
   }
 
-  void _runAtsAnalysis() {
-    if (_application?.jobDescriptionText?.isNotEmpty == true) {
-      final requiredKeywords = KeywordExtractor.extractKeywords(
-        _application!.jobDescriptionText!,
-      );
-      final plainText = _controller.document.toPlainText();
-      final matched = KeywordExtractor.findMatchingKeywords(
-        plainText,
-        requiredKeywords,
-      );
+  void _attachControllerListener() {
+    _controller.addListener(() {
+      if (!_hasChanges) setState(() => _hasChanges = true);
 
-      setState(() {
-        _missingKeywords = requiredKeywords
-            .where((k) => !matched.contains(k))
-            .toList();
-        _foundKeywords = matched.toList();
+      // Debounce ALL analysis (keywords + spelling) so we never call
+      // setState during active typing → cursor stays stable.
+      _spellCheckTimer?.cancel();
+      _spellCheckTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (!mounted) return;
+        _runAtsAnalysis();
       });
+
+      _autoSaveTimer?.cancel();
+      _autoSaveTimer = Timer(const Duration(seconds: 2), () {
+        if (_hasChanges) _save();
+      });
+    });
+  }
+
+  void _runAtsAnalysis() {
+    final plainText = _controller.document.toPlainText();
+
+    List<String> newMissing = _missingKeywords;
+    List<String> newFound = _foundKeywords;
+
+    if (_application?.jobDescriptionText?.isNotEmpty == true) {
+      final requiredKeywords = KeywordExtractor.extractKeywords(_application!.jobDescriptionText!);
+      final matched = KeywordExtractor.findMatchingKeywords(plainText, requiredKeywords);
+      newMissing = requiredKeywords.where((k) => !matched.contains(k)).toList();
+      newFound = matched.toList();
     }
+
+    setState(() => _isSpellChecking = true);
+    SpellChecker.checkText(plainText).then((issues) {
+      if (!mounted) return;
+      setState(() {
+        _missingKeywords = newMissing;
+        _foundKeywords = newFound;
+        _grammarWarnings = issues;
+        _isSpellChecking = false;
+      });
+    });
   }
 
   @override
   void dispose() {
     _autoSaveTimer?.cancel();
+    _spellCheckTimer?.cancel();
+    _editorFocusNode.dispose();
     if (!_isLoading) {
       _controller.dispose();
     }
@@ -122,12 +233,16 @@ class _ApplicationEditorScreenState
   }
 
   Future<void> _save() async {
+    if (widget.applicationId == null) {
+      setState(() { _hasChanges = false; _isSaving = false; });
+      return;
+    }
     setState(() => _isSaving = true);
     final content = jsonEncode(_controller.document.toDelta().toJson());
     final db = ref.read(databaseProvider);
 
     final companion = ApplicationsCompanion(
-      id: drift.Value(widget.applicationId),
+      id: drift.Value(widget.applicationId!),
       coverLetterContent: drift.Value(content),
     );
 
@@ -260,6 +375,39 @@ class _ApplicationEditorScreenState
         ),
         const Divider(height: 32),
         const Text(
+          'Seitenränder',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        _buildMarginSlider('Oben', _marginTop, (v) => setState(() => _marginTop = v), 37.8, 226.8), // 10mm - 60mm
+        _buildMarginSlider('Unten', _marginBottom, (v) => setState(() => _marginBottom = v), 37.8, 151.2), // 10mm - 40mm
+        _buildMarginSlider('Links', _marginLeft, (v) => setState(() => _marginLeft = v), 37.8, 151.2),
+        _buildMarginSlider('Rechts', _marginRight, (v) => setState(() => _marginRight = v), 37.8, 151.2),
+        const Divider(height: 32),
+        const Text(
+          'DIN 5008 Elemente',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: _insertHeader,
+          icon: const Icon(Icons.contact_mail),
+          label: const Text('Briefkopf einfuegen'),
+          style: FilledButton.styleFrom(
+            alignment: Alignment.centerLeft,
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton.icon(
+          onPressed: _insertFooter,
+          icon: const Icon(Icons.draw),
+          label: const Text('Unterschrift & Fusszeile einfuegen'),
+          style: FilledButton.styleFrom(
+            alignment: Alignment.centerLeft,
+          ),
+        ),
+        const Divider(height: 32),
+        const Text(
           'Farbe (Akzent)',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
@@ -310,6 +458,25 @@ class _ApplicationEditorScreenState
     });
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Design angewendet!')));
+  }
+
+  Widget _buildMarginSlider(String label, double value, ValueChanged<double> onChanged, double min, double max) {
+    final mm = (value / 3.78).round();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text('$label: $mm mm', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ),
+        Slider(
+          value: value,
+          min: min,
+          max: max,
+          onChanged: onChanged,
+        ),
+      ],
+    );
   }
 
   Widget _buildDesignCard(
@@ -542,41 +709,80 @@ class _ApplicationEditorScreenState
               bottom: BorderSide(color: colorScheme.outlineVariant),
             ),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: quill.QuillSimpleToolbar(
-            controller: _controller,
-            config: quill.QuillSimpleToolbarConfig(
-              embedButtons: FlutterQuillEmbeds.toolbarButtons(),
-              showFontFamily: false,
-              showFontSize: true,
-              showBoldButton: true,
-              showItalicButton: true,
-              showUnderLineButton: true,
-              showStrikeThrough: false,
-              showInlineCode: false,
-              showColorButton: true,
-              showBackgroundColorButton: false,
-              showClearFormat: true,
-              showAlignmentButtons: true,
-              showLeftAlignment: true,
-              showCenterAlignment: true,
-              showRightAlignment: true,
-              showJustifyAlignment: true,
-              showHeaderStyle: false,
-              showListNumbers: true,
-              showListBullets: true,
-              showListCheck: false,
-              showCodeBlock: false,
-              showQuote: false,
-              showIndent: false,
-              showLink: false,
-              showUndo: true,
-              showRedo: true,
-              showDirection: false,
-              showSearchButton: false,
-              showSubscript: false,
-              showSuperscript: false,
-            ),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: quill.QuillSimpleToolbar(
+                  controller: _controller,
+                  config: quill.QuillSimpleToolbarConfig(
+                    embedButtons: FlutterQuillEmbeds.toolbarButtons(),
+                    buttonOptions: quill.QuillSimpleToolbarButtonOptions(
+                      fontSize: quill.QuillToolbarFontSizeButtonOptions(
+                        items: {
+                          '8pt': '8.0',
+                          '9pt': '9.0',
+                          '10pt': '10.0',
+                          '11pt': '11.0',
+                          '12pt': '12.0',
+                          '14pt': '14.0',
+                          '18pt': '18.0',
+                          '24pt': '24.0',
+                          'Löschen': '0',
+                        },
+                      ),
+                      fontFamily: quill.QuillToolbarFontFamilyButtonOptions(
+                        items: {
+                          'Arial': 'Arial',
+                          'Times New Roman': 'Times New Roman',
+                          'Courier': 'Courier',
+                          'Roboto': 'Roboto',
+                          'Löschen': 'Clear',
+                        },
+                      ),
+                    ),
+                    showFontFamily: true,
+                    showFontSize: true,
+                    showBoldButton: true,
+                    showItalicButton: true,
+                    showUnderLineButton: true,
+                    showStrikeThrough: true,
+                    showInlineCode: false,
+                    showColorButton: true,
+                    showBackgroundColorButton: true,
+                    showClearFormat: true,
+                    showAlignmentButtons: true,
+                    showLeftAlignment: true,
+                    showCenterAlignment: true,
+                    showRightAlignment: true,
+                    showJustifyAlignment: true,
+                    showHeaderStyle: false,
+                    showListNumbers: true,
+                    showListBullets: true,
+                    showListCheck: false,
+                    showCodeBlock: false,
+                    showQuote: false,
+                    showIndent: true,
+                    showLink: true,
+                    showUndo: true,
+                    showRedo: true,
+                    showDirection: false,
+                    showSearchButton: false,
+                    showSubscript: false,
+                    showSuperscript: false,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              FilledButton.icon(
+                onPressed: _isCorrecting ? null : _runAiCorrection,
+                icon: _isCorrecting 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                    : const Icon(Icons.auto_fix_high),
+                label: const Text('KI Korrektur'),
+                style: FilledButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
+              ),
+            ],
           ),
         ),
 
@@ -587,14 +793,27 @@ class _ApplicationEditorScreenState
               return SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Center(
-                  child: Container(
-                    width: 794, // A4 width at 96 DPI
-                    constraints: BoxConstraints(
-                      minHeight: 1123, // A4 height at 96 DPI
-                    ),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface,
-                      borderRadius: BorderRadius.circular(2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Vertical Ruler
+                      const Padding(
+                        padding: EdgeInsets.only(top: 24), // Offset for the horizontal ruler height
+                        child: EditorRuler(isHorizontal: false, length: 1123, offset: 170),
+                      ),
+                      Column(
+                        children: [
+                          // Horizontal Ruler
+                          const EditorRuler(isHorizontal: true, length: 794, offset: 94),
+                          Container(
+                            width: 794, // A4 width at 96 DPI
+                            constraints: const BoxConstraints(
+                              minHeight: 1123, // A4 height at 96 DPI
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(2),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.15),
@@ -620,18 +839,23 @@ class _ApplicationEditorScreenState
                         height: _currentLineHeight,
                       ),
                       child: quill.QuillEditor.basic(
+                        focusNode: _editorFocusNode,
                         controller: _controller,
                         config: quill.QuillEditorConfig(
                           placeholder: 'Schreibe hier dein Anschreiben...',
                           padding: EdgeInsets.zero,
                           embedBuilders: FlutterQuillEmbeds.editorBuilders(),
-                          autoFocus: false,
+                          autoFocus: true,
                           expands: false,
                           scrollable: false, // Let the SingleChildScrollView handle scrolling!
                         ),
                       ),
                     ),
                   ),
+                  ],
+                ),
+                ],
+                ),
                 ),
               );
             },
@@ -658,26 +882,116 @@ class _ApplicationEditorScreenState
             ),
           ),
           const Divider(height: 1),
-          if (_application?.jobDescriptionText == null ||
-              _application!.jobDescriptionText!.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.paste),
-                label: const Text('Stellenanzeige einfügen'),
-                onPressed: _pasteJobDescription,
-              ),
-            )
-          else ...[
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                const Text(
+                  'Rechtschreibung (Offline)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                if (_isSpellChecking)
+                  const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                else if (_grammarWarnings.isEmpty)
                   const Text(
-                    'Geforderte Skills',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
+                    'Keine Fehler gefunden.',
+                    style: TextStyle(color: Colors.green, fontSize: 12),
+                  )
+                else
+                  ..._grammarWarnings.map((w) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.error_outline, color: Colors.red),
+                        title: Text(w['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.wavy, decorationColor: Colors.red)),
+                        subtitle: Text(w['subtitle'] as String, style: const TextStyle(fontSize: 12)),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (c) => FutureBuilder<List<String>>(
+                              future: SpellChecker.getSuggestions(w['title'] as String),
+                              builder: (context, snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const AlertDialog(
+                                    content: Row(
+                                      children: [
+                                        CircularProgressIndicator(),
+                                        SizedBox(width: 16),
+                                        Text('Suche Vorschl\u00e4ge...'),
+                                      ],
+                                    ),
+                                  );
+                                }
+                                
+                                final suggestions = snapshot.data ?? [];
+                                return AlertDialog(
+                                  title: Text('Korrektur f\u00fcr "${w['title']}"'),
+                                  content: SizedBox(
+                                    width: double.maxFinite,
+                                    child: ListView(
+                                      shrinkWrap: true,
+                                      children: [
+                                        if (suggestions.isEmpty)
+                                          const Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: Text('Keine passenden W\u00f6rter gefunden.'),
+                                          )
+                                        else
+                                          ...suggestions.map((s) => ListTile(
+                                            title: Text(s),
+                                            trailing: const Icon(Icons.check_circle_outline, color: Colors.green),
+                                            onTap: () {
+                                              try {
+                                                _controller.replaceText(w['offset'] as int, w['length'] as int, s, null);
+                                                final plainText = _controller.document.toPlainText();
+                                                SpellChecker.checkText(plainText).then((issues) {
+                                                  if (mounted) setState(() { _grammarWarnings = issues; });
+                                                });
+                                              } catch (e) {
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Korrektur fehlgeschlagen.')));
+                                              }
+                                              Navigator.pop(context); // close dialog
+                                            },
+                                          )),
+                                        const Divider(),
+                                        ListTile(
+                                          leading: const Icon(Icons.visibility_off),
+                                          title: const Text('Wort ignorieren'),
+                                          onTap: () {
+                                            SpellChecker.ignoreWord(w['title'] as String);
+                                            final plainText = _controller.document.toPlainText();
+                                            SpellChecker.checkText(plainText).then((issues) {
+                                              if (mounted) setState(() { _grammarWarnings = issues; });
+                                            });
+                                            Navigator.pop(context); // close dialog
+                                          },
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen'))
+                                  ],
+                                );
+                              }
+                            )
+                          );
+                        },
+                        trailing: const Icon(Icons.chevron_right, size: 16),
+                      )),
+                const Divider(height: 32),
+                const Text(
+                  'Keywords (Stellenanzeige)',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                if (_application?.jobDescriptionText == null ||
+                    _application!.jobDescriptionText!.isEmpty)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.paste),
+                    label: const Text('Anzeige einfügen'),
+                    onPressed: _pasteJobDescription,
+                  )
+                else ...[
                   if (_foundKeywords.isEmpty && _missingKeywords.isEmpty)
                     const Text(
                       'Keine Keywords gefunden.',
@@ -691,28 +1005,10 @@ class _ApplicationEditorScreenState
                       (k) => _buildKeywordChip(context, k, false),
                     ),
                   ],
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Tonalitäts-Check',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  const ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(Icons.warning, color: Colors.orange),
-                    title: Text(
-                      'Veraltete Floskel',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                    subtitle: Text(
-                      '"Hiermit bewerbe ich mich..."',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
                 ],
-              ),
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
@@ -746,12 +1042,12 @@ class _ApplicationEditorScreenState
                 final db = ref.read(databaseProvider);
                 await db.applicationsDao.updateApplication(
                   ApplicationsCompanion(
-                    id: drift.Value(widget.applicationId),
+                    id: drift.Value(widget.applicationId!),
                     jobDescriptionText: drift.Value(ctrl.text.trim()),
                   ),
                 );
                 final updatedApp = await db.applicationsDao.getApplicationById(
-                  widget.applicationId,
+                  widget.applicationId!,
                 );
                 setState(() {
                   _application = updatedApp;

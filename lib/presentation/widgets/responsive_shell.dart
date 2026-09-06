@@ -80,6 +80,12 @@ class ResponsiveShell extends ConsumerWidget {
         selectedIcon: Icons.file_copy,
         path: '/templates',
       ),
+      _NavItem(
+        label: 'Freier Editor',
+        icon: Icons.edit_document,
+        selectedIcon: Icons.edit_document,
+        path: '/editor',
+      ),
     ];
 
     int currentIndex = navItems.indexWhere(

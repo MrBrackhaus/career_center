@@ -125,6 +125,10 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) => _fadeTransitionPage(context, state, const TemplatesScreen()),
         ),
         GoRoute(
+          path: '/editor',
+          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const ApplicationEditorScreen()),
+        ),
+        GoRoute(
           path: '/settings',
           pageBuilder: (context, state) => _fadeTransitionPage(context, state, const SettingsScreen()),
         ),

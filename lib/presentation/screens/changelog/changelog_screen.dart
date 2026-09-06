@@ -13,6 +13,39 @@ class ChangelogScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            'Version 0.7.0 Alpha',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 6. September 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🚀 Der neue Pro-Editor (A4-Canvas)', [
+            'Editor 2.0: Der komplette Texteditor wurde neu aufgebaut. Dokumente werden nun visuell als echtes A4-Blatt (Google Docs Style) dargestellt.',
+            'Visuelles Lineal (Ruler): Ein maßstabsgetreues Lineal am oberen und linken Rand hilft bei der perfekten DIN-5008-Formatierung (z.B. 45mm Rand oben).',
+            'Pro-Werkzeugleiste: Exakte Schriftgrößen (8pt, 10pt, 12pt) und professionelle Schriftarten (Roboto, Merriweather) können nun präzise gesetzt werden.',
+            'Bausteine & Design-Menü: Eine neue linke Seitenleiste erlaubt das Einfügen von Textbausteinen per Klick und die Live-Anpassung des Seiten-Layouts.',
+          ]),
+          _buildSection('🤖 KI & ATS-Integration', [
+            'Live Job-Fit (ATS): Die neue rechte Seitenleiste prüft das Dokument in Echtzeit auf wichtige Keywords aus der Stellenanzeige (inkl. fehlenden und gefundenen Keywords).',
+            'Intelligente Offline-Rechtschreibprüfung v2: Erkennt nun deutsche Beugungen (Suffix-Stripping) und Komposita. Fehler werden direkt im Editor markiert.',
+            'Offline-Korrekturmenü: Klick auf einen Fehler zeigt blitzschnelle, speichereffiziente Korrekturvorschläge (sortiert nach Häufigkeit).',
+            'Mehrsprachige Rechtschreibung: 12 neue, riesige Wörterbücher (Französisch, Spanisch, Türkisch, etc.) stehen in den Einstellungen komplett offline zur Verfügung.',
+            'KI-Lektorat: Der neue lila "KI Korrektur"-Button in der Toolbar nutzt lokales Llama 3 (Ollama), um Anschreiben perfekt umzuformulieren und Grammatikfehler vollautomatisch zu tilgen.',
+          ]),
+          _buildSection('🔌 Model Context Protocol (MCP)', [
+            'Die App fungiert nun als nativer MCP-Server! Externe KI-Agenten können via JSON-RPC über Port 47392 direkt mit der Datenbank kommunizieren.',
+            'Neue Tool-Routen: "get_applications" liest den Bewerbungsstand aus, "update_cover_letter" injiziert fertige Anschreiben direkt in den Editor.',
+          ]),
+          _buildSection('🛠️ Verbesserungen & Bugfixes', [
+            'Fokus-Bug behoben: Der Cursor springt beim schnellen Tippen nicht mehr weg. Analysen laufen flüssig im Hintergrund (Debouncing).',
+            'Sicheres Einfügen: Beim Einfügen von Texten (Strg+V) aus dem Browser werden externe Web-Formatierungen jetzt automatisch entfernt.',
+            'Englisch-Fallback in der Rechtschreibung deaktiviert, um treffsicherere deutsche Korrekturvorschläge zu garantieren.',
+          ]),
+          const Divider(height: 48),
+          const Text(
             'Version 0.6.0 Alpha',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),

@@ -19,15 +19,17 @@ class AiCorrectionState {
   }
 }
 
-class AiCorrectionNotifier extends StateNotifier<AiCorrectionState> {
-  final AiCorrectionService _service;
-
-  AiCorrectionNotifier(this._service) : super(AiCorrectionState());
+class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
+  @override
+  AiCorrectionState build() {
+    return AiCorrectionState();
+  }
 
   Future<String?> correctText(String text, String language) async {
+    final service = ref.read(aiCorrectionServiceProvider);
     state = state.copyWith(isCorrecting: true, clearError: true);
     try {
-      final corrected = await _service.correctText(text, language);
+      final corrected = await service.correctText(text, language);
       state = state.copyWith(isCorrecting: false);
       return corrected;
     } catch (e) {
@@ -37,7 +39,4 @@ class AiCorrectionNotifier extends StateNotifier<AiCorrectionState> {
   }
 }
 
-final aiCorrectionProvider = StateNotifierProvider<AiCorrectionNotifier, AiCorrectionState>((ref) {
-  final service = ref.watch(aiCorrectionServiceProvider);
-  return AiCorrectionNotifier(service);
-});
+final aiCorrectionProvider = NotifierProvider<AiCorrectionNotifier, AiCorrectionState>(AiCorrectionNotifier.new);

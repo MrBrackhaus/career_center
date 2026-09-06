@@ -43,7 +43,7 @@ class _ApplicationEditorScreenState
   double _marginLeft = 94.0;
   double _marginRight = 75.0;
   
-  bool ref.watch(aiCorrectionProvider).isCorrecting = false;
+  
   Timer? _spellCheckTimer;
   bool _isSpellChecking = false;
   List<Map<String, dynamic>> _grammarWarnings = [];

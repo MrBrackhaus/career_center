@@ -1,20 +1,3 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 class TextPreprocessor {
   static const Set<String> _stopWords = {
     'der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'aber', 'in', 'im', 'an', 'am', 'auf', 'aus', 'bei', 'mit', 'nach', 'seit', 'von', 'vor', 'zu', 'zum', 'zur', 'den', 'dem', 'des', 'er', 'sie', 'es', 'wir', 'ihr', 'ist', 'sind', 'war', 'hat', 'haben', 'wird', 'werden', 'kann', 'können', 'ich', 'mich', 'mir', 'uns', 'für', 'über', 'unter', 'nicht', 'auch', 'noch', 'nur', 'sehr', 'so', 'wie', 'als', 'wenn', 'dass', 'da', 'hier', 'dort', 'schon', 'doch', 'ja', 'nein', 'bitte', 'vielen', 'dank', 'gerne', 'freundlich', 'freundlichen', 'grüße', 'grüßen', 'etc',

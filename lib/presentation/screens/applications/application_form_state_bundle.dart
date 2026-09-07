@@ -18,6 +18,7 @@ class ApplicationFormStateBundle {
   final TextEditingController contactEmailController;
   final TextEditingController contactPhoneController;
   final TextEditingController addressController;
+  final TextEditingController jobDescriptionTextController;
   final Map<String, TextEditingController> customFieldControllers;
 
   final String status;
@@ -33,6 +34,7 @@ class ApplicationFormStateBundle {
 
   final VoidCallback onSave;
   final VoidCallback onAutoFillFromUrl;
+  final Function(String) onCoverLetterGenerated;
   final VoidCallback onAutoFillFromPdf;
   final Function(String) onStatusChange;
   final Function(DateTime?) onAppliedDateChange;
@@ -55,6 +57,7 @@ class ApplicationFormStateBundle {
     required this.contactEmailController,
     required this.contactPhoneController,
     required this.addressController,
+    required this.jobDescriptionTextController,
     required this.customFieldControllers,
     required this.status,
     required this.appliedDate,
@@ -67,6 +70,7 @@ class ApplicationFormStateBundle {
     required this.onMarkerToggled,
     required this.onSave,
     required this.onAutoFillFromUrl,
+    required this.onCoverLetterGenerated,
     required this.onAutoFillFromPdf,
     required this.onStatusChange,
     required this.onAppliedDateChange,

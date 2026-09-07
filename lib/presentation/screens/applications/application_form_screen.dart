@@ -88,6 +88,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final Map<String, TextEditingController> _customFieldControllers = {};
 
   String _status = 'offen';
+  String? _coverLetterContent;
   DateTime? _appliedDate;
   DateTime? _followUpDate;
   List<String> _activeCustomColumns = [];
@@ -206,6 +207,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       _companyController.text = app.company;
       _positionController.text = app.position;
       _status = app.status;
+      _coverLetterContent = app.coverLetterContent;
       _notesController.text = app.notes ?? '';
       _rejectionReasonController.text = app.rejectionReason ?? '';
       _appliedDate = app.appliedDate;
@@ -686,6 +688,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       contactEmailController: _contactEmailController,
       contactPhoneController: _contactPhoneController,
       addressController: _addressController,
+      jobDescriptionTextController: _jobDescriptionTextController,
       customFieldControllers: _customFieldControllers,
       status: _status,
       appliedDate: _appliedDate,
@@ -702,6 +705,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       },
       onSave: _save,
       onAutoFillFromUrl: _autoFillFromUrl,
+        onCoverLetterGenerated: (deltaJson) => setState(() => _coverLetterContent = deltaJson),
       onAutoFillFromPdf: _autoFillFromPdf,
       onStatusChange: (val) => setState(() => _status = val),
       onAppliedDateChange: (val) => setState(() => _appliedDate = val),
@@ -890,6 +894,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       address: drift.Value(_addressController.text.isEmpty ? null : _addressController.text),
       customFields: drift.Value(customFieldsJson),
       jobDescriptionText: drift.Value(_jobDescriptionTextController.text.isEmpty ? null : _jobDescriptionTextController.text),
+      coverLetterContent: drift.Value(_coverLetterContent),
     );
 
     int insertedId;

@@ -2,6 +2,7 @@ import '../../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:career_center/domain/models/extraction_result.dart';
 import 'package:career_center/domain/enums/document_type.dart';
+import 'ai_cover_letter_dialog.dart';
 import '../application_form_state_bundle.dart';
 
 class BasicDataTab extends StatelessWidget {
@@ -177,6 +178,44 @@ class BasicDataTab extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildField('Position', bundle.positionController, 'Position', isRequired: true),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: bundle.jobDescriptionTextController,
+              decoration: const InputDecoration(
+                labelText: 'Volltext der Stellenanzeige (für KI-Anschreiben)', 
+                border: OutlineInputBorder()
+              ),
+              maxLines: 6,
+              minLines: 3,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  if (bundle.jobDescriptionTextController.text.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte füge zuerst eine Stellenanzeige ein.')));
+                    return;
+                  }
+                  final success = await showDialog<bool>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => AiCoverLetterDialog(
+                      onCoverLetterGenerated: bundle.onCoverLetterGenerated,
+                      company: bundle.companyController.text,
+                      position: bundle.positionController.text,
+                      jobDescription: bundle.jobDescriptionTextController.text,
+                    ),
+                  );
+                  if (success == true) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Anschreiben generiert! Du findest es unter dem Reiter "Dokumente".'), backgroundColor: Colors.green));
+                  }
+                },
+                icon: const Icon(Icons.auto_awesome),
+                label: const Text('✨ KI-Anschreiben generieren', style: TextStyle(fontSize: 16)),
+              ),
+            ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: bundle.status,

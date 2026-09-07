@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../providers/database_provider.dart';
 import '../../../data/database/app_database.dart';
 
@@ -22,27 +23,39 @@ class _TutorialFlowState extends State<TutorialFlow> {
       'color': Colors.blue,
     },
     {
-      'icon': Icons.view_kanban_outlined,
-      'title': 'Die Candidate Journey',
-      'text': 'Organisiere deine Bewerbungen im intuitiven Kanban-Board. Verschiebe Karten per Drag & Drop zwischen den Phasen und verfolge deinen Erfolg im interaktiven Dashboard-Trichter.',
-      'color': Colors.purple,
+      'icon': Icons.edit_document,
+      'title': 'Dokumente & Freier Editor',
+      'text': 'Unter "Meine Dokumente" pflegst du Lebensläufe und Anschreiben. Importiere PDF-Originale (1:1 Übernahme) oder nutze den "Freien Editor" für pixelperfekte A4-Bewerbungsschreiben mit integrierter ATS-Prüfung.',
+      'color': Colors.indigo,
     },
     {
-      'icon': Icons.auto_awesome,
-      'title': 'Smarte KI & Chrome Extension',
-      'text': 'Spare extrem viel Zeit! Der JobTracker nutzt lokale KI, um PDFs zu scannen, Jobangebote auszulesen und dir direkt das Wichtigste zusammenzufassen - ganz ohne Cloud-Zwang.',
+      'icon': Icons.add_task,
+      'title': 'Bewerbungen: Manuell & Automatisch',
+      'text': 'Lege neue Bewerbungen manuell an, oder lass die App die Arbeit machen: Füge einfach eine Stellen-URL (z.B. Arbeitsagentur) ein oder lade ein Job-PDF hoch. Die App extrahiert automatisch alle wichtigen Metadaten.',
       'color': Colors.orange,
     },
     {
-      'icon': Icons.mark_email_read_outlined,
-      'title': 'Intelligenter E-Mail Sync',
-      'text': 'Verbinde dein IMAP/SMTP-Postfach: Sende Bewerbungen direkt aus der App und lass Antworten (wie Einladungen oder Absagen) automatisch erkennen und einsortieren!',
-      'color': Colors.redAccent,
+      'icon': Icons.smart_toy_outlined,
+      'title': 'KI-Workspace & Auto-Anschreiben',
+      'text': 'Nutze den integrierten lokalen LLM-Chat, um dich auf Interviews vorzubereiten. Mit nur einem Klick kann die KI in der Bewerbung ein passgenaues Anschreiben für dich formulieren - ohne Cloud-Zwang!',
+      'color': Colors.teal,
+    },
+    {
+      'icon': Icons.view_kanban_outlined,
+      'title': 'E-Mail Sync & Kanban Board',
+      'text': 'Versende Bewerbungen per E-Mail direkt aus der App. Verwalte den Status (z.B. "Interview") per Drag & Drop im Kanban-Board und werte deinen Erfolg im interaktiven Dashboard aus.',
+      'color': Colors.purple,
+    },
+    {
+      'icon': Icons.terminal,
+      'title': 'Antigravity & MCP-Integration',
+      'text': 'Für Profis: Der JobTracker fungiert als nativer Model Context Protocol (MCP) Server auf Port 47392! KI-Agenten wie Antigravity können so direkt auf deine Datenbank zugreifen, massenhaft Bewerbungen anlegen oder Anschreiben injizieren.',
+      'color': Colors.deepOrange,
     },
     {
       'icon': Icons.rocket_launch_outlined,
       'title': 'Startklar!',
-      'text': 'Bist du bereit? Lege jetzt deine erste Bewerbung an oder importiere Jobs mit der Chrome-Erweiterung.',
+      'text': 'Bist du bereit? Hinterlege in den Einstellungen deine lokale KI-Verbindung (Ollama) oder leg einfach direkt deine erste Bewerbung an!',
       'color': Colors.green,
     },
   ];
@@ -52,8 +65,8 @@ class _TutorialFlowState extends State<TutorialFlow> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Container(
-        width: 600,
-        height: 500,
+        width: 650,
+        height: 550,
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
@@ -82,9 +95,8 @@ class _TutorialFlowState extends State<TutorialFlow> {
                       const SizedBox(height: 32),
                       Text(
                         page['title'] as String,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 16),
@@ -92,6 +104,7 @@ class _TutorialFlowState extends State<TutorialFlow> {
                         page['text'] as String,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          height: 1.5,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -129,7 +142,10 @@ class _TutorialFlowState extends State<TutorialFlow> {
                         onPressed: () async {
                           final db = ref.read(databaseProvider);
                           await db.settingsDao.insertOrUpdateSetting(
-                            const Setting(key: 'has_seen_tutorial', value: 'true'),
+                            const Setting(
+                              key: 'has_seen_tutorial',
+                              value: 'true',
+                            ),
                           );
                           if (context.mounted) Navigator.of(context).pop();
                         },
@@ -146,7 +162,7 @@ class _TutorialFlowState extends State<TutorialFlow> {
                       },
                       child: const Text('Weiter'),
                     );
-                  }
+                  },
                 ),
               ],
             ),

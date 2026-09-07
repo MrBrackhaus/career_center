@@ -164,6 +164,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await dao.insertOrUpdateSetting(Setting(key: 'userSkills',    value: _skillsController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'userLinkedin',  value: _linkedinController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'userWebsite',   value: _websiteController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'weeklyApplicationGoal', value: _weeklyGoalController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'aiServerUrl', value: _aiUrlController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'aiModelName', value: _aiModelController.text));
 
     await dao.insertOrUpdateSetting(Setting(key: 'profilePreset', value: _selectedPreset));
     await dao.insertOrUpdateSetting(Setting(key: 'customColumns', value: _customColumnsController.text));
@@ -332,6 +335,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           // Reload dictionary in background
                           SpellChecker.loadDictionary(language: val);
                         },
+                      ),
+                      const SizedBox(height: 32),
+                      Text('KI & Text-Korrektur (Lokales LLM)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _aiUrlController,
+                        decoration: const InputDecoration(
+                          labelText: 'Ollama API URL (z.B. http://192.168.2.147:11434/api/generate)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.computer),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _aiModelController,
+                        decoration: const InputDecoration(
+                          labelText: 'Ollama Modell (z.B. llama3.2)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.memory),
+                        ),
                       ),
                       const SizedBox(height: 32),
                       Text(AppLocalizations.of(context)!.settingsDesignTitle, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),

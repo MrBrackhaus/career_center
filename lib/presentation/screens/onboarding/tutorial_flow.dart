@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/database_provider.dart';
@@ -18,7 +18,7 @@ class _TutorialFlowState extends State<TutorialFlow> {
   final List<Map<String, dynamic>> _pages = [
     {
       'icon': Icons.work_outline,
-      'title': 'Willkommen beim JobTracker!',
+      'title': 'Willkommen in der Bewerbungszentrale!',
       'text': 'Dein moderner, sicherer Bewerbungsmanager. Behalte den Überblick über alle deine Bewerbungen. Alle Daten bleiben zu 100% lokal auf deinem Gerät - maximale Privatsphäre garantiert.',
       'color': Colors.blue,
     },
@@ -37,7 +37,7 @@ class _TutorialFlowState extends State<TutorialFlow> {
     {
       'icon': Icons.smart_toy_outlined,
       'title': 'KI-Workspace & Auto-Anschreiben',
-      'text': 'Nutze den integrierten lokalen LLM-Chat, um dich auf Interviews vorzubereiten. Mit nur einem Klick kann die KI in der Bewerbung ein passgenaues Anschreiben für dich formulieren - ohne Cloud-Zwang!',
+      'text': 'WICHTIG: Damit die KI funktioniert, musst du in den App-Einstellungen eine lokale LLM-Verbindung hinterlegen (z.B. Ollama über http://localhost:11434 oder deinen Jetson). Danach kannst du den lokalen Chat nutzen und per Knopfdruck personalisierte Anschreiben generieren lassen!',
       'color': Colors.teal,
     },
     {
@@ -49,13 +49,13 @@ class _TutorialFlowState extends State<TutorialFlow> {
     {
       'icon': Icons.terminal,
       'title': 'Antigravity & MCP-Integration',
-      'text': 'Für Profis: Der JobTracker fungiert als nativer Model Context Protocol (MCP) Server auf Port 47392! KI-Agenten wie Antigravity können so direkt auf deine Datenbank zugreifen, massenhaft Bewerbungen anlegen oder Anschreiben injizieren.',
+      'text': 'Für Profis: Die Bewerbungszentrale fungiert als nativer Model Context Protocol (MCP) Server auf Port 47392! KI-Agenten wie Antigravity können so direkt auf deine Datenbank zugreifen, massenhaft Bewerbungen anlegen oder Anschreiben injizieren.',
       'color': Colors.deepOrange,
     },
     {
       'icon': Icons.rocket_launch_outlined,
       'title': 'Startklar!',
-      'text': 'Bist du bereit? Hinterlege in den Einstellungen deine lokale KI-Verbindung (Ollama) oder leg einfach direkt deine erste Bewerbung an!',
+      'text': 'Bist du bereit? Hinterlege nun in den Einstellungen deine LLM-Verbindung und leg direkt deine erste Bewerbung an!',
       'color': Colors.green,
     },
   ];
@@ -184,3 +184,4 @@ Future<void> showTutorialIfNeeded(BuildContext context, WidgetRef ref) async {
     );
   }
 }
+

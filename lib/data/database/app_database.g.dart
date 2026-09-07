@@ -1570,8 +1570,41 @@ class $TemplatesTable extends Templates
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta(
+    'applicationId',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, type, content, createdAt];
+  late final GeneratedColumn<int> applicationId = GeneratedColumn<int>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES applications (id)',
+    ),
+  );
+  static const VerificationMeta _filePathMeta = const VerificationMeta(
+    'filePath',
+  );
+  @override
+  late final GeneratedColumn<String> filePath = GeneratedColumn<String>(
+    'file_path',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    type,
+    content,
+    createdAt,
+    applicationId,
+    filePath,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1615,6 +1648,21 @@ class $TemplatesTable extends Templates
         createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
       );
     }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(
+          data['application_id']!,
+          _applicationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('file_path')) {
+      context.handle(
+        _filePathMeta,
+        filePath.isAcceptableOrUnknown(data['file_path']!, _filePathMeta),
+      );
+    }
     return context;
   }
 
@@ -1644,6 +1692,14 @@ class $TemplatesTable extends Templates
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       ),
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}application_id'],
+      ),
+      filePath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}file_path'],
+      ),
     );
   }
 
@@ -1659,12 +1715,16 @@ class Template extends DataClass implements Insertable<Template> {
   final String type;
   final String? content;
   final DateTime? createdAt;
+  final int? applicationId;
+  final String? filePath;
   const Template({
     required this.id,
     required this.name,
     required this.type,
     this.content,
     this.createdAt,
+    this.applicationId,
+    this.filePath,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1677,6 +1737,12 @@ class Template extends DataClass implements Insertable<Template> {
     }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
+    }
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<int>(applicationId);
+    }
+    if (!nullToAbsent || filePath != null) {
+      map['file_path'] = Variable<String>(filePath);
     }
     return map;
   }
@@ -1692,6 +1758,12 @@ class Template extends DataClass implements Insertable<Template> {
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
+      applicationId: applicationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(applicationId),
+      filePath: filePath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(filePath),
     );
   }
 
@@ -1706,6 +1778,8 @@ class Template extends DataClass implements Insertable<Template> {
       type: serializer.fromJson<String>(json['type']),
       content: serializer.fromJson<String?>(json['content']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
+      applicationId: serializer.fromJson<int?>(json['applicationId']),
+      filePath: serializer.fromJson<String?>(json['filePath']),
     );
   }
   @override
@@ -1717,6 +1791,8 @@ class Template extends DataClass implements Insertable<Template> {
       'type': serializer.toJson<String>(type),
       'content': serializer.toJson<String?>(content),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
+      'applicationId': serializer.toJson<int?>(applicationId),
+      'filePath': serializer.toJson<String?>(filePath),
     };
   }
 
@@ -1726,12 +1802,18 @@ class Template extends DataClass implements Insertable<Template> {
     String? type,
     Value<String?> content = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
+    Value<int?> applicationId = const Value.absent(),
+    Value<String?> filePath = const Value.absent(),
   }) => Template(
     id: id ?? this.id,
     name: name ?? this.name,
     type: type ?? this.type,
     content: content.present ? content.value : this.content,
     createdAt: createdAt.present ? createdAt.value : this.createdAt,
+    applicationId: applicationId.present
+        ? applicationId.value
+        : this.applicationId,
+    filePath: filePath.present ? filePath.value : this.filePath,
   );
   Template copyWithCompanion(TemplatesCompanion data) {
     return Template(
@@ -1740,6 +1822,10 @@ class Template extends DataClass implements Insertable<Template> {
       type: data.type.present ? data.type.value : this.type,
       content: data.content.present ? data.content.value : this.content,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      applicationId: data.applicationId.present
+          ? data.applicationId.value
+          : this.applicationId,
+      filePath: data.filePath.present ? data.filePath.value : this.filePath,
     );
   }
 
@@ -1750,13 +1836,16 @@ class Template extends DataClass implements Insertable<Template> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('content: $content, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('filePath: $filePath')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, type, content, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, type, content, createdAt, applicationId, filePath);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1765,7 +1854,9 @@ class Template extends DataClass implements Insertable<Template> {
           other.name == this.name &&
           other.type == this.type &&
           other.content == this.content &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.applicationId == this.applicationId &&
+          other.filePath == this.filePath);
 }
 
 class TemplatesCompanion extends UpdateCompanion<Template> {
@@ -1774,12 +1865,16 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
   final Value<String> type;
   final Value<String?> content;
   final Value<DateTime?> createdAt;
+  final Value<int?> applicationId;
+  final Value<String?> filePath;
   const TemplatesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.type = const Value.absent(),
     this.content = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.filePath = const Value.absent(),
   });
   TemplatesCompanion.insert({
     this.id = const Value.absent(),
@@ -1787,6 +1882,8 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     required String type,
     this.content = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.filePath = const Value.absent(),
   }) : name = Value(name),
        type = Value(type);
   static Insertable<Template> custom({
@@ -1795,6 +1892,8 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     Expression<String>? type,
     Expression<String>? content,
     Expression<DateTime>? createdAt,
+    Expression<int>? applicationId,
+    Expression<String>? filePath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1802,6 +1901,8 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
       if (type != null) 'type': type,
       if (content != null) 'content': content,
       if (createdAt != null) 'created_at': createdAt,
+      if (applicationId != null) 'application_id': applicationId,
+      if (filePath != null) 'file_path': filePath,
     });
   }
 
@@ -1811,6 +1912,8 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     Value<String>? type,
     Value<String?>? content,
     Value<DateTime?>? createdAt,
+    Value<int?>? applicationId,
+    Value<String?>? filePath,
   }) {
     return TemplatesCompanion(
       id: id ?? this.id,
@@ -1818,6 +1921,8 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
       type: type ?? this.type,
       content: content ?? this.content,
       createdAt: createdAt ?? this.createdAt,
+      applicationId: applicationId ?? this.applicationId,
+      filePath: filePath ?? this.filePath,
     );
   }
 
@@ -1839,6 +1944,12 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (applicationId.present) {
+      map['application_id'] = Variable<int>(applicationId.value);
+    }
+    if (filePath.present) {
+      map['file_path'] = Variable<String>(filePath.value);
+    }
     return map;
   }
 
@@ -1849,7 +1960,9 @@ class TemplatesCompanion extends UpdateCompanion<Template> {
           ..write('name: $name, ')
           ..write('type: $type, ')
           ..write('content: $content, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('filePath: $filePath')
           ..write(')'))
         .toString();
   }
@@ -3789,6 +3902,24 @@ final class $$ApplicationsTableReferences
     extends BaseReferences<_$AppDatabase, $ApplicationsTable, Application> {
   $$ApplicationsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
+  static MultiTypedResultKey<$TemplatesTable, List<Template>>
+  _templatesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.templates,
+    aliasName: 'applications__id__templates__application_id',
+  );
+
+  $$TemplatesTableProcessedTableManager get templatesRefs {
+    final manager = $$TemplatesTableTableManager(
+      $_db,
+      $_db.templates,
+    ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_templatesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
   static MultiTypedResultKey<$EmailsTable, List<Email>> _emailsRefsTable(
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
@@ -4008,6 +4139,31 @@ class $$ApplicationsTableFilterComposer
     column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  Expression<bool> templatesRefs(
+    Expression<bool> Function($$TemplatesTableFilterComposer f) f,
+  ) {
+    final $$TemplatesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.templates,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TemplatesTableFilterComposer(
+            $db: $db,
+            $table: $db.templates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 
   Expression<bool> emailsRefs(
     Expression<bool> Function($$EmailsTableFilterComposer f) f,
@@ -4375,6 +4531,31 @@ class $$ApplicationsTableAnnotationComposer
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 
+  Expression<T> templatesRefs<T extends Object>(
+    Expression<T> Function($$TemplatesTableAnnotationComposer a) f,
+  ) {
+    final $$TemplatesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.templates,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TemplatesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.templates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
   Expression<T> emailsRefs<T extends Object>(
     Expression<T> Function($$EmailsTableAnnotationComposer a) f,
   ) {
@@ -4490,6 +4671,7 @@ class $$ApplicationsTableTableManager
           (Application, $$ApplicationsTableReferences),
           Application,
           PrefetchHooks Function({
+            bool templatesRefs,
             bool emailsRefs,
             bool notesRefs,
             bool documentsRefs,
@@ -4633,6 +4815,7 @@ class $$ApplicationsTableTableManager
               .toList(),
           prefetchHooksCallback:
               ({
+                templatesRefs = false,
                 emailsRefs = false,
                 notesRefs = false,
                 documentsRefs = false,
@@ -4641,6 +4824,7 @@ class $$ApplicationsTableTableManager
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
+                    if (templatesRefs) db.templates,
                     if (emailsRefs) db.emails,
                     if (notesRefs) db.notes,
                     if (documentsRefs) db.documents,
@@ -4649,6 +4833,27 @@ class $$ApplicationsTableTableManager
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
                     return [
+                      if (templatesRefs)
+                        await $_getPrefetchedData<
+                          Application,
+                          $ApplicationsTable,
+                          Template
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ApplicationsTableReferences
+                              ._templatesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ApplicationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).templatesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.applicationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                       if (emailsRefs)
                         await $_getPrefetchedData<
                           Application,
@@ -4754,6 +4959,7 @@ typedef $$ApplicationsTableProcessedTableManager =
       (Application, $$ApplicationsTableReferences),
       Application,
       PrefetchHooks Function({
+        bool templatesRefs,
         bool emailsRefs,
         bool notesRefs,
         bool documentsRefs,
@@ -4766,6 +4972,8 @@ typedef $$TemplatesTableCreateCompanionBuilder = TemplatesCompanion Function({
   required String type,
   Value<String?> content,
   Value<DateTime?> createdAt,
+  Value<int?> applicationId,
+  Value<String?> filePath,
 });
 typedef $$TemplatesTableUpdateCompanionBuilder = TemplatesCompanion Function({
   Value<int> id,
@@ -4773,7 +4981,32 @@ typedef $$TemplatesTableUpdateCompanionBuilder = TemplatesCompanion Function({
   Value<String> type,
   Value<String?> content,
   Value<DateTime?> createdAt,
+  Value<int?> applicationId,
+  Value<String?> filePath,
 });
+
+final class $$TemplatesTableReferences
+    extends BaseReferences<_$AppDatabase, $TemplatesTable, Template> {
+  $$TemplatesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ApplicationsTable _applicationIdTable(_$AppDatabase db) => db
+      .applications
+      .createAlias('templates__application_id__applications__id');
+
+  $$ApplicationsTableProcessedTableManager? get applicationId {
+    final $_column = $_itemColumn<int>('application_id');
+    if ($_column == null) return null;
+    final manager = $$ApplicationsTableTableManager(
+      $_db,
+      $_db.applications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_applicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
 
 class $$TemplatesTableFilterComposer
     extends Composer<_$AppDatabase, $TemplatesTable> {
@@ -4808,6 +5041,34 @@ class $$TemplatesTableFilterComposer
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
+
+  ColumnFilters<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ApplicationsTableFilterComposer get applicationId {
+    final $$ApplicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TemplatesTableOrderingComposer
@@ -4843,6 +5104,34 @@ class $$TemplatesTableOrderingComposer
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get filePath => $composableBuilder(
+    column: $table.filePath,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ApplicationsTableOrderingComposer get applicationId {
+    final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TemplatesTableAnnotationComposer
@@ -4868,6 +5157,32 @@ class $$TemplatesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get filePath =>
+      $composableBuilder(column: $table.filePath, builder: (column) => column);
+
+  $$ApplicationsTableAnnotationComposer get applicationId {
+    final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
 }
 
 class $$TemplatesTableTableManager
@@ -4881,9 +5196,9 @@ class $$TemplatesTableTableManager
           $$TemplatesTableAnnotationComposer,
           $$TemplatesTableCreateCompanionBuilder,
           $$TemplatesTableUpdateCompanionBuilder,
-          (Template, BaseReferences<_$AppDatabase, $TemplatesTable, Template>),
+          (Template, $$TemplatesTableReferences),
           Template,
-          PrefetchHooks Function()
+          PrefetchHooks Function({bool applicationId})
         > {
   $$TemplatesTableTableManager(_$AppDatabase db, $TemplatesTable table)
     : super(
@@ -4903,12 +5218,16 @@ class $$TemplatesTableTableManager
                 Value<String> type = const Value.absent(),
                 Value<String?> content = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String?> filePath = const Value.absent(),
               }) => TemplatesCompanion(
                 id: id,
                 name: name,
                 type: type,
                 content: content,
                 createdAt: createdAt,
+                applicationId: applicationId,
+                filePath: filePath,
               ),
           createCompanionCallback:
               ({
@@ -4917,26 +5236,64 @@ class $$TemplatesTableTableManager
                 required String type,
                 Value<String?> content = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String?> filePath = const Value.absent(),
               }) => TemplatesCompanion.insert(
                 id: id,
                 name: name,
                 type: type,
                 content: content,
                 createdAt: createdAt,
+                applicationId: applicationId,
+                filePath: filePath,
               ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
                   e.readTable<$TemplatesTable, Template>(table),
-                  BaseReferences<_$AppDatabase, $TemplatesTable, Template>(
-                    db,
-                    table,
-                    e,
-                  ),
+                  $$TemplatesTableReferences(db, table, e),
                 ),
               )
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({applicationId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (applicationId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.applicationId,
+                        referencedTable: $$TemplatesTableReferences
+                            ._applicationIdTable(db),
+                        referencedColumn: $$TemplatesTableReferences
+                            ._applicationIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
         ),
       );
 }
@@ -4951,9 +5308,9 @@ typedef $$TemplatesTableProcessedTableManager =
       $$TemplatesTableAnnotationComposer,
       $$TemplatesTableCreateCompanionBuilder,
       $$TemplatesTableUpdateCompanionBuilder,
-      (Template, BaseReferences<_$AppDatabase, $TemplatesTable, Template>),
+      (Template, $$TemplatesTableReferences),
       Template,
-      PrefetchHooks Function()
+      PrefetchHooks Function({bool applicationId})
     >;
 typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
   required String key,

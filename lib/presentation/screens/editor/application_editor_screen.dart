@@ -15,12 +15,20 @@ import '../../../core/utils/spell_checker.dart';
 import 'editor_ruler.dart';
 import '../../providers/ai_correction_provider.dart';
 import '../../providers/document_template_provider.dart';
+
 import 'package:intl/intl.dart';
 
 class ApplicationEditorScreen extends ConsumerStatefulWidget {
   final int? applicationId;
+  final Template? template;
+  final String? initialType;
 
-  const ApplicationEditorScreen({super.key, this.applicationId});
+  const ApplicationEditorScreen({
+    super.key,
+    this.applicationId,
+    this.template,
+    this.initialType,
+  });
 
   @override
   ConsumerState<ApplicationEditorScreen> createState() =>
@@ -36,14 +44,14 @@ class _ApplicationEditorScreenState
   Timer? _autoSaveTimer;
   Application? _application;
   final FocusNode _editorFocusNode = FocusNode();
+  final _nameController = TextEditingController();
 
   // Margins
   double _marginTop = 170.0;
   double _marginBottom = 75.0;
   double _marginLeft = 94.0;
   double _marginRight = 75.0;
-  
-  
+
   Timer? _spellCheckTimer;
   bool _isSpellChecking = false;
   List<Map<String, dynamic>> _grammarWarnings = [];
@@ -60,39 +68,53 @@ class _ApplicationEditorScreenState
   Future<void> _runAiCorrection() async {
     final text = _controller.document.toPlainText();
     if (text.trim().isEmpty) return;
-    
+
     final lang = SpellChecker.currentLanguage;
-    final correctedText = await ref.read(aiCorrectionProvider.notifier).correctText(text, lang);
-    
+    final correctedText = await ref
+        .read(aiCorrectionProvider.notifier)
+        .correctText(text, lang);
+
     if (correctedText != null && correctedText.isNotEmpty && mounted) {
       final length = _controller.document.length;
-      _controller.replaceText(0, length - 1, correctedText, const TextSelection.collapsed(offset: 0));
+      _controller.replaceText(
+        0,
+        length - 1,
+        correctedText,
+        const TextSelection.collapsed(offset: 0),
+      );
     }
   }
-
 
   Future<void> _insertHeader() async {
     final lang = SpellChecker.currentLanguage;
     final templateService = ref.read(documentTemplateServiceProvider);
     final headerText = await templateService.generateHeader(_application, lang);
-    
+
     _controller.document.insert(0, headerText);
-    
+
     String subjectPrefix = 'Bewerbung als ';
-    if (lang == 'en') subjectPrefix = 'Application for ';
-    else if (lang == 'fr') subjectPrefix = 'Candidature pour le poste de ';
-    else if (lang == 'es') subjectPrefix = 'Candidatura para el puesto de ';
-    
+    if (lang == 'en')
+      subjectPrefix = 'Application for ';
+    else if (lang == 'fr')
+      subjectPrefix = 'Candidature pour le poste de ';
+    else if (lang == 'es')
+      subjectPrefix = 'Candidatura para el puesto de ';
+
     final subjectStart = headerText.indexOf(subjectPrefix);
     final subjectEnd = headerText.indexOf('\n', subjectStart);
     if (subjectStart != -1 && subjectEnd != -1) {
-      _controller.formatText(subjectStart, subjectEnd - subjectStart, quill.Attribute.bold);
+      _controller.formatText(
+        subjectStart,
+        subjectEnd - subjectStart,
+        quill.Attribute.bold,
+      );
     }
   }
 
   void _insertFooter() {
     final len = _controller.document.length;
-    final footer = "\n\nMit freundlichen Gruessen\n\n\nMax Mustermann\n\nAnlagen";
+    final footer =
+        "\n\nMit freundlichen Gruessen\n\n\nMax Mustermann\n\nAnlagen";
     _controller.document.insert(len - 1, footer);
   }
 
@@ -104,10 +126,14 @@ class _ApplicationEditorScreenState
 
   Future<void> _loadApplication() async {
     final db = ref.read(databaseProvider);
-    final langSetting = await db.settingsDao.getSettingByKey('spellCheckLanguage');
+    final langSetting = await db.settingsDao.getSettingByKey(
+      'spellCheckLanguage',
+    );
     SpellChecker.loadDictionary(language: langSetting?.value ?? 'de');
 
-    if (widget.applicationId == null) {
+    _nameController.text = widget.template?.name ?? '';
+
+    if (widget.applicationId == null && widget.template == null) {
       _application = null;
       _controller = quill.QuillController(
         document: quill.Document(),
@@ -119,30 +145,43 @@ class _ApplicationEditorScreenState
         ),
       );
       _attachControllerListener();
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
       _runAtsAnalysis();
       return;
     }
-    final app = await db.applicationsDao.getApplicationById(
-      widget.applicationId!,
-    );
 
-    if (app == null) {
-      if (mounted) Navigator.pop(context);
-      return;
-    }
+    quill.Document document = quill.Document();
 
-    _application = app;
-    quill.Document document;
-    if (app.coverLetterContent?.isNotEmpty == true) {
-      try {
-        final decoded = jsonDecode(app.coverLetterContent!);
-        document = quill.Document.fromJson(decoded);
-      } catch (e) {
-        document = quill.Document()..insert(0, app.coverLetterContent!);
+    if (widget.template != null) {
+      if (widget.template?.content?.isNotEmpty == true) {
+        try {
+          final decoded = jsonDecode(widget.template!.content!);
+          document = quill.Document.fromJson(decoded);
+        } catch (e) {
+          document = quill.Document()..insert(0, widget.template!.content!);
+        }
       }
-    } else {
-      document = quill.Document();
+    } else if (widget.applicationId != null) {
+      final app = await db.applicationsDao.getApplicationById(
+        widget.applicationId!,
+      );
+
+      if (app == null) {
+        if (mounted) Navigator.pop(context);
+        return;
+      }
+
+      _application = app;
+      if (app.coverLetterContent?.isNotEmpty == true) {
+        try {
+          final decoded = jsonDecode(app.coverLetterContent!);
+          document = quill.Document.fromJson(decoded);
+        } catch (e) {
+          document = quill.Document()..insert(0, app.coverLetterContent!);
+        }
+      }
     }
 
     _controller = quill.QuillController(
@@ -154,14 +193,10 @@ class _ApplicationEditorScreenState
         ),
       ),
     );
-
     _attachControllerListener();
-
     setState(() {
       _isLoading = false;
     });
-
-    // Initial analysis
     _runAtsAnalysis();
   }
 
@@ -191,8 +226,13 @@ class _ApplicationEditorScreenState
     List<String> newFound = _foundKeywords;
 
     if (_application?.jobDescriptionText?.isNotEmpty == true) {
-      final requiredKeywords = KeywordExtractor.extractKeywords(_application!.jobDescriptionText!);
-      final matched = KeywordExtractor.findMatchingKeywords(plainText, requiredKeywords);
+      final requiredKeywords = KeywordExtractor.extractKeywords(
+        _application!.jobDescriptionText!,
+      );
+      final matched = KeywordExtractor.findMatchingKeywords(
+        plainText,
+        requiredKeywords,
+      );
       newMissing = requiredKeywords.where((k) => !matched.contains(k)).toList();
       newFound = matched.toList();
     }
@@ -221,20 +261,46 @@ class _ApplicationEditorScreenState
   }
 
   Future<void> _save() async {
-    if (widget.applicationId == null) {
-      setState(() { _hasChanges = false; _isSaving = false; });
-      return;
-    }
     setState(() => _isSaving = true);
     final content = jsonEncode(_controller.document.toDelta().toJson());
     final db = ref.read(databaseProvider);
 
-    final companion = ApplicationsCompanion(
-      id: drift.Value(widget.applicationId!),
-      coverLetterContent: drift.Value(content),
-    );
+    if (widget.applicationId != null) {
+      final companion = ApplicationsCompanion(
+        id: drift.Value(widget.applicationId!),
+        coverLetterContent: drift.Value(content),
+      );
+      await db.applicationsDao.updateApplication(companion);
+    } else {
+      // Save as template
+      final name = _nameController.text.trim().isEmpty
+          ? 'Neues Dokument'
+          : _nameController.text.trim();
+      final type = widget.template?.type ?? widget.initialType ?? 'anschreiben';
 
-    await db.applicationsDao.updateApplication(companion);
+      if (widget.template != null) {
+        final companion = TemplatesCompanion(
+          id: drift.Value(widget.template!.id),
+          name: drift.Value(name),
+          type: drift.Value(type),
+          content: drift.Value(content),
+        );
+        await db.templatesDao.updateTemplate(companion);
+      } else {
+        final companion = TemplatesCompanion(
+          name: drift.Value(name),
+          type: drift.Value(type),
+          content: drift.Value(content),
+          createdAt: drift.Value(DateTime.now()),
+        );
+        await db.templatesDao.insertTemplate(companion);
+        // Da wir kein Template-Objekt haben, navigieren wir am besten zurÃ¼ck oder zeigen "Gespeichert" an
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Als Vorlage gespeichert.')),
+        );
+      }
+    }
+
     setState(() {
       _hasChanges = false;
       _isSaving = false;
@@ -245,7 +311,8 @@ class _ApplicationEditorScreenState
   Widget build(BuildContext context) {
     ref.listen<AiCorrectionState>(aiCorrectionProvider, (previous, next) {
       if (next.error != null && next.error != previous?.error) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next.error!)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(next.error!)));
       }
     });
 
@@ -258,7 +325,16 @@ class _ApplicationEditorScreenState
     return Scaffold(
       backgroundColor: colorScheme.surfaceVariant, // The 'Desk' background
       appBar: AppBar(
-        title: Text('Anschreiben: ${_application?.company}'),
+        title: widget.applicationId != null
+            ? Text('Anschreiben: ${_application?.company}')
+            : TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  hintText: 'Dokumentname (z.B. Lebenslauf)',
+                ),
+                style: const TextStyle(color: Colors.white, fontSize: 20),
+              ),
         actions: [
           Center(
             child: Padding(
@@ -373,10 +449,34 @@ class _ApplicationEditorScreenState
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
         const SizedBox(height: 8),
-        _buildMarginSlider('Oben', _marginTop, (v) => setState(() => _marginTop = v), 37.8, 226.8), // 10mm - 60mm
-        _buildMarginSlider('Unten', _marginBottom, (v) => setState(() => _marginBottom = v), 37.8, 151.2), // 10mm - 40mm
-        _buildMarginSlider('Links', _marginLeft, (v) => setState(() => _marginLeft = v), 37.8, 151.2),
-        _buildMarginSlider('Rechts', _marginRight, (v) => setState(() => _marginRight = v), 37.8, 151.2),
+        _buildMarginSlider(
+          'Oben',
+          _marginTop,
+          (v) => setState(() => _marginTop = v),
+          37.8,
+          226.8,
+        ), // 10mm - 60mm
+        _buildMarginSlider(
+          'Unten',
+          _marginBottom,
+          (v) => setState(() => _marginBottom = v),
+          37.8,
+          151.2,
+        ), // 10mm - 40mm
+        _buildMarginSlider(
+          'Links',
+          _marginLeft,
+          (v) => setState(() => _marginLeft = v),
+          37.8,
+          151.2,
+        ),
+        _buildMarginSlider(
+          'Rechts',
+          _marginRight,
+          (v) => setState(() => _marginRight = v),
+          37.8,
+          151.2,
+        ),
         const Divider(height: 32),
         const Text(
           'DIN 5008 Elemente',
@@ -387,18 +487,14 @@ class _ApplicationEditorScreenState
           onPressed: () => _insertHeader(),
           icon: const Icon(Icons.contact_mail),
           label: const Text('Briefkopf einfuegen'),
-          style: FilledButton.styleFrom(
-            alignment: Alignment.centerLeft,
-          ),
+          style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
         ),
         const SizedBox(height: 8),
         FilledButton.icon(
           onPressed: _insertFooter,
           icon: const Icon(Icons.draw),
           label: const Text('Unterschrift & Fusszeile einfuegen'),
-          style: FilledButton.styleFrom(
-            alignment: Alignment.centerLeft,
-          ),
+          style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
         ),
         const Divider(height: 32),
         const Text(
@@ -454,21 +550,25 @@ class _ApplicationEditorScreenState
         .showSnackBar(const SnackBar(content: Text('Design angewendet!')));
   }
 
-  Widget _buildMarginSlider(String label, double value, ValueChanged<double> onChanged, double min, double max) {
+  Widget _buildMarginSlider(
+    String label,
+    double value,
+    ValueChanged<double> onChanged,
+    double min,
+    double max,
+  ) {
     final mm = (value / 3.78).round();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Text('$label: $mm mm', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          child: Text(
+            '$label: $mm mm',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
         ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          onChanged: onChanged,
-        ),
+        Slider(value: value, min: min, max: max, onChanged: onChanged),
       ],
     );
   }
@@ -769,12 +869,24 @@ class _ApplicationEditorScreenState
               ),
               const SizedBox(width: 16),
               FilledButton.icon(
-                onPressed: ref.watch(aiCorrectionProvider).isCorrecting ? null : _runAiCorrection,
-                icon: ref.watch(aiCorrectionProvider).isCorrecting 
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                onPressed: ref.watch(aiCorrectionProvider).isCorrecting
+                    ? null
+                    : _runAiCorrection,
+                icon: ref.watch(aiCorrectionProvider).isCorrecting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.auto_fix_high),
                 label: const Text('KI Korrektur'),
-                style: FilledButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.purple,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
           ),
@@ -793,13 +905,23 @@ class _ApplicationEditorScreenState
                     children: [
                       // Vertical Ruler
                       const Padding(
-                        padding: EdgeInsets.only(top: 24), // Offset for the horizontal ruler height
-                        child: EditorRuler(isHorizontal: false, length: 1123, offset: 170),
+                        padding: EdgeInsets.only(
+                          top: 24,
+                        ), // Offset for the horizontal ruler height
+                        child: EditorRuler(
+                          isHorizontal: false,
+                          length: 1123,
+                          offset: 170,
+                        ),
                       ),
                       Column(
                         children: [
                           // Horizontal Ruler
-                          const EditorRuler(isHorizontal: true, length: 794, offset: 94),
+                          const EditorRuler(
+                            isHorizontal: true,
+                            length: 794,
+                            offset: 94,
+                          ),
                           Container(
                             width: 794, // A4 width at 96 DPI
                             constraints: const BoxConstraints(
@@ -808,48 +930,50 @@ class _ApplicationEditorScreenState
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 15,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    // DIN 5008 Margins: Top: 45mm/27mm, Bottom: 20mm, Left: 25mm, Right: 20mm
-                    // 1mm ~= 3.78 pixels
-                    padding: const EdgeInsets.only(
-                      left: 94, // 25mm
-                      right: 75, // 20mm
-                      top: 170, // 45mm (first page)
-                      bottom: 75, // 20mm
-                    ),
-                    child: DefaultTextStyle(
-                      style: TextStyle(
-                        fontFamily: _currentFontFamily,
-                        fontSize: _currentFontSize,
-                        color: Colors.black,
-                        height: _currentLineHeight,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.15),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            // DIN 5008 Margins: Top: 45mm/27mm, Bottom: 20mm, Left: 25mm, Right: 20mm
+                            // 1mm ~= 3.78 pixels
+                            padding: const EdgeInsets.only(
+                              left: 94, // 25mm
+                              right: 75, // 20mm
+                              top: 170, // 45mm (first page)
+                              bottom: 75, // 20mm
+                            ),
+                            child: DefaultTextStyle(
+                              style: TextStyle(
+                                fontFamily: _currentFontFamily,
+                                fontSize: _currentFontSize,
+                                color: Colors.black,
+                                height: _currentLineHeight,
+                              ),
+                              child: quill.QuillEditor.basic(
+                                focusNode: _editorFocusNode,
+                                controller: _controller,
+                                config: quill.QuillEditorConfig(
+                                  placeholder:
+                                      'Schreibe hier dein Anschreiben...',
+                                  padding: EdgeInsets.zero,
+                                  embedBuilders:
+                                      FlutterQuillEmbeds.editorBuilders(),
+                                  autoFocus: true,
+                                  expands: false,
+                                  scrollable: false, // Let the SingleChildScrollView handle scrolling!
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      child: quill.QuillEditor.basic(
-                        focusNode: _editorFocusNode,
-                        controller: _controller,
-                        config: quill.QuillEditorConfig(
-                          placeholder: 'Schreibe hier dein Anschreiben...',
-                          padding: EdgeInsets.zero,
-                          embedBuilders: FlutterQuillEmbeds.editorBuilders(),
-                          autoFocus: true,
-                          expands: false,
-                          scrollable: false, // Let the SingleChildScrollView handle scrolling!
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-                  ],
-                ),
-                ],
-                ),
                 ),
               );
             },
@@ -893,85 +1017,149 @@ class _ApplicationEditorScreenState
                     style: TextStyle(color: Colors.green, fontSize: 12),
                   )
                 else
-                  ..._grammarWarnings.map((w) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.error_outline, color: Colors.red),
-                        title: Text(w['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.wavy, decorationColor: Colors.red)),
-                        subtitle: Text(w['subtitle'] as String, style: const TextStyle(fontSize: 12)),
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (c) => FutureBuilder<List<String>>(
-                              future: SpellChecker.getSuggestions(w['title'] as String),
-                              builder: (context, snapshot) {
-                                if (snapshot.connectionState == ConnectionState.waiting) {
-                                  return const AlertDialog(
-                                    content: Row(
-                                      children: [
-                                        CircularProgressIndicator(),
-                                        SizedBox(width: 16),
-                                        Text('Suche Vorschl\u00e4ge...'),
-                                      ],
-                                    ),
-                                  );
-                                }
-                                
-                                final suggestions = snapshot.data ?? [];
-                                return AlertDialog(
-                                  title: Text('Korrektur f\u00fcr "${w['title']}"'),
-                                  content: SizedBox(
-                                    width: double.maxFinite,
-                                    child: ListView(
-                                      shrinkWrap: true,
-                                      children: [
-                                        if (suggestions.isEmpty)
-                                          const Padding(
-                                            padding: EdgeInsets.all(16.0),
-                                            child: Text('Keine passenden W\u00f6rter gefunden.'),
-                                          )
-                                        else
-                                          ...suggestions.map((s) => ListTile(
-                                            title: Text(s),
-                                            trailing: const Icon(Icons.check_circle_outline, color: Colors.green),
-                                            onTap: () {
-                                              try {
-                                                _controller.replaceText(w['offset'] as int, w['length'] as int, s, null);
-                                                final plainText = _controller.document.toPlainText();
-                                                SpellChecker.checkText(plainText).then((issues) {
-                                                  if (mounted) setState(() { _grammarWarnings = issues; });
-                                                });
-                                              } catch (e) {
-                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Korrektur fehlgeschlagen.')));
-                                              }
-                                              Navigator.pop(context); // close dialog
-                                            },
-                                          )),
-                                        const Divider(),
-                                        ListTile(
-                                          leading: const Icon(Icons.visibility_off),
-                                          title: const Text('Wort ignorieren'),
-                                          onTap: () {
-                                            SpellChecker.ignoreWord(w['title'] as String);
-                                            final plainText = _controller.document.toPlainText();
-                                            SpellChecker.checkText(plainText).then((issues) {
-                                              if (mounted) setState(() { _grammarWarnings = issues; });
-                                            });
-                                            Navigator.pop(context); // close dialog
-                                          },
-                                        )
-                                      ],
-                                    ),
+                  ..._grammarWarnings.map(
+                    (w) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                      ),
+                      title: Text(
+                        w['title'] as String,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                          decorationStyle: TextDecorationStyle.wavy,
+                          decorationColor: Colors.red,
+                        ),
+                      ),
+                      subtitle: Text(
+                        w['subtitle'] as String,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (c) => FutureBuilder<List<String>>(
+                            future: SpellChecker.getSuggestions(
+                              w['title'] as String,
+                            ),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return const AlertDialog(
+                                  content: Row(
+                                    children: [
+                                      CircularProgressIndicator(),
+                                      SizedBox(width: 16),
+                                      Text('Suche Vorschl\u00e4ge...'),
+                                    ],
                                   ),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen'))
-                                  ],
                                 );
                               }
-                            )
-                          );
-                        },
-                        trailing: const Icon(Icons.chevron_right, size: 16),
-                      )),
+
+                              final suggestions = snapshot.data ?? [];
+                              return AlertDialog(
+                                title: Text(
+                                  'Korrektur f\u00fcr "${w['title']}"',
+                                ),
+                                content: SizedBox(
+                                  width: double.maxFinite,
+                                  child: ListView(
+                                    shrinkWrap: true,
+                                    children: [
+                                      if (suggestions.isEmpty)
+                                        const Padding(
+                                          padding: EdgeInsets.all(16.0),
+                                          child: Text(
+                                            'Keine passenden W\u00f6rter gefunden.',
+                                          ),
+                                        )
+                                      else
+                                        ...suggestions.map(
+                                          (s) => ListTile(
+                                            title: Text(s),
+                                            trailing: const Icon(
+                                              Icons.check_circle_outline,
+                                              color: Colors.green,
+                                            ),
+                                            onTap: () {
+                                              try {
+                                                _controller.replaceText(
+                                                  w['offset'] as int,
+                                                  w['length'] as int,
+                                                  s,
+                                                  null,
+                                                );
+                                                final plainText = _controller
+                                                    .document
+                                                    .toPlainText();
+                                                SpellChecker.checkText(
+                                                  plainText,
+                                                ).then((issues) {
+                                                  if (mounted)
+                                                    setState(() {
+                                                      _grammarWarnings = issues;
+                                                    });
+                                                });
+                                              } catch (e) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          'Korrektur fehlgeschlagen.',
+                                                        ),
+                                                      ),
+                                                    );
+                                              }
+                                              Navigator.pop(
+                                                context,
+                                              ); // close dialog
+                                            },
+                                          ),
+                                        ),
+                                      const Divider(),
+                                      ListTile(
+                                        leading: const Icon(
+                                          Icons.visibility_off,
+                                        ),
+                                        title: const Text('Wort ignorieren'),
+                                        onTap: () {
+                                          SpellChecker.ignoreWord(
+                                            w['title'] as String,
+                                          );
+                                          final plainText = _controller.document
+                                              .toPlainText();
+                                          SpellChecker.checkText(plainText)
+                                              .then((issues) {
+                                                if (mounted)
+                                                  setState(() {
+                                                    _grammarWarnings = issues;
+                                                  });
+                                              });
+                                          Navigator.pop(
+                                            context,
+                                          ); // close dialog
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text('Abbrechen'),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      trailing: const Icon(Icons.chevron_right, size: 16),
+                    ),
+                  ),
                 const Divider(height: 32),
                 const Text(
                   'Keywords (Stellenanzeige)',

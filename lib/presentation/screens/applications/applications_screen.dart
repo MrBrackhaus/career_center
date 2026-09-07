@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:pdfrx/pdfrx.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:html/parser.dart' as html_parser;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +12,8 @@ import '../../providers/imap_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/custom_columns_provider.dart';
 import '../../../data/database/app_database.dart';
+import 'package:drift/drift.dart' as drift;
+import 'widgets/ai_cover_letter_dialog.dart';
 import '../onboarding/tutorial_flow.dart';
 import 'widgets/application_card.dart';
 import 'email_scanner_dialog.dart';
@@ -385,14 +390,138 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
           // Actions
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: FilledButton.tonalIcon(
-                    onPressed: () => context.go('/applications/edit/${app.id}'),
-                    icon: const Icon(Icons.edit_document),
-                    label: const Text('Komplett bearbeiten'),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonalIcon(
+                        onPressed: () => context.go('/applications/edit/${app.id}'),
+                        icon: const Icon(Icons.edit_document),
+                        label: const Text('Komplett bearbeiten'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                        onPressed: () async {
+                          String jobDesc = app.jobDescriptionText ?? '';
+                          if (jobDesc.isEmpty) {
+                             final controller = TextEditingController();
+                             jobDesc = await showDialog<String>(
+                               context: context,
+                               builder: (context) => StatefulBuilder(
+                                 builder: (context, setStateDialog) => AlertDialog(
+                                   title: const Text('Stellenanzeige einfügen'),
+                                   content: SizedBox(
+                                     width: 400,
+                                     child: Column(
+                                       mainAxisSize: MainAxisSize.min,
+                                       children: [
+                                         const Text('Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.'),
+                                         const SizedBox(height: 8),
+                                         TextField(
+                                           controller: controller,
+                                           maxLines: 5,
+                                           decoration: const InputDecoration(border: OutlineInputBorder()),
+                                         ),
+                                         const SizedBox(height: 8),
+                                         TextButton.icon(
+                                           onPressed: () async {
+                                             try {
+                                               final typeGroup = const XTypeGroup(label: 'PDF', extensions: ['pdf']);
+                                               final file = await openFile(acceptedTypeGroups: [typeGroup]);
+                                               if (file == null) return;
+                                               final bytes = await file.readAsBytes();
+                                               final doc = await PdfDocument.openData(bytes);
+                                               final StringBuffer textBuf = StringBuffer();
+                                               for (var page in doc.pages) {
+                                                 final pageText = await page.loadText();
+                                                 if (pageText != null) {
+                                                   textBuf.writeln(pageText.fullText);
+                                                 }
+                                               }
+                                               doc.dispose();
+                                               final resultText = textBuf.toString().replaceAll('\u00A0', ' ');
+                                               setStateDialog(() {
+                                                 controller.text = resultText;
+                                               });
+                                             } catch (e) {
+                                               if (context.mounted) {
+                                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Auslesen: ')));
+                                               }
+                                             }
+                                           },
+                                           icon: const Icon(Icons.picture_as_pdf),
+                                           label: const Text('Stellenanzeige als PDF hochladen'),
+                                         ),
+                                       ],
+                                     ),
+                                   ),
+                                   actions: [
+                                     TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+                                     ElevatedButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Weiter')),
+                                   ],
+                                 )
+                               )
+                             ) ?? '';
+                             
+                             if (jobDesc.isEmpty) return;
+                             
+                             if (jobDesc.trim().startsWith('<') || jobDesc.contains('<!DOCTYPE')) {
+                               try {
+                                 final doc = html_parser.parse(jobDesc);
+                                 jobDesc = doc.body?.text ?? doc.documentElement?.text ?? jobDesc;
+                                 jobDesc = jobDesc.replaceAll(RegExp(r'\s+'), ' ').trim();
+                               } catch (_) {}
+                             }
+                             
+                             final db = ref.read(databaseProvider);
+                             await db.applicationsDao.updateApplication(app.copyWith(jobDescriptionText: drift.Value(jobDesc)));
+                          }
+
+                          final success = await showDialog<bool>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => AiCoverLetterDialog(
+                              company: app.company,
+                              position: app.position,
+                              jobDescription: jobDesc,
+                              onCoverLetterGenerated: (deltaJson) async {
+                                 final db = ref.read(databaseProvider);
+                                 await db.applicationsDao.updateApplication(app.copyWith(
+                                   coverLetterContent: drift.Value(deltaJson),
+                                   jobDescriptionText: drift.Value(jobDesc),
+                                 ));
+                                 
+                                 final newTemplate = TemplatesCompanion(
+                                   name: drift.Value('Anschreiben - ${app.company}'),
+                                   type: const drift.Value('anschreiben'),
+                                   content: drift.Value(deltaJson),
+                                   applicationId: drift.Value(app.id),
+                                   createdAt: drift.Value(DateTime.now()),
+                                 );
+                                 await db.templatesDao.insertTemplate(newTemplate);
+                              },
+                            ),
+                          );
+                          if (success == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Anschreiben generiert! Klicke auf "Komplett bearbeiten" um es im Editor zu sehen.'), backgroundColor: Colors.green));
+                          }
+                        },
+                        icon: const Icon(Icons.auto_awesome),
+                        label: const Text('✨ KI-Anschreiben generieren'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

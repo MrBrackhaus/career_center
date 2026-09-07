@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
+
+import 'dart:io';
+
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
+import 'package:pdfrx/pdfrx.dart';
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'dart:convert';
+
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
 import '../../../l10n/app_localizations.dart';
-import '../editor/template_editor_screen.dart';
+import '../editor/application_editor_screen.dart';
+import 'widgets/ki_workspace_chat.dart';
 
 class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
@@ -14,7 +26,8 @@ class TemplatesScreen extends ConsumerStatefulWidget {
   ConsumerState<TemplatesScreen> createState() => _TemplatesScreenState();
 }
 
-class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTickerProviderStateMixin {
+class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Template> _templates = [];
   bool _isLoading = true;
@@ -30,7 +43,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initializedTone) {
-      _promptToneController.text = AppLocalizations.of(context)!.promptToneDefault;
+      _promptToneController.text = AppLocalizations.of(context)!
+          .promptToneDefault;
       _initializedTone = true;
     }
   }
@@ -94,9 +108,12 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
           ),
         ],
       ),
-      floatingActionButton: (_tabController.index == 0 || _tabController.index == 1)
+      floatingActionButton:
+          (_tabController.index == 0 || _tabController.index == 1)
           ? FloatingActionButton(
-              onPressed: () => _createNewTemplate(_tabController.index == 0 ? 'lebenslauf' : 'anschreiben'),
+              onPressed: () => _createNewTemplate(
+                _tabController.index == 0 ? 'lebenslauf' : 'anschreiben',
+              ),
               child: const Icon(Icons.add),
             )
           : null,
@@ -133,14 +150,23 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final template = filtered[index];
-        IconData icon = type == 'lebenslauf' ? Icons.person_outline : Icons.mail_outline;
+        IconData icon = type == 'lebenslauf'
+            ? Icons.person_outline
+            : Icons.mail_outline;
 
         return Card(
           child: ListTile(
             leading: Icon(icon, size: 32),
-            title: Text(template.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              template.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text(
-              template.type.toUpperCase(),
+              template.applicationId != null
+                  ? ' (Verknüpft)'
+                  : (template.filePath != null
+                        ? ' (Original-PDF)'
+                        : template.type.toUpperCase()),
               style: TextStyle(fontSize: 11, color: Colors.grey[600]),
             ),
             trailing: Row(
@@ -164,26 +190,133 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
   }
 
   Widget _buildKiWorkspaceTab() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.chat_bubble_outline, size: 64, color: Colors.blue),
-          SizedBox(height: 16),
-          Text('KI-Workspace', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-          SizedBox(height: 8),
-          Text('Chatte mit deinem lokalen LLM.', style: TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
+    return const KiWorkspaceChat();
   }
 
-  void _createNewTemplate(String type) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => TemplateEditorScreen(template: null, initialType: type))).then((_) => _loadTemplates());
+  void _createNewTemplate(String type) async {
+    if (type == 'lebenslauf') {
+      final action = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Neuen Lebenslauf anlegen'),
+          content: const Text(
+            'Möchtest du einen komplett leeren Lebenslauf anlegen oder deinen bestehenden Lebenslauf aus einer PDF-Datei importieren?',
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () => Navigator.pop(context, 'empty'),
+              icon: const Icon(Icons.insert_drive_file),
+              label: const Text('Leeres Dokument'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pop(context, 'pdf'),
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('Aus PDF importieren'),
+            ),
+          ],
+        ),
+      );
+
+      if (action == null) return;
+
+      if (action == 'pdf') {
+        try {
+          final typeGroup = const XTypeGroup(label: 'PDF', extensions: ['pdf']);
+          final file = await openFile(acceptedTypeGroups: [typeGroup]);
+          if (file == null) return;
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(const SnackBar(content: Text('Lese PDF aus...')));
+          }
+
+          final bytes = await file.readAsBytes();
+          final doc = await PdfDocument.openData(bytes);
+          final StringBuffer textBuf = StringBuffer();
+          for (var page in doc.pages) {
+            final pageText = await page.loadText();
+            if (pageText != null) {
+              textBuf.writeln(pageText.fullText);
+            }
+          }
+          doc.dispose();
+
+          final resultText = textBuf.toString().replaceAll('\u00A0', ' ');
+
+          final appDir = await getApplicationDocumentsDirectory();
+          final savedPdfPath = p.join(
+            appDir.path,
+            'JobTracker',
+            'Templates',
+            file.name,
+          );
+          await File(savedPdfPath).create(recursive: true);
+          await File(file.path).copy(savedPdfPath);
+
+          final newTemplate = TemplatesCompanion(
+            name: drift.Value(file.name),
+            type: const drift.Value('lebenslauf'),
+            content: drift.Value(resultText),
+            filePath: drift.Value(savedPdfPath),
+            createdAt: drift.Value(DateTime.now()),
+          );
+
+          final db = ref.read(databaseProvider);
+          await db.templatesDao.insertTemplate(newTemplate);
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Lebenslauf-PDF erfolgreich als Original importiert!',
+                ),
+                backgroundColor: Colors.green,
+              ),
+            );
+            _loadTemplates();
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Fehler beim Import: '),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+        return;
+      }
+    }
+
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              ApplicationEditorScreen(template: null, initialType: type),
+        ),
+      ).then((_) => _loadTemplates());
+    }
   }
 
   void _editTemplate(Template template) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => TemplateEditorScreen(template: template))).then((_) => _loadTemplates());
+    if (template.filePath != null && template.filePath!.isNotEmpty) {
+      if (Platform.isWindows) {
+        Process.run('explorer', [template.filePath!]);
+      } else if (Platform.isMacOS) {
+        Process.run('open', [template.filePath!]);
+      } else if (Platform.isLinux) {
+        Process.run('xdg-open', [template.filePath!]);
+      }
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ApplicationEditorScreen(template: template),
+      ),
+    ).then((_) => _loadTemplates());
   }
 
   void _deleteTemplate(Template template) async {
@@ -198,9 +331,16 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('🤖 ' + AppLocalizations.of(context)!.promptTitle, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            '🤖 ' + AppLocalizations.of(context)!.promptTitle,
+            style: Theme.of(context).textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
-          Text(AppLocalizations.of(context)!.promptSubtitle, style: const TextStyle(color: Colors.grey)),
+          Text(
+            AppLocalizations.of(context)!.promptSubtitle,
+            style: const TextStyle(color: Colors.grey),
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _promptPositionController,
@@ -226,7 +366,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
             controller: _promptSkillsController,
             decoration: InputDecoration(
               labelText: AppLocalizations.of(context)!.promptSkills,
-              hintText: 'z.B. 5 Jahre Netzwerktechnik, ITIL-Zertifikat, Teamführung',
+              hintText:
+                  'z.B. 5 Jahre Netzwerktechnik, ITIL-Zertifikat, Teamführung',
               border: OutlineInputBorder(),
               prefixIcon: Icon(Icons.star),
             ),
@@ -249,7 +390,10 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
             child: ElevatedButton.icon(
               onPressed: _generatePrompt,
               icon: const Icon(Icons.auto_awesome),
-              label: Text(AppLocalizations.of(context)!.promptGenerate, style: TextStyle(fontSize: 16)),
+              label: Text(
+                AppLocalizations.of(context)!.promptGenerate,
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
           if (_generatedPrompt.isNotEmpty) ...[
@@ -261,44 +405,53 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            const Text('Dein generierter Prompt:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                            IconButton(
-                                              icon: const Icon(Icons.copy),
-                                              onPressed: () {
-                                                Clipboard.setData(ClipboardData(text: _generatedPrompt));
-                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("In die Zwischenablage kopiert!")));
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        SelectableText(_generatedPrompt),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ]
-                            ],
-                          ),
-                        );
-                      }
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Dein generierter Prompt:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy),
+                          onPressed: () {
+                            Clipboard.setData(
+                              ClipboardData(text: _generatedPrompt),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("In die Zwischenablage kopiert!"),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SelectableText(_generatedPrompt),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
   void _generatePrompt() {
-                        final position = _promptPositionController.text.trim();
-                        final company = _promptCompanyController.text.trim();
-                        final skills = _promptSkillsController.text.trim();
-                        final tone = _promptToneController.text.trim();
-                        
-                        setState(() {
-                          _generatedPrompt = '''Erstelle ein überzeugendes Bewerbungsanschreiben für folgende Stelle:
+    final position = _promptPositionController.text.trim();
+    final company = _promptCompanyController.text.trim();
+    final skills = _promptSkillsController.text.trim();
+    final tone = _promptToneController.text.trim();
+
+    setState(() {
+      _generatedPrompt =
+          '''Erstelle ein überzeugendes Bewerbungsanschreiben für folgende Stelle:
 Position: $position
 Firma: $company
 Meine Skills: $skills
 Tonalität: $tone''';
-                        });
-                      }
-                    }
+    });
+  }
+}

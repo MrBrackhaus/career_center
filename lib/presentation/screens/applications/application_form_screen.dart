@@ -1,4 +1,5 @@
 import '../../../l10n/app_localizations.dart';
+
 /*
  * JobTracker
  * Copyright (C) 2026 
@@ -22,21 +23,26 @@ import 'package:go_router/go_router.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:html/parser.dart' as html_parser;
 import 'package:file_selector/file_selector.dart';
+
 import '../../../core/utils/pdf_generator.dart';
 import '../../../data/database/app_database.dart';
 import 'email_composer_dialog.dart';
-import '../../../core/utils/file_picker_web.dart' if (dart.library.io) 'package:file_selector/file_selector.dart';
+import '../../../core/utils/file_picker_web.dart'
+    if (dart.library.io) 'package:file_selector/file_selector.dart';
 import '../../../core/services/document_intelligence_service.dart';
 import '../../../domain/enums/document_type.dart';
 import '../../../domain/models/extraction_result.dart';
 import '../../providers/document_intelligence_provider.dart';
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:desktop_drop/desktop_drop.dart';
+
 import 'widgets/web_reader_widget.dart';
 import 'widgets/notes_widget.dart';
 import 'widgets/contacts_widget.dart';
@@ -63,7 +69,8 @@ class ApplicationFormScreen extends ConsumerStatefulWidget {
   }) : super(key: key);
 
   @override
-  ConsumerState<ApplicationFormScreen> createState() => _ApplicationFormScreenState();
+  ConsumerState<ApplicationFormScreen> createState() =>
+      _ApplicationFormScreenState();
 }
 
 class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
@@ -76,9 +83,11 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final _rejectionReasonController = TextEditingController();
   final _commutCarController = TextEditingController();
   final _salaryWishController = TextEditingController();
-  final _jobUrlController = TextEditingController(); // Normales Formularfeld fÃƒÂ¼r Job-Link
-  final _autoFillUrlController = TextEditingController(); // Nur fÃƒÂ¼r das Magic-Auto-Fill Feld
-  final _companyUrlController = TextEditingController(); 
+  final _jobUrlController =
+      TextEditingController(); // Normales Formularfeld fÃƒÂ¼r Job-Link
+  final _autoFillUrlController =
+      TextEditingController(); // Nur fÃƒÂ¼r das Magic-Auto-Fill Feld
+  final _companyUrlController = TextEditingController();
   // Kontakt-Felder
   final _contactNameController = TextEditingController();
   final _contactEmailController = TextEditingController();
@@ -96,7 +105,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   bool _isAutoFilling = false;
   bool _isDragging = false;
   ExtractionResult? _lastExtractionResult;
-  
+
   // Split-View State
   String? _loadedPdfPath;
   String? _loadedWebContent;
@@ -131,7 +140,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     _salaryWishController.dispose();
     _jobUrlController.dispose();
     _autoFillUrlController.dispose();
-    _companyUrlController.dispose(); 
+    _companyUrlController.dispose();
     _contactNameController.dispose();
     _contactEmailController.dispose();
     _contactPhoneController.dispose();
@@ -153,7 +162,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       setState(() {
         _activeCustomColumns = cols;
         for (final col in cols) {
-          _customFieldControllers.putIfAbsent(col, () => TextEditingController());
+          _customFieldControllers.putIfAbsent(
+            col,
+            () => TextEditingController(),
+          );
         }
       });
     }
@@ -194,7 +206,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       setState(() => _isAutoFilling = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('? Fehler beim Auslesen: '), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('? Fehler beim Auslesen: '),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -202,7 +217,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
   Future<void> _loadApplication() async {
     setState(() => _isLoading = true);
-    final app = await ref.read(applicationsRepositoryProvider).getApplicationById(widget.applicationId!);
+    final app = await ref
+        .read(applicationsRepositoryProvider)
+        .getApplicationById(widget.applicationId!);
     setState(() {
       _companyController.text = app.company;
       _positionController.text = app.position;
@@ -216,7 +233,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       _salaryWishController.text = app.salaryWish?.toString() ?? '';
       _jobUrlController.text = app.jobUrl ?? '';
       _companyUrlController.text = app.companyUrl ?? '';
-      
+
       _contactNameController.text = app.contactName ?? '';
       _contactEmailController.text = app.contactEmail ?? '';
       _contactPhoneController.text = app.contactPhone ?? '';
@@ -225,7 +242,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
       if (app.customFields != null && app.customFields!.isNotEmpty) {
         try {
-          final decoded = json.decode(app.customFields!) as Map<String, dynamic>;
+          final decoded =
+              json.decode(app.customFields!) as Map<String, dynamic>;
           for (final entry in decoded.entries) {
             _customFieldControllers[entry.key]?.text = entry.value.toString();
           }
@@ -257,20 +275,33 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 10);
-      final request = await client.getUrl(Uri.parse(url)).timeout(const Duration(seconds: 10));
-      request.headers.set('User-Agent',
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      request.headers.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8');
+      final request = await client
+          .getUrl(Uri.parse(url))
+          .timeout(const Duration(seconds: 10));
+      request.headers.set(
+        'User-Agent',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      );
+      request.headers.set(
+        'Accept',
+        'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      );
       request.headers.set('Accept-Language', 'de-DE,de;q=0.9,en-US;q=0.8');
-      final response = await request.close().timeout(const Duration(seconds: 10));
-      final bytes = await response.expand((chunk) => chunk).toList().timeout(const Duration(seconds: 10));
+      final response = await request.close().timeout(
+        const Duration(seconds: 10),
+      );
+      final bytes = await response
+          .expand((chunk) => chunk)
+          .toList()
+          .timeout(const Duration(seconds: 10));
       final body = utf8.decode(bytes, allowMalformed: true);
       client.close();
 
       // Check for common captchas (e.g. Cloudflare, reCAPTCHA, Jobcenter blocking)
-      if (body.contains('Cloudflare') && body.contains('captcha-bypass') || 
+      if (body.contains('Cloudflare') && body.contains('captcha-bypass') ||
           body.toLowerCase().contains('you have been blocked') ||
-          (url.contains('arbeitsagentur.de') && body.contains('SicherheitsprÃƒÂ¼fung'))) {
+          (url.contains('arbeitsagentur.de') &&
+              body.contains('SicherheitsprÃƒÂ¼fung'))) {
         setState(() => _isAutoFilling = false);
         if (mounted) {
           showDialog(
@@ -278,21 +309,22 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             builder: (ctx) => AlertDialog(
               title: const Text('Ã¢Å¡Â Ã¯Â¸Â Captcha / Blockierung erkannt'),
               content: const Text(
-                  'Die Webseite blockiert das automatische Auslesen (oft bei Jobcenter / Arbeitsagentur oder Stepstone).\n\n'
-                  'Bitte ÃƒÂ¶ffne die Seite im Browser, lÃƒÂ¶se das Captcha, drÃƒÂ¼cke Strg+P (Drucken) und speichere die Seite als PDF.\n'
-                  'Lade diese PDF dann hier hoch, um die Daten inkl. Kontaktdaten auszulesen.'),
+                'Die Webseite blockiert das automatische Auslesen (oft bei Jobcenter / Arbeitsagentur oder Stepstone).\n\n'
+                'Bitte ÃƒÂ¶ffne die Seite im Browser, lÃƒÂ¶se das Captcha, drÃƒÂ¼cke Strg+P (Drucken) und speichere die Seite als PDF.\n'
+                'Lade diese PDF dann hier hoch, um die Daten inkl. Kontaktdaten auszulesen.',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   child: const Text('OK, verstanden'),
-                )
+                ),
               ],
             ),
           );
         }
         return;
       }
-      
+
       // Save HTML for reader mode
       setState(() => _loadedWebContent = body);
 
@@ -304,7 +336,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
       // Force job URL
       _jobUrlController.text = url;
-      
+
       _applyExtractionResult(result);
       setState(() => _isAutoFilling = false);
 
@@ -312,7 +344,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         if (result.fields.position == null && result.fields.company == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Ã¢Å¡Â Ã¯Â¸Â Keine Daten gefunden Ã¢â‚¬â€œ diese Seite nutzt evtl. clientseitiges Rendering. Lade die Seite als PDF herunter und probiere den PDF-Upload.'),
+              content: Text(
+                'Ã¢Å¡Â Ã¯Â¸Â Keine Daten gefunden Ã¢â‚¬â€œ diese Seite nutzt evtl. clientseitiges Rendering. Lade die Seite als PDF herunter und probiere den PDF-Upload.',
+              ),
               duration: Duration(seconds: 5),
               backgroundColor: Colors.orange,
             ),
@@ -330,7 +364,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       setState(() => _isAutoFilling = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ã¢Â Å’ Fehler beim Laden der URL: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Ã¢Â Å’ Fehler beim Laden der URL: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -339,10 +376,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   Future<void> _handleDroppedFiles(DropDoneDetails details) async {
     setState(() => _isDragging = false);
     if (details.files.isEmpty) return;
-    
+
     final xfile = details.files.first;
     if (!xfile.name.toLowerCase().endsWith('.pdf')) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte nur PDF-Dateien ablegen.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bitte nur PDF-Dateien ablegen.')),
+      );
       return;
     }
 
@@ -361,10 +400,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         final doc = await PdfDocument.openData(bytes);
         final StringBuffer textBuf = StringBuffer();
         for (var page in doc.pages) {
-            final pageText = await page.loadText();
-            if (pageText != null) {
-                textBuf.writeln(pageText.fullText);
-            }
+          final pageText = await page.loadText();
+          if (pageText != null) {
+            textBuf.writeln(pageText.fullText);
+          }
         }
         text = textBuf.toString().replaceAll('\u00A0', ' ');
         doc.dispose();
@@ -379,12 +418,14 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       );
 
       _applyExtractionResult(result);
-
     } catch (e) {
       setState(() => _isAutoFilling = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim PDF auslesen: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Fehler beim PDF auslesen: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -396,9 +437,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       final file = await openFile(acceptedTypeGroups: [typeGroup]);
 
       if (file == null) return;
-      
+
       final bytes = await file.readAsBytes();
-      
+
       setState(() {
         _isAutoFilling = true;
         _loadedPdfPath = file.path;
@@ -406,17 +447,17 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         _loadedWebUrl = null;
         _activeMarkerField = null;
       });
-      
+
       // Text extrahieren mit pdfrx (rein Dart/Flutter, MIT-Lizenz)
       String text = '';
       try {
         final doc = await PdfDocument.openData(bytes);
         final StringBuffer textBuf = StringBuffer();
         for (var page in doc.pages) {
-            final pageText = await page.loadText();
-            if (pageText != null) {
-                textBuf.writeln(pageText.fullText);
-            }
+          final pageText = await page.loadText();
+          if (pageText != null) {
+            textBuf.writeln(pageText.fullText);
+          }
         }
         text = textBuf.toString().replaceAll('\u00A0', ' ');
         doc.dispose();
@@ -432,12 +473,14 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       );
 
       _applyExtractionResult(result);
-
     } catch (e) {
       setState(() => _isAutoFilling = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ã¢ÂÅ’ Fehler beim PDF auslesen: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Ã¢ÂÅ’ Fehler beim PDF auslesen: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -482,9 +525,44 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       if (fields.applicationStatus != null) {
         _status = fields.applicationStatus!.value;
       }
-      
+
       if (result.rawText.isNotEmpty) {
-        _jobDescriptionTextController.text = result.rawText;
+        String jd = result.rawText;
+        if (jd.contains('<html') ||
+            jd.contains('<!DOCTYPE') ||
+            jd.contains('<body')) {
+          try {
+            final doc = html_parser.parse(jd);
+            doc
+                .querySelectorAll('script, style, noscript')
+                .forEach((e) => e.remove());
+            jd = doc.body?.text ?? doc.documentElement?.text ?? jd;
+          } catch (e) {
+            debugPrint('HTML parsing error: $e');
+          }
+          // Fallback falls immer noch HTML-Reste vorhanden sind
+          if (jd.contains('<html') ||
+              jd.contains('<!DOCTYPE') ||
+              jd.contains('<body')) {
+            jd = jd.replaceAll(
+              RegExp(
+                r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
+                caseSensitive: false,
+              ),
+              '',
+            );
+            jd = jd.replaceAll(
+              RegExp(
+                r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>',
+                caseSensitive: false,
+              ),
+              '',
+            );
+            jd = jd.replaceAll(RegExp(r'<[^>]+>'), ' ');
+          }
+          jd = jd.replaceAll(RegExp(r'\s+'), ' ').trim();
+        }
+        _jobDescriptionTextController.text = jd;
       }
       _isAutoFilling = false;
     });
@@ -531,7 +609,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     }
   }
 
-  void _handleAiFeedbackCorrection(ExtractionResult result, DocumentType newType) {
+  void _handleAiFeedbackCorrection(
+    ExtractionResult result,
+    DocumentType newType,
+  ) {
     DocumentIntelligenceService().learnFromCorrection(result.rawText, newType);
     setState(() {
       _lastExtractionResult = ExtractionResult(
@@ -545,7 +626,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('KI hat gelernt: Neues Muster fÃƒÂ¼r "${newType.name}" gespeichert!'),
+        content: Text(
+          'KI hat gelernt: Neues Muster fÃƒÂ¼r "${newType.name}" gespeichert!',
+        ),
         backgroundColor: Colors.green,
       ),
     );
@@ -559,12 +642,16 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         content: const Text('Diese Bewerbung wirklich lÃƒÂ¶schen?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Abbrechen')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('LÃƒÂ¶schen',
-                  style: TextStyle(color: Colors.red))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'LÃƒÂ¶schen',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
         ],
       ),
     );
@@ -572,9 +659,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       final app = await ref
           .read(applicationsRepositoryProvider)
           .getApplicationById(widget.applicationId!);
-      await ref
-          .read(applicationNotifierProvider)
-          .deleteApplication(app);
+      await ref.read(applicationNotifierProvider).deleteApplication(app);
       if (mounted) context.pop();
     }
   }
@@ -597,7 +682,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                   icon: const Icon(Icons.edit_document),
                   label: const Text('Anschreiben'),
                   onPressed: () {
-                    context.push('/applications/${widget.applicationId}/editor');
+                    context.push(
+                      '/applications/${widget.applicationId}/editor',
+                    );
                   },
                 ),
               ),
@@ -606,7 +693,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 padding: const EdgeInsets.only(right: 16.0),
                 child: FilledButton.icon(
                   onPressed: () async {
-                    final app = await ref.read(databaseProvider).applicationsDao.getApplicationById(widget.applicationId!);
+                    final app = await ref
+                        .read(databaseProvider)
+                        .applicationsDao
+                        .getApplicationById(widget.applicationId!);
                     if (app != null && context.mounted) {
                       showDialog(
                         context: context,
@@ -627,9 +717,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             isScrollable: true,
             tabs: [
               Tab(text: AppLocalizations.of(context)!.formTabBasic),
-              if (isEditing) Tab(text: AppLocalizations.of(context)!.formTabEmails),
-              if (isEditing) Tab(text: AppLocalizations.of(context)!.formTabDocs),
-              if (isEditing) Tab(text: AppLocalizations.of(context)!.formTabNotes),
+              if (isEditing)
+                Tab(text: AppLocalizations.of(context)!.formTabEmails),
+              if (isEditing)
+                Tab(text: AppLocalizations.of(context)!.formTabDocs),
+              if (isEditing)
+                Tab(text: AppLocalizations.of(context)!.formTabNotes),
             ],
           ),
         ),
@@ -640,15 +733,20 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           child: Stack(
             children: [
               _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    children: [
-                      _buildSplitView(context, isEditing),
-                      if (isEditing) EmailsAndContactsTab(applicationId: widget.applicationId!),
-                      if (isEditing) DocumentsWidget(applicationId: widget.applicationId!),
-                      if (isEditing) NotesWidget(applicationId: widget.applicationId!),
-                    ],
-                  ),
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      children: [
+                        _buildSplitView(context, isEditing),
+                        if (isEditing)
+                          EmailsAndContactsTab(
+                            applicationId: widget.applicationId!,
+                          ),
+                        if (isEditing)
+                          DocumentsWidget(applicationId: widget.applicationId!),
+                        if (isEditing)
+                          NotesWidget(applicationId: widget.applicationId!),
+                      ],
+                    ),
               if (_isDragging)
                 Container(
                   color: Colors.blue.withOpacity(0.2),
@@ -656,9 +754,20 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.picture_as_pdf, size: 64, color: Colors.blue),
+                        Icon(
+                          Icons.picture_as_pdf,
+                          size: 64,
+                          color: Colors.blue,
+                        ),
                         SizedBox(height: 16),
-                        Text('PDF hier ablegen zum Auslesen', style: TextStyle(fontSize: 24, color: Colors.blue, fontWeight: FontWeight.bold)),
+                        Text(
+                          'PDF hier ablegen zum Auslesen',
+                          style: TextStyle(
+                            fontSize: 24,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -670,7 +779,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     );
   }
 
-  bool get _hasDocumentPreview => _loadedPdfPath != null || _loadedWebContent != null;
+  bool get _hasDocumentPreview =>
+      _loadedPdfPath != null || _loadedWebContent != null;
 
   Widget _buildSplitView(BuildContext context, bool isEditing) {
     final bundle = ApplicationFormStateBundle(
@@ -705,7 +815,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       },
       onSave: _save,
       onAutoFillFromUrl: _autoFillFromUrl,
-        onCoverLetterGenerated: (deltaJson) => setState(() => _coverLetterContent = deltaJson),
+      onCoverLetterGenerated: (deltaJson) =>
+          setState(() => _coverLetterContent = deltaJson),
       onAutoFillFromPdf: _autoFillFromPdf,
       onStatusChange: (val) => setState(() => _status = val),
       onAppliedDateChange: (val) => setState(() => _appliedDate = val),
@@ -724,9 +835,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         // Left: Form
         Expanded(child: formWidget),
         // Right: Document Preview
-        Expanded(
-          child: _buildDocumentPreview(context),
-        ),
+        Expanded(child: _buildDocumentPreview(context)),
       ],
     );
   }
@@ -737,7 +846,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     if (_loadedPdfPath != null) {
       return Container(
         decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: colorScheme.outlineVariant, width: 1)),
+          border: Border(
+            left: BorderSide(color: colorScheme.outlineVariant, width: 1),
+          ),
         ),
         child: Column(
           children: [
@@ -749,20 +860,37 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.picture_as_pdf, size: 16, color: colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.picture_as_pdf,
+                    size: 16,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
-                  Text('PDF-Vorschau', style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                  Text(
+                    'PDF-Vorschau',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const Spacer(),
                   if (_activeMarkerField != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '🎯 Markiere Text für: $_activeMarkerField',
-                        style: const TextStyle(fontSize: 11, color: Colors.orange, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   IconButton(
@@ -779,21 +907,22 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             // PDF Viewer
             Expanded(
               child: PdfViewer.file(
-                  _loadedPdfPath!,
-                  params: PdfViewerParams(
-                    backgroundColor: Colors.white,
-                    textSelectionParams: PdfTextSelectionParams(
-                      onTextSelectionChange: (selection) async {
-                        if (selection != null && selection.hasSelectedText) {
-                          final selectedText = await selection.getSelectedText();
-                          if (selectedText.isNotEmpty && _activeMarkerField != null) {
-                            _applyMarkerText(selectedText);
-                          }
+                _loadedPdfPath!,
+                params: PdfViewerParams(
+                  backgroundColor: Colors.white,
+                  textSelectionParams: PdfTextSelectionParams(
+                    onTextSelectionChange: (selection) async {
+                      if (selection != null && selection.hasSelectedText) {
+                        final selectedText = await selection.getSelectedText();
+                        if (selectedText.isNotEmpty &&
+                            _activeMarkerField != null) {
+                          _applyMarkerText(selectedText);
                         }
-                      },
-                    ),
+                      }
+                    },
                   ),
                 ),
+              ),
             ),
           ],
         ),
@@ -877,33 +1006,94 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       company: drift.Value(_companyController.text.trim()),
       position: drift.Value(_positionController.text.trim()),
       status: drift.Value(_status),
-      notes: drift.Value(_notesController.text.isEmpty ? null : _notesController.text),
+      notes: drift.Value(
+        _notesController.text.isEmpty ? null : _notesController.text,
+      ),
       rejectionReason: drift.Value(
-          _status == 'absage' && _rejectionReasonController.text.isNotEmpty
-              ? _rejectionReasonController.text
-              : null),
+        _status == 'absage' && _rejectionReasonController.text.isNotEmpty
+            ? _rejectionReasonController.text
+            : null,
+      ),
       appliedDate: drift.Value(_appliedDate),
       followupDate: drift.Value(_followUpDate),
       commuteCar: drift.Value(int.tryParse(_commutCarController.text)),
       salaryWish: drift.Value(int.tryParse(_salaryWishController.text)),
-      jobUrl: drift.Value(_jobUrlController.text.isEmpty ? null : _jobUrlController.text),
-      companyUrl: drift.Value(_companyUrlController.text.isEmpty ? null : _companyUrlController.text),
-      contactName: drift.Value(_contactNameController.text.isEmpty ? null : _contactNameController.text),
-      contactEmail: drift.Value(_contactEmailController.text.isEmpty ? null : _contactEmailController.text),
-      contactPhone: drift.Value(_contactPhoneController.text.isEmpty ? null : _contactPhoneController.text),
-      address: drift.Value(_addressController.text.isEmpty ? null : _addressController.text),
+      jobUrl: drift.Value(
+        _jobUrlController.text.isEmpty ? null : _jobUrlController.text,
+      ),
+      companyUrl: drift.Value(
+        _companyUrlController.text.isEmpty ? null : _companyUrlController.text,
+      ),
+      contactName: drift.Value(
+        _contactNameController.text.isEmpty
+            ? null
+            : _contactNameController.text,
+      ),
+      contactEmail: drift.Value(
+        _contactEmailController.text.isEmpty
+            ? null
+            : _contactEmailController.text,
+      ),
+      contactPhone: drift.Value(
+        _contactPhoneController.text.isEmpty
+            ? null
+            : _contactPhoneController.text,
+      ),
+      address: drift.Value(
+        _addressController.text.isEmpty ? null : _addressController.text,
+      ),
       customFields: drift.Value(customFieldsJson),
-      jobDescriptionText: drift.Value(_jobDescriptionTextController.text.isEmpty ? null : _jobDescriptionTextController.text),
+      jobDescriptionText: drift.Value(() {
+        String jd = _jobDescriptionTextController.text;
+        if (jd.isEmpty) return null;
+        if (jd.contains('<html') ||
+            jd.contains('<!DOCTYPE') ||
+            jd.contains('<body')) {
+          try {
+            final doc = html_parser.parse(jd);
+            doc
+                .querySelectorAll('script, style, noscript')
+                .forEach((e) => e.remove());
+            jd = doc.body?.text ?? doc.documentElement?.text ?? jd;
+          } catch (e) {
+            debugPrint('HTML parsing error in save: $e');
+          }
+          if (jd.contains('<html') ||
+              jd.contains('<!DOCTYPE') ||
+              jd.contains('<body')) {
+            jd = jd.replaceAll(
+              RegExp(
+                r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
+                caseSensitive: false,
+              ),
+              '',
+            );
+            jd = jd.replaceAll(
+              RegExp(
+                r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>',
+                caseSensitive: false,
+              ),
+              '',
+            );
+            jd = jd.replaceAll(RegExp(r'<[^>]+>'), ' ');
+          }
+          jd = jd.replaceAll(RegExp(r'\s+'), ' ').trim();
+        }
+        return jd.isEmpty ? null : jd;
+      }()),
       coverLetterContent: drift.Value(_coverLetterContent),
     );
 
     int insertedId;
     if (widget.applicationId != null) {
       insertedId = widget.applicationId!;
-      await ref.read(applicationNotifierProvider).updateApplication(
-            companion.copyWith(id: drift.Value(insertedId)));
+      await ref
+          .read(applicationNotifierProvider)
+          .updateApplication(companion.copyWith(id: drift.Value(insertedId)));
     } else {
-      insertedId = await ref.read(applicationNotifierProvider).addApplication(companion);
+      insertedId = await ref
+          .read(applicationNotifierProvider)
+          .addApplication(companion);
     }
 
     // Save pending screenshot if it exists
@@ -911,7 +1101,11 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       try {
         final bytes = base64Decode(_pendingScreenshotBase64!.split(',').last);
         final dir = await getApplicationDocumentsDirectory();
-        final path = p.join(dir.path, 'career_center_docs', 'screenshot_$insertedId.png');
+        final path = p.join(
+          dir.path,
+          'career_center_docs',
+          'screenshot_$insertedId.png',
+        );
         final file = File(path);
         if (!await file.parent.exists()) {
           await file.parent.create(recursive: true);
@@ -919,16 +1113,20 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         await file.writeAsBytes(bytes);
 
         // Add to database
-        await ref.read(databaseProvider).documentsDao.insertDocument(
-          DocumentsCompanion(
-            applicationId: drift.Value(insertedId),
-            fileName: drift.Value('Stellenanzeige_Screenshot.png'),
-            filePath: drift.Value(path),
-            fileType: drift.Value('png'),
-            uploadedAt: drift.Value(DateTime.now()),
-          )
-        );
-        _pendingScreenshotBase64 = null; // Clear it so it won't be saved again if edited
+        await ref
+            .read(databaseProvider)
+            .documentsDao
+            .insertDocument(
+              DocumentsCompanion(
+                applicationId: drift.Value(insertedId),
+                fileName: drift.Value('Stellenanzeige_Screenshot.png'),
+                filePath: drift.Value(path),
+                fileType: drift.Value('png'),
+                uploadedAt: drift.Value(DateTime.now()),
+              ),
+            );
+        _pendingScreenshotBase64 =
+            null; // Clear it so it won't be saved again if edited
       } catch (e) {
         debugPrint('Failed to save screenshot: $e');
       }
@@ -937,10 +1135,3 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     if (mounted) context.pop();
   }
 }
-
-
-
-
-
-
-

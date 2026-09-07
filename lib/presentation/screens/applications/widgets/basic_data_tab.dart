@@ -188,35 +188,7 @@ class BasicDataTab extends StatelessWidget {
               maxLines: 6,
               minLines: 3,
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  if (bundle.jobDescriptionTextController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte füge zuerst eine Stellenanzeige ein.')));
-                    return;
-                  }
-                  final success = await showDialog<bool>(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (context) => AiCoverLetterDialog(
-                      onCoverLetterGenerated: bundle.onCoverLetterGenerated,
-                      company: bundle.companyController.text,
-                      position: bundle.positionController.text,
-                      jobDescription: bundle.jobDescriptionTextController.text,
-                    ),
-                  );
-                  if (success == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Anschreiben generiert! Du findest es unter dem Reiter "Dokumente".'), backgroundColor: Colors.green));
-                  }
-                },
-                icon: const Icon(Icons.auto_awesome),
-                label: const Text('✨ KI-Anschreiben generieren', style: TextStyle(fontSize: 16)),
-              ),
-            ),
-            const SizedBox(height: 12),
+            
             DropdownButtonFormField<String>(
               value: bundle.status,
               decoration: InputDecoration(labelText: AppLocalizations.of(context)!.formBasicStatus, border: OutlineInputBorder()),

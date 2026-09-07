@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class ChangelogScreen extends StatelessWidget {
   const ChangelogScreen({super.key});
@@ -12,6 +12,24 @@ class ChangelogScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const Text(
+            'Version 0.7.1 Alpha',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 7. September 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🚀 Neue Features & Verbesserungen', [
+            'KI-Workspace: Der leere KI-Workspace Tab wurde durch einen funktionierenden, lokalen LLM-Chat ersetzt. Nutze ihn, um dich auf Interviews vorzubereiten oder Fragen zu Bewerbungen zu stellen.',
+            'Zentraler "Freier Editor": Alle Dokumententypen (Vorlagen, Anschreiben, freie Texte) nutzen nun durchgehend denselben vollausgestatteten Editor inkl. ATS-Features und Rechtschreibprüfung. Der alte, abgespeckte Vorlagen-Editor wurde komplett entfernt.',
+          ]),
+          _buildSection('🛠️ Bugfixes', [
+            'HTML-Extraktion: Ein Fehler wurde behoben, bei dem die Job-Beschreibung beim Import über eine URL (z.B. Arbeitsagentur) als roher HTML-Code im Textfeld landete. Es gibt nun einen robusten Regex-Fallback, der garantiert, dass nur noch reiner Text übernommen wird.',
+          ]),
+          const Divider(height: 48),
           const Text(
             'Version 0.7.0 Alpha',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),

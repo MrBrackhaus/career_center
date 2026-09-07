@@ -67,6 +67,8 @@ class Templates extends Table {
   TextColumn get type      => text()(); // anschreiben | textbaustein | lebenslauf
   TextColumn get content   => text().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
+  IntColumn get applicationId => integer().nullable().references(Applications, #id)();
+  TextColumn get filePath => text().nullable()(); // NEW: Für originale PDF-Dateien
 }
 
 class Settings extends Table {
@@ -126,7 +128,7 @@ class AppDatabase extends _$AppDatabase {
   ContactsDao get contactsDao => ContactsDao(this);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration {
@@ -153,6 +155,12 @@ class AppDatabase extends _$AppDatabase {
         if (from < 7) {
           await m.addColumn(applications, applications.coverLetterContent);
           await m.addColumn(applications, applications.jobDescriptionText);
+        }
+        if (from < 8) {
+          await m.addColumn(templates, templates.applicationId);
+        }
+        if (from < 9) {
+          await m.addColumn(templates, templates.filePath);
         }
       },
     );

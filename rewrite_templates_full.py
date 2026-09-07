@@ -1,4 +1,19 @@
-import 'package:flutter/material.dart';
+﻿import codecs
+
+path = 's:/Projekte/career_center/lib/presentation/screens/templates/templates_screen.dart'
+with codecs.open(path, 'r', 'utf-8') as f:
+    text = f.read()
+
+# Extract prompt generator tab
+prompt_idx = text.find('Widget _buildPromptGeneratorTab() {')
+examples_idx = text.find('Widget _buildExamplesTab() {')
+generate_idx = text.find('void _generatePrompt() {')
+
+prompt_tab = text[prompt_idx:examples_idx].strip()
+examples_tab = text[examples_idx:generate_idx].strip()
+generate_method = text[generate_idx:].strip()
+
+new_content = """import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
@@ -192,113 +207,11 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen> with SingleTi
     _loadTemplates();
   }
 
-  Widget _buildPromptGeneratorTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('🤖 ' + AppLocalizations.of(context)!.promptTitle, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(AppLocalizations.of(context)!.promptSubtitle, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _promptPositionController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.promptPosition,
-              hintText: 'z.B. IT-Systemadministrator',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.work),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _promptCompanyController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.promptCompany,
-              hintText: 'z.B. Musterfirma GmbH',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.business),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _promptSkillsController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.promptSkills,
-              hintText: 'z.B. 5 Jahre Netzwerktechnik, ITIL-Zertifikat, Teamführung',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.star),
-            ),
-            maxLines: 3,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _promptToneController,
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.promptTone,
-              hintText: 'z.B. professionell, locker, motiviert',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.tune),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: _generatePrompt,
-              icon: const Icon(Icons.auto_awesome),
-              label: Text(AppLocalizations.of(context)!.promptGenerate, style: TextStyle(fontSize: 16)),
-            ),
-          ),
-          if (_generatedPrompt.isNotEmpty) ...[
-            const SizedBox(height: 24),
-            Card(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+"""
 
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            const Text('Dein generierter Prompt:', style: TextStyle(fontWeight: FontWeight.bold)),
-                                            IconButton(
-                                              icon: const Icon(Icons.copy),
-                                              onPressed: () {
-                                                Clipboard.setData(ClipboardData(text: _generatedPrompt));
-                                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("In die Zwischenablage kopiert!")));
-                                              },
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8),
-                                        SelectableText(_generatedPrompt),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ]
-                            ],
-                          ),
-                        );
-                      }
+new_content += "  " + prompt_tab + "\n\n  " + generate_method + "\n}\n"
 
-  void _generatePrompt() {
-                        final position = _promptPositionController.text.trim();
-                        final company = _promptCompanyController.text.trim();
-                        final skills = _promptSkillsController.text.trim();
-                        final tone = _promptToneController.text.trim();
-                        
-                        setState(() {
-                          _generatedPrompt = '''Erstelle ein überzeugendes Bewerbungsanschreiben für folgende Stelle:
-Position: $position
-Firma: $company
-Meine Skills: $skills
-Tonalität: $tone''';
-                        });
-                      }
-                    }
+with codecs.open(path, 'w', 'utf-8') as f:
+    f.write(new_content)
+
+print("Screen generated cleanly!")

@@ -125,7 +125,7 @@ abstract class AppLocalizations {
   /// No description provided for @navTemplates.
   ///
   /// In de, this message translates to:
-  /// **'Vorlagen'**
+  /// **'Meine Dokumente'**
   String get navTemplates;
 
   /// No description provided for @navSettings.

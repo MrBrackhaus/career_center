@@ -10,8 +10,9 @@ import '../../providers/editor_provider.dart';
 
 class TemplateEditorScreen extends ConsumerStatefulWidget {
   final Template? template;
+  final String initialType;
   
-  const TemplateEditorScreen({super.key, this.template});
+  const TemplateEditorScreen({super.key, this.template, this.initialType = 'anschreiben'});
 
   @override
   ConsumerState<TemplateEditorScreen> createState() => _TemplateEditorScreenState();
@@ -67,7 +68,7 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
     await ref.read(templateEditorProvider.notifier).saveTemplate(
       existingId: widget.template?.id,
       name: name,
-      type: widget.template?.type ?? 'anschreiben',
+      type: widget.template?.type ?? widget.initialType,
       deltaJson: deltaJson,
     );
     

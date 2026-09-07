@@ -22,7 +22,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get navCalendar => 'Kalender';
 
   @override
-  String get navTemplates => 'Vorlagen';
+  String get navTemplates => 'Meine Dokumente';
 
   @override
   String get navSettings => 'Einstellungen';

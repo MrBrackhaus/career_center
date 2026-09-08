@@ -353,7 +353,7 @@ class _ApplicationEditorScreenState
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surfaceVariant, // The 'Desk' background
+      backgroundColor: colorScheme.surfaceContainerHighest, // The 'Desk' background
       appBar: AppBar(
         title: widget.applicationId != null
             ? Text('Anschreiben: ${_application?.company}')
@@ -421,7 +421,7 @@ class _ApplicationEditorScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              color: colorScheme.surfaceVariant.withOpacity(0.3),
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
               child: const TabBar(
                 tabs: [
                   Tab(icon: Icon(Icons.dashboard_customize), text: 'Bausteine'),
@@ -437,6 +437,23 @@ class _ApplicationEditorScreenState
           ],
         ),
       ),
+    );
+  }
+
+  
+  Widget _buildHeaderTab() {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('Briefkopf (Kopfzeile)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 16),
+        _buildHeaderStyleCard('Ohne Briefkopf', 'none'),
+        _buildHeaderStyleCard('Modern (MK Design)', 'modern_mk'),
+        const Divider(height: 32),
+        const Text('Deine Daten', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+        const SizedBox(height: 8),
+        const Text('Die Daten für den Briefkopf werden automatisch aus deinen Einstellungen (Profil) geladen.', style: TextStyle(color: Colors.grey, fontSize: 12)),
+      ],
     );
   }
 
@@ -621,7 +638,7 @@ const Divider(height: 32),
       elevation: 0,
       color: isSelected
           ? Theme.of(context).colorScheme.primaryContainer
-          : Theme.of(context).colorScheme.surfaceVariant,
+          : Theme.of(context).colorScheme.surfaceContainerHighest,
       margin: const EdgeInsets.only(bottom: 8),
       shape: RoundedRectangleBorder(
         side: BorderSide(
@@ -797,7 +814,7 @@ const Divider(height: 32),
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
-      color: Theme.of(context).colorScheme.surfaceVariant,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
         side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         borderRadius: BorderRadius.circular(8),

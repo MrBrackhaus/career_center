@@ -49,6 +49,16 @@ class _ApplicationEditorScreenState
   // Margins
   double _marginTop = 170.0;
   double _marginBottom = 75.0;
+
+  String _headerStyle = 'none'; // 'none', 'modern_mk'
+  String _userName = '';
+  String _userEmail = '';
+  String _userPhone = '';
+  String _userAddress = '';
+  String _userZip = '';
+  String _userCity = '';
+  String _userProfession = '';
+
   double _marginLeft = 94.0;
   double _marginRight = 75.0;
 
@@ -130,6 +140,26 @@ class _ApplicationEditorScreenState
       'spellCheckLanguage',
     );
     SpellChecker.loadDictionary(language: langSetting?.value ?? 'de');
+
+    final nameSetting = await db.settingsDao.getSettingByKey('userName');
+    final emailSetting = await db.settingsDao.getSettingByKey('userEmail');
+    final phoneSetting = await db.settingsDao.getSettingByKey('userPhone');
+    final addressSetting = await db.settingsDao.getSettingByKey('userAddress');
+    final zipSetting = await db.settingsDao.getSettingByKey('userZip');
+    final citySetting = await db.settingsDao.getSettingByKey('userCity');
+    
+    if (mounted) {
+      setState(() {
+        _userName = nameSetting?.value ?? 'Dein Name';
+        _userEmail = emailSetting?.value ?? 'email@beispiel.de';
+        _userPhone = phoneSetting?.value ?? '0123-456789';
+        _userAddress = addressSetting?.value ?? 'Musterstraße 1';
+        _userZip = zipSetting?.value ?? '12345';
+        _userCity = citySetting?.value ?? 'Musterstadt';
+        _userProfession = 'FACHINFORMATIKER FÜR SYSTEMINTEGRATION';
+      });
+    }
+
 
     _nameController.text = widget.template?.name ?? '';
 
@@ -443,7 +473,13 @@ class _ApplicationEditorScreenState
           1.3,
           _currentFontFamily == 'Arial' && _currentFontSize == 10,
         ),
-        const Divider(height: 32),
+        
+          const Divider(height: 32),
+          const Text('Briefkopf (Kopfzeile)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 8),
+          _buildHeaderStyleCard('Ohne Briefkopf', 'none'),
+          _buildHeaderStyleCard('Modern (MK Design)', 'modern_mk'),
+const Divider(height: 32),
         const Text(
           'Seitenränder',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -625,6 +661,43 @@ class _ApplicationEditorScreenState
     );
   }
 
+  Widget _buildHeaderStyleCard(String title, String styleId) {
+    final isSelected = _headerStyle == styleId;
+    return Card(
+      color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
+      elevation: isSelected ? 2 : 0,
+      margin: const EdgeInsets.only(bottom: 8),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: InkWell(
+        onTap: () => setState(() => _headerStyle = styleId),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Icon(
+                styleId == 'none' ? Icons.article_outlined : Icons.branding_watermark_outlined,
+                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
   Widget _buildBausteineTab() {
     final db = ref.read(databaseProvider);
     return StreamBuilder<List<Template>>(
@@ -788,6 +861,117 @@ class _ApplicationEditorScreenState
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  
+  Widget _buildProfessionalHeader() {
+    if (_headerStyle == 'none') return const SizedBox.shrink();
+    
+    final initials = _userName.trim().isNotEmpty
+        ? _userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0].toUpperCase() : '').take(2).join('')
+        : 'MK';
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 94, right: 75, top: 50, bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: Color(0xFF1E3A8A), width: 3), // Dark blue border
+                    bottom: BorderSide(color: Color(0xFF1E3A8A), width: 3),
+                  ),
+                ),
+                padding: const EdgeInsets.only(left: 12, bottom: 4, right: 12, top: 4),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF374151),
+                    letterSpacing: -2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _userName,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _userProfession,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      letterSpacing: 1.2,
+                      color: Color(0xFF4B5563),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          const Text(
+            'PERSÖNLICHE DATEN',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E3A8A), // Dark blue
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(height: 1, color: const Color(0xFF1E3A8A)),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('E-MAIL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(_userEmail, style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text('\n ', style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Text(_userPhone, style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

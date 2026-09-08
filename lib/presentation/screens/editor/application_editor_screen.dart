@@ -1140,6 +1140,20 @@ class _ApplicationEditorScreenState
                                           focusNode: _editorFocusNode,
                                           controller: _controller,
                                           config: quill.QuillEditorConfig(
+                                            customStyles: quill.DefaultStyles(
+                                              paragraph: quill.DefaultTextBlockStyle(
+                                                TextStyle(
+                                                  fontFamily: _currentFontFamily,
+                                                  fontSize: _currentFontSize,
+                                                  color: Colors.black,
+                                                  height: _currentLineHeight,
+                                                ),
+                                                const quill.HorizontalSpacing(0, 0),
+                                                const quill.VerticalSpacing(0, 0),
+                                                const quill.VerticalSpacing(0, 0),
+                                                null,
+                                              ),
+                                            ),
                                             placeholder:
                                                 'Schreibe hier dein Anschreiben...',
                                             padding: EdgeInsets.zero,

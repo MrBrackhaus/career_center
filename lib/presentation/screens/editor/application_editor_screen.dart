@@ -1096,37 +1096,49 @@ class _ApplicationEditorScreenState
                             ),
                             // DIN 5008 Margins: Top: 45mm/27mm, Bottom: 20mm, Left: 25mm, Right: 20mm
                             // 1mm ~= 3.78 pixels
-                            padding: const EdgeInsets.only(
-                              left: 94, // 25mm
-                              right: 75, // 20mm
-                              top: 170, // 45mm (first page)
-                              bottom: 75, // 20mm
-                            ),
-                            child: DefaultTextStyle(
-                              style: TextStyle(
-                                fontFamily: _currentFontFamily,
-                                fontSize: _currentFontSize,
-                                color: Colors.black,
-                                height: _currentLineHeight,
+                            padding: EdgeInsets.zero,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildProfessionalHeader(),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                        left: 94, // 25mm
+                                        right: 75, // 20mm
+                                        top: _currentDesignId != 'monogram' ? 170 : 40,
+                                        bottom: 75, // 20mm
+                                      ),
+                                      child: DefaultTextStyle(
+                                        style: TextStyle(
+                                          fontFamily: _currentFontFamily,
+                                          fontSize: _currentFontSize,
+                                          color: Colors.black,
+                                          height: _currentLineHeight,
+                                        ),
+                                        child: quill.QuillEditor.basic(
+                                          focusNode: _editorFocusNode,
+                                          controller: _controller,
+                                          config: quill.QuillEditorConfig(
+                                            placeholder:
+                                                'Schreibe hier dein Anschreiben...',
+                                            padding: EdgeInsets.zero,
+                                            embedBuilders:
+                                                FlutterQuillEmbeds.editorBuilders(),
+                                            autoFocus: true,
+                                            expands: false,
+                                            scrollable: false, // Let the SingleChildScrollView handle scrolling!
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  _buildProfessionalFooter(),
+                                ],
                               ),
-                              child: quill.QuillEditor.basic(
-                                focusNode: _editorFocusNode,
-                                controller: _controller,
-                                config: quill.QuillEditorConfig(
-                                  placeholder:
-                                      'Schreibe hier dein Anschreiben...',
-                                  padding: EdgeInsets.zero,
-                                  embedBuilders:
-                                      FlutterQuillEmbeds.editorBuilders(),
-                                  autoFocus: true,
-                                  expands: false,
-                                  scrollable: false, // Let the SingleChildScrollView handle scrolling!
-                                ),
-                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ),

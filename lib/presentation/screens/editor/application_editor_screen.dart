@@ -50,7 +50,7 @@ class _ApplicationEditorScreenState
   double _marginTop = 170.0;
   double _marginBottom = 75.0;
 
-  String _headerStyle = 'none'; // 'none', 'modern_mk'
+  String _currentDesignId = 'modern';
   String _userName = '';
   String _userEmail = '';
   String _userPhone = '';
@@ -441,23 +441,8 @@ class _ApplicationEditorScreenState
   }
 
   
-  Widget _buildHeaderTab() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text('Briefkopf (Kopfzeile)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-        const SizedBox(height: 16),
-        _buildHeaderStyleCard('Ohne Briefkopf', 'none'),
-        _buildHeaderStyleCard('Modern (MK Design)', 'modern_mk'),
-        const Divider(height: 32),
-        const Text('Deine Daten', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        const SizedBox(height: 8),
-        const Text('Die Daten für den Briefkopf werden automatisch aus deinen Einstellungen (Profil) geladen.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildDesignTab() {
+  
+    Widget _buildDesignTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -466,37 +451,13 @@ class _ApplicationEditorScreenState
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 16),
-        _buildDesignCard(
-          'Klassisch',
-          'Serife Schrift, seriös & zeitlos',
-          'Times New Roman',
-          12,
-          1.5,
-          _currentFontFamily == 'Times New Roman',
-        ),
-        _buildDesignCard(
-          'Modern',
-          'Klare Kanten, serifenlos',
-          'Arial',
-          14,
-          1.6,
-          _currentFontFamily == 'Arial' && _currentFontSize == 14,
-        ),
-        _buildDesignCard(
-          'Kompakt',
-          'Für viel Text auf einer Seite',
-          'Arial',
-          10,
-          1.3,
-          _currentFontFamily == 'Arial' && _currentFontSize == 10,
-        ),
+        _buildDesignCard('Klassisch', 'Serife Schrift, seriös & zeitlos', 'klassisch'),
+        _buildDesignCard('Modern', 'Klare Kanten, serifenlos', 'modern'),
+        _buildDesignCard('Kompakt', 'Für viel Text auf einer Seite', 'kompakt'),
+        _buildDesignCard('Monogram', 'Professionelles Layout mit blauem Monogramm', 'monogram'),
         
           const Divider(height: 32),
-          const Text('Briefkopf (Kopfzeile)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-          const SizedBox(height: 8),
-          _buildHeaderStyleCard('Ohne Briefkopf', 'none'),
-          _buildHeaderStyleCard('Modern (MK Design)', 'modern_mk'),
-const Divider(height: 32),
+          
         const Text(
           'Seitenränder',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -593,11 +554,26 @@ const Divider(height: 32),
     );
   }
 
-  void _applyDesign(String fontFamily, double size, double height) {
+  void _applyDesign(String designId) {
     setState(() {
-      _currentFontFamily = fontFamily;
-      _currentFontSize = size;
-      _currentLineHeight = height;
+      _currentDesignId = designId;
+      if (designId == 'klassisch') {
+        _currentFontFamily = 'Times New Roman';
+        _currentFontSize = 12;
+        _currentLineHeight = 1.5;
+      } else if (designId == 'modern') {
+        _currentFontFamily = 'Arial';
+        _currentFontSize = 14;
+        _currentLineHeight = 1.6;
+      } else if (designId == 'kompakt') {
+        _currentFontFamily = 'Arial';
+        _currentFontSize = 10;
+        _currentLineHeight = 1.3;
+      } else if (designId == 'monogram') {
+        _currentFontFamily = 'Arial';
+        _currentFontSize = 12;
+        _currentLineHeight = 1.5;
+      }
     });
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Design angewendet!')));
@@ -629,11 +605,9 @@ const Divider(height: 32),
   Widget _buildDesignCard(
     String title,
     String subtitle,
-    String font,
-    double size,
-    double height,
-    bool isSelected,
+    String designId,
   ) {
+    bool isSelected = _currentDesignId == designId;
     return Card(
       elevation: 0,
       color: isSelected
@@ -650,7 +624,7 @@ const Divider(height: 32),
         borderRadius: BorderRadius.circular(8),
       ),
       child: InkWell(
-        onTap: () => _applyDesign(font, size, height),
+        onTap: () => _applyDesign(designId),
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -678,42 +652,7 @@ const Divider(height: 32),
     );
   }
 
-  Widget _buildHeaderStyleCard(String title, String styleId) {
-    final isSelected = _headerStyle == styleId;
-    return Card(
-      color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
-      elevation: isSelected ? 2 : 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(
-        side: BorderSide(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey.shade300,
-          width: isSelected ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: InkWell(
-        onTap: () => setState(() => _headerStyle = styleId),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Icon(
-                styleId == 'none' ? Icons.article_outlined : Icons.branding_watermark_outlined,
-                color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-              if (isSelected)
-                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
+  
 
   Widget _buildBausteineTab() {
     final db = ref.read(databaseProvider);
@@ -884,11 +823,10 @@ const Divider(height: 32),
 
   
   Widget _buildProfessionalHeader() {
-    if (_headerStyle == 'none') return const SizedBox.shrink();
+    if (_currentDesignId != 'monogram') return const SizedBox.shrink();
     
-    final initials = _userName.trim().isNotEmpty
-        ? _userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0].toUpperCase() : '').take(2).join('')
-        : 'MK';
+    final name = _userName.trim().isNotEmpty ? _userName.trim() : 'Max Mustermann';
+    final initials = name.split(' ').where((e) => e.isNotEmpty).map((e) => e[0].toUpperCase()).take(2).join('');
 
     return Padding(
       padding: const EdgeInsets.only(left: 94, right: 75, top: 50, bottom: 20),
@@ -989,6 +927,22 @@ const Divider(height: 32),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  
+  Widget _buildProfessionalFooter() {
+    if (_currentDesignId != 'monogram') return const SizedBox.shrink();
+    
+    return Container(
+      width: double.infinity,
+      height: 20,
+      margin: const EdgeInsets.only(top: 40),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Color(0xFF1E3A8A), width: 3),
+        ),
       ),
     );
   }

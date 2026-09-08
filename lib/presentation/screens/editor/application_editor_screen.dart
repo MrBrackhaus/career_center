@@ -909,8 +909,8 @@ class _ApplicationEditorScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text('\n ', style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                      const SizedBox(height: 4),
+                      Text('$_userAddress\n$_userZip $_userCity', style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
                   ],
                 ),
               ),
@@ -921,15 +921,35 @@ class _ApplicationEditorScreenState
                     const Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
                     Text(_userPhone, style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+              ],
+            ),
+            const SizedBox(height: 40),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(_application?.company ?? 'Unternehmensname', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                      Text(_application?.contactName ?? 'Personalabteilung', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                      Text(_application?.address ?? 'Musterstraße 1, 12345 Stadt', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}',
+                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
 
   
   Widget _buildProfessionalFooter() {

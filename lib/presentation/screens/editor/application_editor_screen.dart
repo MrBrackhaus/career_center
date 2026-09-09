@@ -989,12 +989,11 @@ class _ApplicationEditorScreenState
   }
 
   Widget _buildProfessionalFooter() {
-    if (_currentDesignId != 'monogram') return SizedBox.shrink();
+    if (_currentDesignId != 'monogram') return const SizedBox.shrink();
     
     return Container(
       width: double.infinity,
-      height: 20,
-      margin: EdgeInsets.only(top: 40),
+      height: 40,
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: _currentAccentColor, width: 3),
@@ -1159,12 +1158,13 @@ class _ApplicationEditorScreenState
                             // DIN 5008 Margins: Top: 45mm/27mm, Bottom: 20mm, Left: 25mm, Right: 20mm
                             // 1mm ~= 3.78 pixels
                             padding: EdgeInsets.zero,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  _buildProfessionalHeader(),
-                                  Expanded(
-                                    child: Padding(
+                            child: Stack(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _buildProfessionalHeader(),
+                                    Padding(
                                       padding: EdgeInsets.only(
                                         left: 94, // 25mm
                                         right: 75, // 20mm
@@ -1208,13 +1208,20 @@ class _ApplicationEditorScreenState
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  _buildProfessionalFooter(),
-                                ],
-                              ),
+                                    const SizedBox(height: 60), // Space so text doesn't hit the footer
+                                  ],
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: _buildProfessionalFooter(),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),

@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/database_provider.dart';
 import '../../../data/database/app_database.dart';
 
 class TutorialFlow extends StatefulWidget {
-  const TutorialFlow({Key? key}) : super(key: key);
+  const TutorialFlow({super.key});
 
   @override
   State<TutorialFlow> createState() => _TutorialFlowState();
@@ -83,7 +83,9 @@ class _TutorialFlowState extends State<TutorialFlow> {
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: (page['color'] as Color).withOpacity(0.1),
+                          color: (page['color'] as Color).withValues(
+                            alpha: 0.1,
+                          ),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -184,4 +186,3 @@ Future<void> showTutorialIfNeeded(BuildContext context, WidgetRef ref) async {
     );
   }
 }
-

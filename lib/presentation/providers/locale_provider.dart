@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'database_provider.dart';
 import '../../data/database/app_database.dart';
-import '../../data/database/daos/settings_dao.dart';
 
-final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(LocaleNotifier.new);
+final localeProvider = NotifierProvider<LocaleNotifier, Locale?>(
+  LocaleNotifier.new,
+);
 
 class LocaleNotifier extends Notifier<Locale?> {
   @override
@@ -20,21 +22,23 @@ class LocaleNotifier extends Notifier<Locale?> {
       state = Locale(lang.value);
     } else {
       // Default behavior (system locale)
-      state = null; 
+      state = null;
     }
   }
 
   Future<void> setLocale(String languageCode) async {
     final settingsDao = ref.read(databaseProvider).settingsDao;
-    await settingsDao.insertOrUpdateSetting(Setting(key: 'app_language', value: languageCode));
+    await settingsDao.insertOrUpdateSetting(
+      Setting(key: 'app_language', value: languageCode),
+    );
     state = Locale(languageCode);
   }
-  
+
   Future<void> clearLocale() async {
     final settingsDao = ref.read(databaseProvider).settingsDao;
-    await settingsDao.insertOrUpdateSetting(Setting(key: 'app_language', value: ''));
+    await settingsDao.insertOrUpdateSetting(
+      Setting(key: 'app_language', value: ''),
+    );
     state = null;
   }
 }
-
-

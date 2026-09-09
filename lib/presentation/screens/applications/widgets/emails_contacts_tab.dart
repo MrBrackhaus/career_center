@@ -1,16 +1,13 @@
-import '../../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:career_center/presentation/providers/imap_provider.dart';
+
 import 'contacts_widget.dart';
 
 class EmailsAndContactsTab extends ConsumerWidget {
   final int applicationId;
 
-  const EmailsAndContactsTab({
-    Key? key,
-    required this.applicationId,
-  }) : super(key: key);
+  const EmailsAndContactsTab({super.key, required this.applicationId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -19,11 +16,16 @@ class EmailsAndContactsTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Zugeordnete E-Mails', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Zugeordnete E-Mails',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
           Consumer(
             builder: (context, ref, child) {
-              final emailsAsync = ref.watch(applicationEmailsProvider(applicationId));
+              final emailsAsync = ref.watch(
+                applicationEmailsProvider(applicationId),
+              );
               return emailsAsync.when(
                 data: (emails) {
                   if (emails.isEmpty) {
@@ -41,8 +43,13 @@ class EmailsAndContactsTab extends ConsumerWidget {
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ExpansionTile(
-                          title: Text(email.subject, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('${email.sender} • ${email.receivedAt.day}.${email.receivedAt.month}.${email.receivedAt.year}'),
+                          title: Text(
+                            email.subject,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '${email.sender} • ${email.receivedAt.day}.${email.receivedAt.month}.${email.receivedAt.year}',
+                          ),
                           children: [
                             Padding(
                               padding: const EdgeInsets.all(16.0),
@@ -55,7 +62,10 @@ class EmailsAndContactsTab extends ConsumerWidget {
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Text('Fehler beim Laden der E-Mails: $err', style: const TextStyle(color: Colors.red)),
+                error: (err, stack) => Text(
+                  'Fehler beim Laden der E-Mails: $err',
+                  style: const TextStyle(color: Colors.red),
+                ),
               );
             },
           ),

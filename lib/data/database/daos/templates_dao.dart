@@ -16,16 +16,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:drift/drift.dart';
+
 import '../app_database.dart';
 
 part 'templates_dao.g.dart';
 
 @DriftAccessor(tables: [Templates])
-class TemplatesDao extends DatabaseAccessor<AppDatabase> with _$TemplatesDaoMixin {
-  TemplatesDao(AppDatabase db) : super(db);
+class TemplatesDao extends DatabaseAccessor<AppDatabase>
+    with _$TemplatesDaoMixin {
+  TemplatesDao(super.db);
 
   Future<List<Template>> getAllTemplates() => select(templates).get();
-  
+
   Stream<List<Template>> watchAllTemplates() => select(templates).watch();
 
   Stream<List<Template>> watchTemplatesByType(String t) {
@@ -44,4 +46,3 @@ class TemplatesDao extends DatabaseAccessor<AppDatabase> with _$TemplatesDaoMixi
     return delete(templates).delete(template);
   }
 }
-

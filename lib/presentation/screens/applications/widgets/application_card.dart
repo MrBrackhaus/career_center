@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../data/database/app_database.dart';
 
 class ApplicationCard extends StatefulWidget {
@@ -10,12 +11,12 @@ class ApplicationCard extends StatefulWidget {
   final VoidCallback onDelete;
 
   const ApplicationCard({
-    Key? key,
+    super.key,
     required this.application,
     required this.isSelected,
     required this.onTap,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<ApplicationCard> createState() => _ApplicationCardState();
@@ -42,7 +43,7 @@ class _ApplicationCardState extends State<ApplicationCard> {
         ? CircleAvatar(
             backgroundColor: Colors.white,
             backgroundImage: NetworkImage(logoUrl),
-            onBackgroundImageError: (_, __) {},
+            onBackgroundImageError: (_, _) {},
             radius: 20,
           )
         : CircleAvatar(
@@ -50,7 +51,10 @@ class _ApplicationCardState extends State<ApplicationCard> {
             radius: 20,
             child: Text(
               app.company.isNotEmpty ? app.company[0].toUpperCase() : '?',
-              style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           );
 
@@ -65,7 +69,9 @@ class _ApplicationCardState extends State<ApplicationCard> {
           decoration: BoxDecoration(
             color: widget.isSelected
                 ? colorScheme.primaryContainer.withValues(alpha: 0.2)
-                : (_isHovering ? colorScheme.surfaceContainerHigh : colorScheme.surfaceContainer),
+                : (_isHovering
+                      ? colorScheme.surfaceContainerHigh
+                      : colorScheme.surfaceContainer),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: widget.isSelected
@@ -74,7 +80,13 @@ class _ApplicationCardState extends State<ApplicationCard> {
               width: widget.isSelected ? 1.5 : 1,
             ),
             boxShadow: _isHovering && !widget.isSelected
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))]
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
                 : [],
           ),
           child: Padding(
@@ -89,26 +101,40 @@ class _ApplicationCardState extends State<ApplicationCard> {
                     children: [
                       Text(
                         app.position,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         app.company,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 14),
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
                 Text(
-                  app.appliedDate != null ? DateFormat('dd.MM.yyyy').format(app.appliedDate!) : '-',
-                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
+                  app.appliedDate != null
+                      ? DateFormat('dd.MM.yyyy').format(app.appliedDate!)
+                      : '-',
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 _buildStatusBadge(app.status),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                   onSelected: (value) {
                     if (value == 'edit') {
                       context.go('/applications/edit/${app.id}');
@@ -117,8 +143,26 @@ class _ApplicationCardState extends State<ApplicationCard> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Bearbeiten')])),
-                    const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, color: Colors.red, size: 18), SizedBox(width: 8), Text('Löschen', style: TextStyle(color: Colors.red))])),
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 18),
+                          SizedBox(width: 8),
+                          Text('Bearbeiten'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red, size: 18),
+                          SizedBox(width: 8),
+                          Text('Löschen', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -132,18 +176,39 @@ class _ApplicationCardState extends State<ApplicationCard> {
   Widget _buildStatusBadge(String status) {
     Color bgColor;
     switch (status.toLowerCase()) {
-      case 'offen': bgColor = Colors.orange; break;
-      case 'versendet': bgColor = Colors.blue; break;
-      case 'interview': bgColor = Colors.purple; break;
-      case 'zusage': bgColor = Colors.green; break;
-      case 'absage': bgColor = Colors.red; break;
-      default: bgColor = Colors.grey;
+      case 'offen':
+        bgColor = Colors.orange;
+        break;
+      case 'versendet':
+        bgColor = Colors.blue;
+        break;
+      case 'interview':
+        bgColor = Colors.purple;
+        break;
+      case 'zusage':
+        bgColor = Colors.green;
+        break;
+      case 'absage':
+        bgColor = Colors.red;
+        break;
+      default:
+        bgColor = Colors.grey;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
-      child: Text(status.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
     );
   }
 }

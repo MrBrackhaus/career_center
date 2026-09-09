@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart';
+
 import '../../data/database/app_database.dart';
 import 'database_provider.dart';
 
@@ -25,7 +25,10 @@ final applicationsProvider = StreamProvider<List<Application>>((ref) {
   return repository.watchAllApplications();
 });
 
-final applicationByIdProvider = FutureProvider.family<Application, int>((ref, id) async {
+final applicationByIdProvider = FutureProvider.family<Application, int>((
+  ref,
+  id,
+) async {
   final repository = ref.watch(applicationsRepositoryProvider);
   return await repository.getApplicationById(id);
 });
@@ -45,7 +48,7 @@ class ApplicationNotifier {
     final repository = _ref.read(applicationsRepositoryProvider);
     await repository.updateApplication(app);
   }
-  
+
   Future<void> deleteApplication(Application app) async {
     final repository = _ref.read(applicationsRepositoryProvider);
     await repository.deleteApplication(app);
@@ -55,4 +58,3 @@ class ApplicationNotifier {
 final applicationNotifierProvider = Provider<ApplicationNotifier>((ref) {
   return ApplicationNotifier(ref);
 });
-

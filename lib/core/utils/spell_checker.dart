@@ -1,4 +1,5 @@
 import 'dart:collection';
+
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/foundation.dart';
 
@@ -6,7 +7,7 @@ class SpellChecker {
   static LinkedHashSet<String> _dictionary = LinkedHashSet<String>();
   static bool _isLoaded = false;
   static String _currentLanguage = 'de';
-  static LinkedHashSet<String> _userDictionary = LinkedHashSet<String>();
+  static final LinkedHashSet<String> _userDictionary = LinkedHashSet<String>();
 
   /// Available languages with display names
   static const Map<String, String> availableLanguages = {
@@ -28,12 +29,36 @@ class SpellChecker {
 
   /// Common German suffixes for stripping (longest first)
   static const List<String> _germanSuffixes = [
-    'ischen', 'ischen', 'ungen', 'heit', 'keit',
-    'lich', 'isch', 'igen', 'iges', 'igem', 'iger',
-    'enen', 'enem', 'ener', 'enes',
-    'ige', 'ten', 'tes', 'tem', 'ter', 'ene',
-    'en', 'er', 'es', 'em', 'te', 'ig',
-    'e', 's', 'n',
+    'ischen',
+    'ischen',
+    'ungen',
+    'heit',
+    'keit',
+    'lich',
+    'isch',
+    'igen',
+    'iges',
+    'igem',
+    'iger',
+    'enen',
+    'enem',
+    'ener',
+    'enes',
+    'ige',
+    'ten',
+    'tes',
+    'tem',
+    'ter',
+    'ene',
+    'en',
+    'er',
+    'es',
+    'em',
+    'te',
+    'ig',
+    'e',
+    's',
+    'n',
   ];
 
   static String get currentLanguage => _currentLanguage;
@@ -45,13 +70,13 @@ class SpellChecker {
     _isLoaded = false;
 
     try {
-      final primaryDict = await rootBundle.loadString('assets/dictionaries/$language.txt');
+      final primaryDict = await rootBundle.loadString(
+        'assets/dictionaries/$language.txt',
+      );
 
       // Parse in isolate to avoid UI jank
       final result = await compute(_parseDictionary, primaryDict);
       _dictionary = result;
-
-
 
       _isLoaded = true;
       debugPrint('Dictionary loaded ($language): ${_dictionary.length} words');
@@ -133,7 +158,8 @@ class SpellChecker {
       final right = word.substring(i);
 
       // Check if left part is valid
-      final leftValid = _dictionary.contains(left) || _checkWithSuffixStripping(left);
+      final leftValid =
+          _dictionary.contains(left) || _checkWithSuffixStripping(left);
       if (!leftValid) continue;
 
       // Check if right part is valid (directly or with suffix stripping)
@@ -144,7 +170,8 @@ class SpellChecker {
       // Try with Fugen-s (e.g., Arbeit-s-platz)
       if (right.startsWith('s') && right.length > 4) {
         final rightWithoutS = right.substring(1);
-        if (_dictionary.contains(rightWithoutS) || _checkWithSuffixStripping(rightWithoutS)) {
+        if (_dictionary.contains(rightWithoutS) ||
+            _checkWithSuffixStripping(rightWithoutS)) {
           return true;
         }
       }
@@ -152,45 +179,47 @@ class SpellChecker {
     return false;
   }
 
-
   /// Returns a list of suggested corrections using a fast Levenshtein distance subset search.
   static Future<List<String>> getSuggestions(String originalWord) async {
     if (!_isLoaded || _dictionary.isEmpty) return [];
-    
+
     // Run on main thread, but it's very fast because we filter aggressively
     final String word = originalWord.toLowerCase();
     final dict = _dictionary;
-    
+
     final List<MapEntry<String, int>> matchEntries = [];
-    
+
     // Filter dictionary to words with similar length (+/- 2 characters)
     // and same starting letter (for performance)
     final startChar = word.isEmpty ? '' : word[0];
-    
+
     int index = 0;
     for (final dictWord in dict) {
       index++;
       if (dictWord.isEmpty) continue;
-      
+
       final lenDiff = (dictWord.length - word.length).abs();
       if (lenDiff > 2) continue;
-      
+
       if (dictWord[0] != startChar && lenDiff != 0) continue;
-      
+
       final dist = _levenshtein(dictWord, word);
       if (dist <= 2) {
-        matchEntries.add(MapEntry(dictWord, (dist * 1000000) + index)); // Encode dist and frequency rank together
+        matchEntries.add(
+          MapEntry(dictWord, (dist * 1000000) + index),
+        ); // Encode dist and frequency rank together
       }
     }
-    
+
     // Sort: lowest distance first, then lowest index (most frequent)
     matchEntries.sort((a, b) => a.value.compareTo(b.value));
-      
+
     // Return top 5
     return matchEntries.take(5).map((entry) {
       final w = entry.key;
       // Capitalize if original word was capitalized
-      if (originalWord.isNotEmpty && originalWord[0] == originalWord[0].toUpperCase()) {
+      if (originalWord.isNotEmpty &&
+          originalWord[0] == originalWord[0].toUpperCase()) {
         return w[0].toUpperCase() + w.substring(1);
       }
       return w;

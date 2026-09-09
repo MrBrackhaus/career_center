@@ -64,20 +64,10 @@ dependencies:
   signature: ^6.4.0
   http: ^1.6.0
   mcp: ^0.0.1
+  system_theme: ^3.3.0
+  system_fonts: ^1.0.1
+  mime: any
 dev_dependencies:
-  file_selector: ^1.1.0
-  flutter_quill: ^11.5.1
-  flutter_quill_extensions: ^11.0.0
-  pdf: ^3.13.0
-  printing: ^5.15.0
-  table_calendar: ^3.2.1
-  csv: ^8.0.0
-  flutter_colorpicker: ^1.1.0
-  image_picker: ^1.2.3
-  flutter_secure_storage: ^11.0.0
-  flutter_localizations:
-    sdk: flutter
-  intl: ^0.20.3
   flutter_test:
     sdk: flutter
 
@@ -99,3 +89,5 @@ flutter:
 
 dependency_overrides:
   xml: ^7.0.1
+
+

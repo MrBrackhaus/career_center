@@ -16,7 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:convert';
+
 import 'package:html/parser.dart' as html_parser;
+
 import '../../../domain/models/extraction_result.dart';
 
 /// Extrahiert Daten aus Stellenanzeigen / Job-Postings.
@@ -28,13 +30,14 @@ import '../../../domain/models/extraction_result.dart';
 /// - Kontaktperson / Ansprechpartner
 /// - E-Mail, Telefon, Standort, URL
 class JobPostingExtractor {
-  
   /// Extrahiert Daten aus dem HTML (insbesondere JSON-LD/Schema.org JobPosting)
   static ExtractedFields extractFromHtml(String htmlString) {
     try {
       final document = html_parser.parse(htmlString);
-      final scriptTags = document.querySelectorAll('script[type="application/ld+json"]');
-      
+      final scriptTags = document.querySelectorAll(
+        'script[type="application/ld+json"]',
+      );
+
       for (final script in scriptTags) {
         final text = script.text;
         if (text.contains('"JobPosting"') || text.contains("'JobPosting'")) {
@@ -45,11 +48,14 @@ class JobPostingExtractor {
           } catch (_) {
             continue;
           }
-          
+
           if (jsonLd is List) {
-            jsonLd = jsonLd.firstWhere((e) => e['@type'] == 'JobPosting', orElse: () => null);
+            jsonLd = jsonLd.firstWhere(
+              (e) => e['@type'] == 'JobPosting',
+              orElse: () => null,
+            );
           }
-          
+
           if (jsonLd != null && jsonLd['@type'] == 'JobPosting') {
             final position = jsonLd['title']?.toString();
             final companyNode = jsonLd['hiringOrganization'];
@@ -59,7 +65,7 @@ class JobPostingExtractor {
             } else {
               company = companyNode?.toString();
             }
-            
+
             final locationNode = jsonLd['jobLocation'];
             String? address;
             if (locationNode is Map && locationNode['address'] != null) {
@@ -68,7 +74,11 @@ class JobPostingExtractor {
                 final locality = addr['addressLocality']?.toString() ?? '';
                 final region = addr['addressRegion']?.toString() ?? '';
                 final country = addr['addressCountry']?.toString() ?? '';
-                address = [locality, region, country].where((e) => e.isNotEmpty).join(', ');
+                address = [
+                  locality,
+                  region,
+                  country,
+                ].where((e) => e.isNotEmpty).join(', ');
               }
             } else if (locationNode is List && locationNode.isNotEmpty) {
               final addr = locationNode[0]['address'];
@@ -76,7 +86,7 @@ class JobPostingExtractor {
                 address = addr['addressLocality']?.toString() ?? '';
               }
             }
-            
+
             final salaryNode = jsonLd['baseSalary'];
             String? salary;
             if (salaryNode is Map && salaryNode['value'] != null) {
@@ -87,17 +97,41 @@ class JobPostingExtractor {
                 salary = val.toString();
               }
             }
-            
+
             return ExtractedFields(
-              position: position != null ? FieldResult(value: position, confidence: 1.0, source: 'schema.org') : null,
-              company: company != null ? FieldResult(value: company, confidence: 1.0, source: 'schema.org') : null,
-              address: address != null && address.isNotEmpty ? FieldResult(value: address, confidence: 1.0, source: 'schema.org') : null,
-              salaryInfo: salary != null ? FieldResult(value: salary, confidence: 1.0, source: 'schema.org') : null,
+              position: position != null
+                  ? FieldResult(
+                      value: position,
+                      confidence: 1.0,
+                      source: 'schema.org',
+                    )
+                  : null,
+              company: company != null
+                  ? FieldResult(
+                      value: company,
+                      confidence: 1.0,
+                      source: 'schema.org',
+                    )
+                  : null,
+              address: address != null && address.isNotEmpty
+                  ? FieldResult(
+                      value: address,
+                      confidence: 1.0,
+                      source: 'schema.org',
+                    )
+                  : null,
+              salaryInfo: salary != null
+                  ? FieldResult(
+                      value: salary,
+                      confidence: 1.0,
+                      source: 'schema.org',
+                    )
+                  : null,
             );
           }
         }
       }
-      
+
       // Fallback: Strip HTML and use plain text extractor
       final plainText = document.body?.text ?? htmlString;
       return extract(plainText);
@@ -112,7 +146,10 @@ class JobPostingExtractor {
     final nonEmptyLines = lines.where((l) => l.isNotEmpty).toList();
 
     FieldResult<String>? foundPosition;
-    final titleRegex = RegExp(r'(.*?)\s*\([mwfd]\/[mwfd]\/[mwfd]\)', caseSensitive: false);
+    final titleRegex = RegExp(
+      r'(.*?)\s*\([mwfd]\/[mwfd]\/[mwfd]\)',
+      caseSensitive: false,
+    );
     for (final line in nonEmptyLines) {
       final match = titleRegex.firstMatch(line);
       if (match != null) {
@@ -151,7 +188,9 @@ class JobPostingExtractor {
     if (foundCompany == null) {
       for (int i = 0; i < nonEmptyLines.length; i++) {
         final lower = nonEmptyLines[i].toLowerCase();
-        if (lower == 'Ã¼ber uns' || lower == 'wir sind' || lower == 'unternehmen') {
+        if (lower == 'Ã¼ber uns' ||
+            lower == 'wir sind' ||
+            lower == 'unternehmen') {
           if (i + 1 < nonEmptyLines.length) {
             foundCompany = FieldResult(
               value: nonEmptyLines[i + 1],
@@ -195,37 +234,57 @@ class JobPostingExtractor {
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ Kontaktperson Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     FieldResult<String>? foundContact;
-    
+
     // Suche nach HR-Begriffen oder Ansprechpartner in der NÃ¤he von Namen
-    final hrRoles = ['hr manager', 'recruiter', 'personalreferent', 'talent acquisition', 'ansprechpartner', 'kontakt', 'z.hd.', 'zu hÃ¤nden'];
+    final hrRoles = [
+      'hr manager',
+      'recruiter',
+      'personalreferent',
+      'talent acquisition',
+      'ansprechpartner',
+      'kontakt',
+      'z.hd.',
+      'zu hÃ¤nden',
+    ];
     for (int i = 0; i < nonEmptyLines.length; i++) {
       final line = nonEmptyLines[i];
       final lower = line.toLowerCase();
-      
+
       bool hasHrRole = hrRoles.any((r) => lower.contains(r));
-      
+
       if (hasHrRole) {
         // Regex fÃ¼r Namen: optional Titel, optional Herr/Frau, dann 2+ groÃŸgeschriebene WÃ¶rter
-        final nameRegex = RegExp(r'(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)\s+)?(?:(?:Dr\.|Prof\.)\s+)?([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+(?:\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+)?)');
-        
+        final nameRegex = RegExp(
+          r'(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)\s+)?(?:(?:Dr\.|Prof\.)\s+)?([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+(?:\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+)?)',
+        );
+
         // PrÃ¼fe aktuelle Zeile
         final match = nameRegex.firstMatch(line);
-        if (match != null && !lower.startsWith('kontakt')) { // Vermeide, dass das Wort "Kontakt" selbst matcht, wenn es kein Name ist.
-          foundContact = FieldResult(value: match.group(0)!, confidence: 0.9, source: 'contact_hr_role_line');
+        if (match != null && !lower.startsWith('kontakt')) {
+          // Vermeide, dass das Wort "Kontakt" selbst matcht, wenn es kein Name ist.
+          foundContact = FieldResult(
+            value: match.group(0)!,
+            confidence: 0.9,
+            source: 'contact_hr_role_line',
+          );
           break;
         }
-        
+
         // PrÃ¼fe nÃ¤chste 1-2 Zeilen
         if (i + 1 < nonEmptyLines.length) {
-          final nextMatch = nameRegex.firstMatch(nonEmptyLines[i+1]);
+          final nextMatch = nameRegex.firstMatch(nonEmptyLines[i + 1]);
           if (nextMatch != null) {
-            foundContact = FieldResult(value: nextMatch.group(0)!, confidence: 0.8, source: 'contact_hr_role_next_line');
+            foundContact = FieldResult(
+              value: nextMatch.group(0)!,
+              confidence: 0.8,
+              source: 'contact_hr_role_next_line',
+            );
             break;
           }
         }
       }
     }
-    
+
     // Fallback: Suche einfach nach Frau/Herr Dr. Max Mustermann im gesamten Text
     if (foundContact == null) {
       final contactRegexFallback = RegExp(
@@ -243,7 +302,9 @@ class JobPostingExtractor {
 
     // Ã¢â€â‚¬Ã¢â€â‚¬ E-Mail Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     FieldResult<String>? foundEmail;
-    final emailRegex = RegExp(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}');
+    final emailRegex = RegExp(
+      r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+    );
     final emailMatch = emailRegex.firstMatch(text);
     if (emailMatch != null) {
       foundEmail = FieldResult(
@@ -267,19 +328,19 @@ class JobPostingExtractor {
 
     // â”€â”€ Standort / Adresse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     FieldResult<String>? foundAddress;
-    
+
     // Volle Adresse mit StraÃŸe und PLZ/Ort finden
     final fullAddressRegex = RegExp(
       r'([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ\s.-]+(?:str\.|straÃŸe|weg|platz|allee|ring)\s+\d+[a-zA-Z]?)[,\s]+(\d{5})\s+([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ-]+)',
     );
     final fullMatch = fullAddressRegex.firstMatch(text);
-    
+
     if (fullMatch != null) {
       String street = fullMatch.group(1)?.trim() ?? '';
       String plz = fullMatch.group(2)?.trim() ?? '';
       String city = fullMatch.group(3)?.trim() ?? '';
       street = street.split('\n').last.trim();
-      
+
       foundAddress = FieldResult(
         value: "$street, $plz $city",
         confidence: 0.95,
@@ -287,7 +348,9 @@ class JobPostingExtractor {
       );
     } else {
       // Fallback: Nur PLZ und Stadt
-      final plzCityRegex = RegExp(r'\b(\d{5})\s+([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ-]+)\b');
+      final plzCityRegex = RegExp(
+        r'\b(\d{5})\s+([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ-]+)\b',
+      );
       final plzMatch = plzCityRegex.firstMatch(text);
       if (plzMatch != null) {
         foundAddress = FieldResult(
@@ -299,7 +362,9 @@ class JobPostingExtractor {
     }
     // Ã¢â€â‚¬Ã¢â€â‚¬ URL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     FieldResult<String>? foundUrl;
-    final urlRegex = RegExp(r'https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[/a-zA-Z0-9._~:/?#\[\]@!$&()*+,;=-]*');
+    final urlRegex = RegExp(
+      r'https?://[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[/a-zA-Z0-9._~:/?#\[\]@!$&()*+,;=-]*',
+    );
     final urlMatch = urlRegex.firstMatch(text);
     if (urlMatch != null) {
       foundUrl = FieldResult(
@@ -331,6 +396,3 @@ class JobPostingExtractor {
     );
   }
 }
-
-
-

@@ -60,11 +60,9 @@ class DocumentIntelligenceNotifier extends Notifier<DocumentAnalysisState> {
     state = state.copyWith(isAnalyzing: true, errorMessage: null);
 
     try {
-      final result = await ref.read(documentIntelligenceServiceProvider).analyzeDocument(
-        text,
-        source: source,
-        metadata: metadata,
-      );
+      final result = await ref
+          .read(documentIntelligenceServiceProvider)
+          .analyzeDocument(text, source: source, metadata: metadata);
       state = state.copyWith(lastResult: result, isAnalyzing: false);
       return result;
     } catch (e) {
@@ -82,7 +80,9 @@ class DocumentIntelligenceNotifier extends Notifier<DocumentAnalysisState> {
     if (lastResult == null || lastResult.rawText.isEmpty) return;
 
     try {
-      await ref.read(documentIntelligenceServiceProvider).learnFromCorrection(lastResult.rawText, correctType);
+      await ref
+          .read(documentIntelligenceServiceProvider)
+          .learnFromCorrection(lastResult.rawText, correctType);
     } catch (e) {
       // Stilles Fehlschlagen – Learning ist optional
     }
@@ -95,11 +95,13 @@ class DocumentIntelligenceNotifier extends Notifier<DocumentAnalysisState> {
 }
 
 /// Provider für den DocumentIntelligenceService (Singleton).
-final documentIntelligenceServiceProvider = Provider<DocumentIntelligenceService>((ref) {
-  return DocumentIntelligenceService();
-});
+final documentIntelligenceServiceProvider =
+    Provider<DocumentIntelligenceService>((ref) {
+      return DocumentIntelligenceService();
+    });
 
 /// Provider für den DocumentIntelligenceNotifier.
 final documentIntelligenceProvider =
-    NotifierProvider<DocumentIntelligenceNotifier, DocumentAnalysisState>(DocumentIntelligenceNotifier.new);
-
+    NotifierProvider<DocumentIntelligenceNotifier, DocumentAnalysisState>(
+      DocumentIntelligenceNotifier.new,
+    );

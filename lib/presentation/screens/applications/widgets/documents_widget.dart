@@ -1,4 +1,5 @@
 import '../../../../l10n/app_localizations.dart';
+
 /*
  * JobTracker
  * Copyright (C) 2026 
@@ -17,11 +18,13 @@ import '../../../../l10n/app_localizations.dart';
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+
 import '../../../providers/documents_provider.dart';
 
 class DocumentsWidget extends ConsumerWidget {
@@ -38,18 +41,25 @@ class DocumentsWidget extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(AppLocalizations.of(context)!.formTabDocs, style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              AppLocalizations.of(context)!.formTabDocs,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             TextButton.icon(
               icon: const Icon(Icons.upload_file),
               label: const Text('Hochladen'),
               onPressed: () => _uploadDoc(context, ref),
-            )
+            ),
           ],
         ),
         const SizedBox(height: 8),
         docsAsync.when(
           data: (docs) {
-            if (docs.isEmpty) return const Text('Keine Dokumente abgelegt.', style: TextStyle(color: Colors.grey));
+            if (docs.isEmpty)
+              return const Text(
+                'Keine Dokumente abgelegt.',
+                style: TextStyle(color: Colors.grey),
+              );
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -60,10 +70,16 @@ class DocumentsWidget extends ConsumerWidget {
                   child: ListTile(
                     leading: const Icon(Icons.description, color: Colors.blue),
                     title: Text(d.fileName),
-                    subtitle: Text('${d.uploadedAt?.day}.${d.uploadedAt?.month}.${d.uploadedAt?.year}'),
+                    subtitle: Text(
+                      '${d.uploadedAt?.day}.${d.uploadedAt?.month}.${d.uploadedAt?.year}',
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => ref.read(documentsNotifierProvider(applicationId).notifier).deleteDocument(d.id),
+                      onPressed: () => ref
+                          .read(
+                            documentsNotifierProvider(applicationId).notifier,
+                          )
+                          .deleteDocument(d.id),
                     ),
                   ),
                 );
@@ -92,14 +108,19 @@ class DocumentsWidget extends ConsumerWidget {
     }
 
     final originalName = p.basename(file.path);
-    final newPath = p.join(docsDir.path, '${DateTime.now().millisecondsSinceEpoch}_$originalName');
-    
+    final newPath = p.join(
+      docsDir.path,
+      '${DateTime.now().millisecondsSinceEpoch}_$originalName',
+    );
+
     await File(file.path).copy(newPath);
 
-    ref.read(documentsNotifierProvider(applicationId).notifier).addDocument(
-      originalName,
-      newPath,
-      p.extension(originalName).replaceAll('.', ''),
-    );
+    ref
+        .read(documentsNotifierProvider(applicationId).notifier)
+        .addDocument(
+          originalName,
+          newPath,
+          p.extension(originalName).replaceAll('.', ''),
+        );
   }
 }

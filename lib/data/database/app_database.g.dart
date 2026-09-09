@@ -3803,6 +3803,1616 @@ class ContactsCompanion extends UpdateCompanion<Contact> {
   }
 }
 
+class $CvWorkExperiencesTable extends CvWorkExperiences
+    with TableInfo<$CvWorkExperiencesTable, CvWorkExperience> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CvWorkExperiencesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta(
+    'applicationId',
+  );
+  @override
+  late final GeneratedColumn<int> applicationId = GeneratedColumn<int>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES applications (id)',
+    ),
+  );
+  static const VerificationMeta _companyMeta = const VerificationMeta(
+    'company',
+  );
+  @override
+  late final GeneratedColumn<String> company = GeneratedColumn<String>(
+    'company',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _positionMeta = const VerificationMeta(
+    'position',
+  );
+  @override
+  late final GeneratedColumn<String> position = GeneratedColumn<String>(
+    'position',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endDateMeta = const VerificationMeta(
+    'endDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+    'end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isCurrentMeta = const VerificationMeta(
+    'isCurrent',
+  );
+  @override
+  late final GeneratedColumn<bool> isCurrent = GeneratedColumn<bool>(
+    'is_current',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_current" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    applicationId,
+    company,
+    position,
+    startDate,
+    endDate,
+    isCurrent,
+    description,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cv_work_experiences';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CvWorkExperience> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(
+          data['application_id']!,
+          _applicationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('company')) {
+      context.handle(
+        _companyMeta,
+        company.isAcceptableOrUnknown(data['company']!, _companyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_companyMeta);
+    }
+    if (data.containsKey('position')) {
+      context.handle(
+        _positionMeta,
+        position.isAcceptableOrUnknown(data['position']!, _positionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_positionMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    }
+    if (data.containsKey('end_date')) {
+      context.handle(
+        _endDateMeta,
+        endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta),
+      );
+    }
+    if (data.containsKey('is_current')) {
+      context.handle(
+        _isCurrentMeta,
+        isCurrent.isAcceptableOrUnknown(data['is_current']!, _isCurrentMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CvWorkExperience map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CvWorkExperience(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}application_id'],
+      ),
+      company: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}company'],
+      )!,
+      position: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}position'],
+      )!,
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_date'],
+      ),
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_date'],
+      ),
+      isCurrent: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_current'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+    );
+  }
+
+  @override
+  $CvWorkExperiencesTable createAlias(String alias) {
+    return $CvWorkExperiencesTable(attachedDatabase, alias);
+  }
+}
+
+class CvWorkExperience extends DataClass
+    implements Insertable<CvWorkExperience> {
+  final int id;
+  final int? applicationId;
+  final String company;
+  final String position;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool isCurrent;
+  final String? description;
+  const CvWorkExperience({
+    required this.id,
+    this.applicationId,
+    required this.company,
+    required this.position,
+    this.startDate,
+    this.endDate,
+    required this.isCurrent,
+    this.description,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<int>(applicationId);
+    }
+    map['company'] = Variable<String>(company);
+    map['position'] = Variable<String>(position);
+    if (!nullToAbsent || startDate != null) {
+      map['start_date'] = Variable<DateTime>(startDate);
+    }
+    if (!nullToAbsent || endDate != null) {
+      map['end_date'] = Variable<DateTime>(endDate);
+    }
+    map['is_current'] = Variable<bool>(isCurrent);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    return map;
+  }
+
+  CvWorkExperiencesCompanion toCompanion(bool nullToAbsent) {
+    return CvWorkExperiencesCompanion(
+      id: Value(id),
+      applicationId: applicationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(applicationId),
+      company: Value(company),
+      position: Value(position),
+      startDate: startDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startDate),
+      endDate: endDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endDate),
+      isCurrent: Value(isCurrent),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+    );
+  }
+
+  factory CvWorkExperience.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CvWorkExperience(
+      id: serializer.fromJson<int>(json['id']),
+      applicationId: serializer.fromJson<int?>(json['applicationId']),
+      company: serializer.fromJson<String>(json['company']),
+      position: serializer.fromJson<String>(json['position']),
+      startDate: serializer.fromJson<DateTime?>(json['startDate']),
+      endDate: serializer.fromJson<DateTime?>(json['endDate']),
+      isCurrent: serializer.fromJson<bool>(json['isCurrent']),
+      description: serializer.fromJson<String?>(json['description']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'applicationId': serializer.toJson<int?>(applicationId),
+      'company': serializer.toJson<String>(company),
+      'position': serializer.toJson<String>(position),
+      'startDate': serializer.toJson<DateTime?>(startDate),
+      'endDate': serializer.toJson<DateTime?>(endDate),
+      'isCurrent': serializer.toJson<bool>(isCurrent),
+      'description': serializer.toJson<String?>(description),
+    };
+  }
+
+  CvWorkExperience copyWith({
+    int? id,
+    Value<int?> applicationId = const Value.absent(),
+    String? company,
+    String? position,
+    Value<DateTime?> startDate = const Value.absent(),
+    Value<DateTime?> endDate = const Value.absent(),
+    bool? isCurrent,
+    Value<String?> description = const Value.absent(),
+  }) => CvWorkExperience(
+    id: id ?? this.id,
+    applicationId: applicationId.present
+        ? applicationId.value
+        : this.applicationId,
+    company: company ?? this.company,
+    position: position ?? this.position,
+    startDate: startDate.present ? startDate.value : this.startDate,
+    endDate: endDate.present ? endDate.value : this.endDate,
+    isCurrent: isCurrent ?? this.isCurrent,
+    description: description.present ? description.value : this.description,
+  );
+  CvWorkExperience copyWithCompanion(CvWorkExperiencesCompanion data) {
+    return CvWorkExperience(
+      id: data.id.present ? data.id.value : this.id,
+      applicationId: data.applicationId.present
+          ? data.applicationId.value
+          : this.applicationId,
+      company: data.company.present ? data.company.value : this.company,
+      position: data.position.present ? data.position.value : this.position,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      isCurrent: data.isCurrent.present ? data.isCurrent.value : this.isCurrent,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvWorkExperience(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('company: $company, ')
+          ..write('position: $position, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    applicationId,
+    company,
+    position,
+    startDate,
+    endDate,
+    isCurrent,
+    description,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CvWorkExperience &&
+          other.id == this.id &&
+          other.applicationId == this.applicationId &&
+          other.company == this.company &&
+          other.position == this.position &&
+          other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
+          other.isCurrent == this.isCurrent &&
+          other.description == this.description);
+}
+
+class CvWorkExperiencesCompanion extends UpdateCompanion<CvWorkExperience> {
+  final Value<int> id;
+  final Value<int?> applicationId;
+  final Value<String> company;
+  final Value<String> position;
+  final Value<DateTime?> startDate;
+  final Value<DateTime?> endDate;
+  final Value<bool> isCurrent;
+  final Value<String?> description;
+  const CvWorkExperiencesCompanion({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.company = const Value.absent(),
+    this.position = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.isCurrent = const Value.absent(),
+    this.description = const Value.absent(),
+  });
+  CvWorkExperiencesCompanion.insert({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    required String company,
+    required String position,
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.isCurrent = const Value.absent(),
+    this.description = const Value.absent(),
+  }) : company = Value(company),
+       position = Value(position);
+  static Insertable<CvWorkExperience> custom({
+    Expression<int>? id,
+    Expression<int>? applicationId,
+    Expression<String>? company,
+    Expression<String>? position,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? endDate,
+    Expression<bool>? isCurrent,
+    Expression<String>? description,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (applicationId != null) 'application_id': applicationId,
+      if (company != null) 'company': company,
+      if (position != null) 'position': position,
+      if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
+      if (isCurrent != null) 'is_current': isCurrent,
+      if (description != null) 'description': description,
+    });
+  }
+
+  CvWorkExperiencesCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? applicationId,
+    Value<String>? company,
+    Value<String>? position,
+    Value<DateTime?>? startDate,
+    Value<DateTime?>? endDate,
+    Value<bool>? isCurrent,
+    Value<String?>? description,
+  }) {
+    return CvWorkExperiencesCompanion(
+      id: id ?? this.id,
+      applicationId: applicationId ?? this.applicationId,
+      company: company ?? this.company,
+      position: position ?? this.position,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      isCurrent: isCurrent ?? this.isCurrent,
+      description: description ?? this.description,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<int>(applicationId.value);
+    }
+    if (company.present) {
+      map['company'] = Variable<String>(company.value);
+    }
+    if (position.present) {
+      map['position'] = Variable<String>(position.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
+    if (isCurrent.present) {
+      map['is_current'] = Variable<bool>(isCurrent.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvWorkExperiencesCompanion(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('company: $company, ')
+          ..write('position: $position, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('isCurrent: $isCurrent, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CvEducationsTable extends CvEducations
+    with TableInfo<$CvEducationsTable, CvEducation> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CvEducationsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta(
+    'applicationId',
+  );
+  @override
+  late final GeneratedColumn<int> applicationId = GeneratedColumn<int>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES applications (id)',
+    ),
+  );
+  static const VerificationMeta _institutionMeta = const VerificationMeta(
+    'institution',
+  );
+  @override
+  late final GeneratedColumn<String> institution = GeneratedColumn<String>(
+    'institution',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _degreeMeta = const VerificationMeta('degree');
+  @override
+  late final GeneratedColumn<String> degree = GeneratedColumn<String>(
+    'degree',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _endDateMeta = const VerificationMeta(
+    'endDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+    'end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    applicationId,
+    institution,
+    degree,
+    startDate,
+    endDate,
+    description,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cv_educations';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CvEducation> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(
+          data['application_id']!,
+          _applicationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('institution')) {
+      context.handle(
+        _institutionMeta,
+        institution.isAcceptableOrUnknown(
+          data['institution']!,
+          _institutionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_institutionMeta);
+    }
+    if (data.containsKey('degree')) {
+      context.handle(
+        _degreeMeta,
+        degree.isAcceptableOrUnknown(data['degree']!, _degreeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_degreeMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    }
+    if (data.containsKey('end_date')) {
+      context.handle(
+        _endDateMeta,
+        endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CvEducation map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CvEducation(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}application_id'],
+      ),
+      institution: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}institution'],
+      )!,
+      degree: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}degree'],
+      )!,
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_date'],
+      ),
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_date'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+    );
+  }
+
+  @override
+  $CvEducationsTable createAlias(String alias) {
+    return $CvEducationsTable(attachedDatabase, alias);
+  }
+}
+
+class CvEducation extends DataClass implements Insertable<CvEducation> {
+  final int id;
+  final int? applicationId;
+  final String institution;
+  final String degree;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final String? description;
+  const CvEducation({
+    required this.id,
+    this.applicationId,
+    required this.institution,
+    required this.degree,
+    this.startDate,
+    this.endDate,
+    this.description,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<int>(applicationId);
+    }
+    map['institution'] = Variable<String>(institution);
+    map['degree'] = Variable<String>(degree);
+    if (!nullToAbsent || startDate != null) {
+      map['start_date'] = Variable<DateTime>(startDate);
+    }
+    if (!nullToAbsent || endDate != null) {
+      map['end_date'] = Variable<DateTime>(endDate);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    return map;
+  }
+
+  CvEducationsCompanion toCompanion(bool nullToAbsent) {
+    return CvEducationsCompanion(
+      id: Value(id),
+      applicationId: applicationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(applicationId),
+      institution: Value(institution),
+      degree: Value(degree),
+      startDate: startDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startDate),
+      endDate: endDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endDate),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+    );
+  }
+
+  factory CvEducation.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CvEducation(
+      id: serializer.fromJson<int>(json['id']),
+      applicationId: serializer.fromJson<int?>(json['applicationId']),
+      institution: serializer.fromJson<String>(json['institution']),
+      degree: serializer.fromJson<String>(json['degree']),
+      startDate: serializer.fromJson<DateTime?>(json['startDate']),
+      endDate: serializer.fromJson<DateTime?>(json['endDate']),
+      description: serializer.fromJson<String?>(json['description']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'applicationId': serializer.toJson<int?>(applicationId),
+      'institution': serializer.toJson<String>(institution),
+      'degree': serializer.toJson<String>(degree),
+      'startDate': serializer.toJson<DateTime?>(startDate),
+      'endDate': serializer.toJson<DateTime?>(endDate),
+      'description': serializer.toJson<String?>(description),
+    };
+  }
+
+  CvEducation copyWith({
+    int? id,
+    Value<int?> applicationId = const Value.absent(),
+    String? institution,
+    String? degree,
+    Value<DateTime?> startDate = const Value.absent(),
+    Value<DateTime?> endDate = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+  }) => CvEducation(
+    id: id ?? this.id,
+    applicationId: applicationId.present
+        ? applicationId.value
+        : this.applicationId,
+    institution: institution ?? this.institution,
+    degree: degree ?? this.degree,
+    startDate: startDate.present ? startDate.value : this.startDate,
+    endDate: endDate.present ? endDate.value : this.endDate,
+    description: description.present ? description.value : this.description,
+  );
+  CvEducation copyWithCompanion(CvEducationsCompanion data) {
+    return CvEducation(
+      id: data.id.present ? data.id.value : this.id,
+      applicationId: data.applicationId.present
+          ? data.applicationId.value
+          : this.applicationId,
+      institution: data.institution.present
+          ? data.institution.value
+          : this.institution,
+      degree: data.degree.present ? data.degree.value : this.degree,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvEducation(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('institution: $institution, ')
+          ..write('degree: $degree, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    applicationId,
+    institution,
+    degree,
+    startDate,
+    endDate,
+    description,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CvEducation &&
+          other.id == this.id &&
+          other.applicationId == this.applicationId &&
+          other.institution == this.institution &&
+          other.degree == this.degree &&
+          other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
+          other.description == this.description);
+}
+
+class CvEducationsCompanion extends UpdateCompanion<CvEducation> {
+  final Value<int> id;
+  final Value<int?> applicationId;
+  final Value<String> institution;
+  final Value<String> degree;
+  final Value<DateTime?> startDate;
+  final Value<DateTime?> endDate;
+  final Value<String?> description;
+  const CvEducationsCompanion({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.institution = const Value.absent(),
+    this.degree = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.description = const Value.absent(),
+  });
+  CvEducationsCompanion.insert({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    required String institution,
+    required String degree,
+    this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
+    this.description = const Value.absent(),
+  }) : institution = Value(institution),
+       degree = Value(degree);
+  static Insertable<CvEducation> custom({
+    Expression<int>? id,
+    Expression<int>? applicationId,
+    Expression<String>? institution,
+    Expression<String>? degree,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? endDate,
+    Expression<String>? description,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (applicationId != null) 'application_id': applicationId,
+      if (institution != null) 'institution': institution,
+      if (degree != null) 'degree': degree,
+      if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
+      if (description != null) 'description': description,
+    });
+  }
+
+  CvEducationsCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? applicationId,
+    Value<String>? institution,
+    Value<String>? degree,
+    Value<DateTime?>? startDate,
+    Value<DateTime?>? endDate,
+    Value<String?>? description,
+  }) {
+    return CvEducationsCompanion(
+      id: id ?? this.id,
+      applicationId: applicationId ?? this.applicationId,
+      institution: institution ?? this.institution,
+      degree: degree ?? this.degree,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      description: description ?? this.description,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<int>(applicationId.value);
+    }
+    if (institution.present) {
+      map['institution'] = Variable<String>(institution.value);
+    }
+    if (degree.present) {
+      map['degree'] = Variable<String>(degree.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvEducationsCompanion(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('institution: $institution, ')
+          ..write('degree: $degree, ')
+          ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
+          ..write('description: $description')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CvSkillsTable extends CvSkills with TableInfo<$CvSkillsTable, CvSkill> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CvSkillsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta(
+    'applicationId',
+  );
+  @override
+  late final GeneratedColumn<int> applicationId = GeneratedColumn<int>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES applications (id)',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<int> level = GeneratedColumn<int>(
+    'level',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(3),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, applicationId, name, level];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cv_skills';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CvSkill> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(
+          data['application_id']!,
+          _applicationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('level')) {
+      context.handle(
+        _levelMeta,
+        level.isAcceptableOrUnknown(data['level']!, _levelMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CvSkill map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CvSkill(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}application_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      level: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}level'],
+      )!,
+    );
+  }
+
+  @override
+  $CvSkillsTable createAlias(String alias) {
+    return $CvSkillsTable(attachedDatabase, alias);
+  }
+}
+
+class CvSkill extends DataClass implements Insertable<CvSkill> {
+  final int id;
+  final int? applicationId;
+  final String name;
+  final int level;
+  const CvSkill({
+    required this.id,
+    this.applicationId,
+    required this.name,
+    required this.level,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<int>(applicationId);
+    }
+    map['name'] = Variable<String>(name);
+    map['level'] = Variable<int>(level);
+    return map;
+  }
+
+  CvSkillsCompanion toCompanion(bool nullToAbsent) {
+    return CvSkillsCompanion(
+      id: Value(id),
+      applicationId: applicationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(applicationId),
+      name: Value(name),
+      level: Value(level),
+    );
+  }
+
+  factory CvSkill.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CvSkill(
+      id: serializer.fromJson<int>(json['id']),
+      applicationId: serializer.fromJson<int?>(json['applicationId']),
+      name: serializer.fromJson<String>(json['name']),
+      level: serializer.fromJson<int>(json['level']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'applicationId': serializer.toJson<int?>(applicationId),
+      'name': serializer.toJson<String>(name),
+      'level': serializer.toJson<int>(level),
+    };
+  }
+
+  CvSkill copyWith({
+    int? id,
+    Value<int?> applicationId = const Value.absent(),
+    String? name,
+    int? level,
+  }) => CvSkill(
+    id: id ?? this.id,
+    applicationId: applicationId.present
+        ? applicationId.value
+        : this.applicationId,
+    name: name ?? this.name,
+    level: level ?? this.level,
+  );
+  CvSkill copyWithCompanion(CvSkillsCompanion data) {
+    return CvSkill(
+      id: data.id.present ? data.id.value : this.id,
+      applicationId: data.applicationId.present
+          ? data.applicationId.value
+          : this.applicationId,
+      name: data.name.present ? data.name.value : this.name,
+      level: data.level.present ? data.level.value : this.level,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvSkill(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('name: $name, ')
+          ..write('level: $level')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, applicationId, name, level);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CvSkill &&
+          other.id == this.id &&
+          other.applicationId == this.applicationId &&
+          other.name == this.name &&
+          other.level == this.level);
+}
+
+class CvSkillsCompanion extends UpdateCompanion<CvSkill> {
+  final Value<int> id;
+  final Value<int?> applicationId;
+  final Value<String> name;
+  final Value<int> level;
+  const CvSkillsCompanion({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.level = const Value.absent(),
+  });
+  CvSkillsCompanion.insert({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    required String name,
+    this.level = const Value.absent(),
+  }) : name = Value(name);
+  static Insertable<CvSkill> custom({
+    Expression<int>? id,
+    Expression<int>? applicationId,
+    Expression<String>? name,
+    Expression<int>? level,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (applicationId != null) 'application_id': applicationId,
+      if (name != null) 'name': name,
+      if (level != null) 'level': level,
+    });
+  }
+
+  CvSkillsCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? applicationId,
+    Value<String>? name,
+    Value<int>? level,
+  }) {
+    return CvSkillsCompanion(
+      id: id ?? this.id,
+      applicationId: applicationId ?? this.applicationId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<int>(applicationId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (level.present) {
+      map['level'] = Variable<int>(level.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvSkillsCompanion(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('name: $name, ')
+          ..write('level: $level')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CvLanguagesTable extends CvLanguages
+    with TableInfo<$CvLanguagesTable, CvLanguage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CvLanguagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta(
+    'applicationId',
+  );
+  @override
+  late final GeneratedColumn<int> applicationId = GeneratedColumn<int>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES applications (id)',
+    ),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<String> level = GeneratedColumn<String>(
+    'level',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, applicationId, name, level];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cv_languages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CvLanguage> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(
+          data['application_id']!,
+          _applicationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('level')) {
+      context.handle(
+        _levelMeta,
+        level.isAcceptableOrUnknown(data['level']!, _levelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CvLanguage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CvLanguage(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}application_id'],
+      ),
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      level: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}level'],
+      )!,
+    );
+  }
+
+  @override
+  $CvLanguagesTable createAlias(String alias) {
+    return $CvLanguagesTable(attachedDatabase, alias);
+  }
+}
+
+class CvLanguage extends DataClass implements Insertable<CvLanguage> {
+  final int id;
+  final int? applicationId;
+  final String name;
+  final String level;
+  const CvLanguage({
+    required this.id,
+    this.applicationId,
+    required this.name,
+    required this.level,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<int>(applicationId);
+    }
+    map['name'] = Variable<String>(name);
+    map['level'] = Variable<String>(level);
+    return map;
+  }
+
+  CvLanguagesCompanion toCompanion(bool nullToAbsent) {
+    return CvLanguagesCompanion(
+      id: Value(id),
+      applicationId: applicationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(applicationId),
+      name: Value(name),
+      level: Value(level),
+    );
+  }
+
+  factory CvLanguage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CvLanguage(
+      id: serializer.fromJson<int>(json['id']),
+      applicationId: serializer.fromJson<int?>(json['applicationId']),
+      name: serializer.fromJson<String>(json['name']),
+      level: serializer.fromJson<String>(json['level']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'applicationId': serializer.toJson<int?>(applicationId),
+      'name': serializer.toJson<String>(name),
+      'level': serializer.toJson<String>(level),
+    };
+  }
+
+  CvLanguage copyWith({
+    int? id,
+    Value<int?> applicationId = const Value.absent(),
+    String? name,
+    String? level,
+  }) => CvLanguage(
+    id: id ?? this.id,
+    applicationId: applicationId.present
+        ? applicationId.value
+        : this.applicationId,
+    name: name ?? this.name,
+    level: level ?? this.level,
+  );
+  CvLanguage copyWithCompanion(CvLanguagesCompanion data) {
+    return CvLanguage(
+      id: data.id.present ? data.id.value : this.id,
+      applicationId: data.applicationId.present
+          ? data.applicationId.value
+          : this.applicationId,
+      name: data.name.present ? data.name.value : this.name,
+      level: data.level.present ? data.level.value : this.level,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvLanguage(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('name: $name, ')
+          ..write('level: $level')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, applicationId, name, level);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CvLanguage &&
+          other.id == this.id &&
+          other.applicationId == this.applicationId &&
+          other.name == this.name &&
+          other.level == this.level);
+}
+
+class CvLanguagesCompanion extends UpdateCompanion<CvLanguage> {
+  final Value<int> id;
+  final Value<int?> applicationId;
+  final Value<String> name;
+  final Value<String> level;
+  const CvLanguagesCompanion({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.level = const Value.absent(),
+  });
+  CvLanguagesCompanion.insert({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    required String name,
+    required String level,
+  }) : name = Value(name),
+       level = Value(level);
+  static Insertable<CvLanguage> custom({
+    Expression<int>? id,
+    Expression<int>? applicationId,
+    Expression<String>? name,
+    Expression<String>? level,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (applicationId != null) 'application_id': applicationId,
+      if (name != null) 'name': name,
+      if (level != null) 'level': level,
+    });
+  }
+
+  CvLanguagesCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? applicationId,
+    Value<String>? name,
+    Value<String>? level,
+  }) {
+    return CvLanguagesCompanion(
+      id: id ?? this.id,
+      applicationId: applicationId ?? this.applicationId,
+      name: name ?? this.name,
+      level: level ?? this.level,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<int>(applicationId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (level.present) {
+      map['level'] = Variable<String>(level.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvLanguagesCompanion(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('name: $name, ')
+          ..write('level: $level')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -3813,6 +5423,11 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $NotesTable notes = $NotesTable(this);
   late final $DocumentsTable documents = $DocumentsTable(this);
   late final $ContactsTable contacts = $ContactsTable(this);
+  late final $CvWorkExperiencesTable cvWorkExperiences =
+      $CvWorkExperiencesTable(this);
+  late final $CvEducationsTable cvEducations = $CvEducationsTable(this);
+  late final $CvSkillsTable cvSkills = $CvSkillsTable(this);
+  late final $CvLanguagesTable cvLanguages = $CvLanguagesTable(this);
   late final ApplicationsDao applicationsDao = ApplicationsDao(
     this as AppDatabase,
   );
@@ -3822,6 +5437,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final NotesDao notesDao = NotesDao(this as AppDatabase);
   late final DocumentsDao documentsDao = DocumentsDao(this as AppDatabase);
   late final ContactsDao contactsDao = ContactsDao(this as AppDatabase);
+  late final CvDao cvDao = CvDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3834,6 +5450,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notes,
     documents,
     contacts,
+    cvWorkExperiences,
+    cvEducations,
+    cvSkills,
+    cvLanguages,
   ];
 }
 
@@ -3990,6 +5610,82 @@ final class $$ApplicationsTableReferences
     ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_contactsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CvWorkExperiencesTable, List<CvWorkExperience>>
+  _cvWorkExperiencesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.cvWorkExperiences,
+        aliasName: 'applications__id__cv_work_experiences__application_id',
+      );
+
+  $$CvWorkExperiencesTableProcessedTableManager get cvWorkExperiencesRefs {
+    final manager = $$CvWorkExperiencesTableTableManager(
+      $_db,
+      $_db.cvWorkExperiences,
+    ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _cvWorkExperiencesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CvEducationsTable, List<CvEducation>>
+  _cvEducationsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cvEducations,
+    aliasName: 'applications__id__cv_educations__application_id',
+  );
+
+  $$CvEducationsTableProcessedTableManager get cvEducationsRefs {
+    final manager = $$CvEducationsTableTableManager(
+      $_db,
+      $_db.cvEducations,
+    ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cvEducationsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CvSkillsTable, List<CvSkill>> _cvSkillsRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.cvSkills,
+    aliasName: 'applications__id__cv_skills__application_id',
+  );
+
+  $$CvSkillsTableProcessedTableManager get cvSkillsRefs {
+    final manager = $$CvSkillsTableTableManager(
+      $_db,
+      $_db.cvSkills,
+    ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cvSkillsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CvLanguagesTable, List<CvLanguage>>
+  _cvLanguagesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cvLanguages,
+    aliasName: 'applications__id__cv_languages__application_id',
+  );
+
+  $$CvLanguagesTableProcessedTableManager get cvLanguagesRefs {
+    final manager = $$CvLanguagesTableTableManager(
+      $_db,
+      $_db.cvLanguages,
+    ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cvLanguagesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -4256,6 +5952,106 @@ class $$ApplicationsTableFilterComposer
           }) => $$ContactsTableFilterComposer(
             $db: $db,
             $table: $db.contacts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cvWorkExperiencesRefs(
+    Expression<bool> Function($$CvWorkExperiencesTableFilterComposer f) f,
+  ) {
+    final $$CvWorkExperiencesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvWorkExperiences,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvWorkExperiencesTableFilterComposer(
+            $db: $db,
+            $table: $db.cvWorkExperiences,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cvEducationsRefs(
+    Expression<bool> Function($$CvEducationsTableFilterComposer f) f,
+  ) {
+    final $$CvEducationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvEducations,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvEducationsTableFilterComposer(
+            $db: $db,
+            $table: $db.cvEducations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cvSkillsRefs(
+    Expression<bool> Function($$CvSkillsTableFilterComposer f) f,
+  ) {
+    final $$CvSkillsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvSkills,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvSkillsTableFilterComposer(
+            $db: $db,
+            $table: $db.cvSkills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cvLanguagesRefs(
+    Expression<bool> Function($$CvLanguagesTableFilterComposer f) f,
+  ) {
+    final $$CvLanguagesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvLanguages,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvLanguagesTableFilterComposer(
+            $db: $db,
+            $table: $db.cvLanguages,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -4655,6 +6451,107 @@ class $$ApplicationsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> cvWorkExperiencesRefs<T extends Object>(
+    Expression<T> Function($$CvWorkExperiencesTableAnnotationComposer a) f,
+  ) {
+    final $$CvWorkExperiencesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.cvWorkExperiences,
+          getReferencedColumn: (t) => t.applicationId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$CvWorkExperiencesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.cvWorkExperiences,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> cvEducationsRefs<T extends Object>(
+    Expression<T> Function($$CvEducationsTableAnnotationComposer a) f,
+  ) {
+    final $$CvEducationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvEducations,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvEducationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cvEducations,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> cvSkillsRefs<T extends Object>(
+    Expression<T> Function($$CvSkillsTableAnnotationComposer a) f,
+  ) {
+    final $$CvSkillsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvSkills,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvSkillsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cvSkills,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> cvLanguagesRefs<T extends Object>(
+    Expression<T> Function($$CvLanguagesTableAnnotationComposer a) f,
+  ) {
+    final $$CvLanguagesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvLanguages,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvLanguagesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cvLanguages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ApplicationsTableTableManager
@@ -4676,6 +6573,10 @@ class $$ApplicationsTableTableManager
             bool notesRefs,
             bool documentsRefs,
             bool contactsRefs,
+            bool cvWorkExperiencesRefs,
+            bool cvEducationsRefs,
+            bool cvSkillsRefs,
+            bool cvLanguagesRefs,
           })
         > {
   $$ApplicationsTableTableManager(_$AppDatabase db, $ApplicationsTable table)
@@ -4820,6 +6721,10 @@ class $$ApplicationsTableTableManager
                 notesRefs = false,
                 documentsRefs = false,
                 contactsRefs = false,
+                cvWorkExperiencesRefs = false,
+                cvEducationsRefs = false,
+                cvSkillsRefs = false,
+                cvLanguagesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -4829,6 +6734,10 @@ class $$ApplicationsTableTableManager
                     if (notesRefs) db.notes,
                     if (documentsRefs) db.documents,
                     if (contactsRefs) db.contacts,
+                    if (cvWorkExperiencesRefs) db.cvWorkExperiences,
+                    if (cvEducationsRefs) db.cvEducations,
+                    if (cvSkillsRefs) db.cvSkills,
+                    if (cvLanguagesRefs) db.cvLanguages,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -4938,6 +6847,90 @@ class $$ApplicationsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cvWorkExperiencesRefs)
+                        await $_getPrefetchedData<
+                          Application,
+                          $ApplicationsTable,
+                          CvWorkExperience
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ApplicationsTableReferences
+                              ._cvWorkExperiencesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ApplicationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cvWorkExperiencesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.applicationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (cvEducationsRefs)
+                        await $_getPrefetchedData<
+                          Application,
+                          $ApplicationsTable,
+                          CvEducation
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ApplicationsTableReferences
+                              ._cvEducationsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ApplicationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cvEducationsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.applicationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (cvSkillsRefs)
+                        await $_getPrefetchedData<
+                          Application,
+                          $ApplicationsTable,
+                          CvSkill
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ApplicationsTableReferences
+                              ._cvSkillsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ApplicationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cvSkillsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.applicationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (cvLanguagesRefs)
+                        await $_getPrefetchedData<
+                          Application,
+                          $ApplicationsTable,
+                          CvLanguage
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ApplicationsTableReferences
+                              ._cvLanguagesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ApplicationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cvLanguagesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.applicationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -4964,6 +6957,10 @@ typedef $$ApplicationsTableProcessedTableManager =
         bool notesRefs,
         bool documentsRefs,
         bool contactsRefs,
+        bool cvWorkExperiencesRefs,
+        bool cvEducationsRefs,
+        bool cvSkillsRefs,
+        bool cvLanguagesRefs,
       })
     >;
 typedef $$TemplatesTableCreateCompanionBuilder = TemplatesCompanion Function({
@@ -6756,6 +8753,1321 @@ typedef $$ContactsTableProcessedTableManager =
       Contact,
       PrefetchHooks Function({bool applicationId})
     >;
+typedef $$CvWorkExperiencesTableCreateCompanionBuilder =
+    CvWorkExperiencesCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      required String company,
+      required String position,
+      Value<DateTime?> startDate,
+      Value<DateTime?> endDate,
+      Value<bool> isCurrent,
+      Value<String?> description,
+    });
+typedef $$CvWorkExperiencesTableUpdateCompanionBuilder =
+    CvWorkExperiencesCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      Value<String> company,
+      Value<String> position,
+      Value<DateTime?> startDate,
+      Value<DateTime?> endDate,
+      Value<bool> isCurrent,
+      Value<String?> description,
+    });
+
+final class $$CvWorkExperiencesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $CvWorkExperiencesTable,
+          CvWorkExperience
+        > {
+  $$CvWorkExperiencesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ApplicationsTable _applicationIdTable(_$AppDatabase db) => db
+      .applications
+      .createAlias('cv_work_experiences__application_id__applications__id');
+
+  $$ApplicationsTableProcessedTableManager? get applicationId {
+    final $_column = $_itemColumn<int>('application_id');
+    if ($_column == null) return null;
+    final manager = $$ApplicationsTableTableManager(
+      $_db,
+      $_db.applications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_applicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CvWorkExperiencesTableFilterComposer
+    extends Composer<_$AppDatabase, $CvWorkExperiencesTable> {
+  $$CvWorkExperiencesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get company => $composableBuilder(
+    column: $table.company,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ApplicationsTableFilterComposer get applicationId {
+    final $$ApplicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvWorkExperiencesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CvWorkExperiencesTable> {
+  $$CvWorkExperiencesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get company => $composableBuilder(
+    column: $table.company,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get position => $composableBuilder(
+    column: $table.position,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isCurrent => $composableBuilder(
+    column: $table.isCurrent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ApplicationsTableOrderingComposer get applicationId {
+    final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvWorkExperiencesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CvWorkExperiencesTable> {
+  $$CvWorkExperiencesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get company =>
+      $composableBuilder(column: $table.company, builder: (column) => column);
+
+  GeneratedColumn<String> get position =>
+      $composableBuilder(column: $table.position, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<bool> get isCurrent =>
+      $composableBuilder(column: $table.isCurrent, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  $$ApplicationsTableAnnotationComposer get applicationId {
+    final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvWorkExperiencesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CvWorkExperiencesTable,
+          CvWorkExperience,
+          $$CvWorkExperiencesTableFilterComposer,
+          $$CvWorkExperiencesTableOrderingComposer,
+          $$CvWorkExperiencesTableAnnotationComposer,
+          $$CvWorkExperiencesTableCreateCompanionBuilder,
+          $$CvWorkExperiencesTableUpdateCompanionBuilder,
+          (CvWorkExperience, $$CvWorkExperiencesTableReferences),
+          CvWorkExperience,
+          PrefetchHooks Function({bool applicationId})
+        > {
+  $$CvWorkExperiencesTableTableManager(
+    _$AppDatabase db,
+    $CvWorkExperiencesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CvWorkExperiencesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CvWorkExperiencesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CvWorkExperiencesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String> company = const Value.absent(),
+                Value<String> position = const Value.absent(),
+                Value<DateTime?> startDate = const Value.absent(),
+                Value<DateTime?> endDate = const Value.absent(),
+                Value<bool> isCurrent = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+              }) => CvWorkExperiencesCompanion(
+                id: id,
+                applicationId: applicationId,
+                company: company,
+                position: position,
+                startDate: startDate,
+                endDate: endDate,
+                isCurrent: isCurrent,
+                description: description,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                required String company,
+                required String position,
+                Value<DateTime?> startDate = const Value.absent(),
+                Value<DateTime?> endDate = const Value.absent(),
+                Value<bool> isCurrent = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+              }) => CvWorkExperiencesCompanion.insert(
+                id: id,
+                applicationId: applicationId,
+                company: company,
+                position: position,
+                startDate: startDate,
+                endDate: endDate,
+                isCurrent: isCurrent,
+                description: description,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CvWorkExperiencesTable, CvWorkExperience>(table),
+                  $$CvWorkExperiencesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({applicationId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (applicationId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.applicationId,
+                        referencedTable: $$CvWorkExperiencesTableReferences
+                            ._applicationIdTable(db),
+                        referencedColumn: $$CvWorkExperiencesTableReferences
+                            ._applicationIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CvWorkExperiencesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CvWorkExperiencesTable,
+      CvWorkExperience,
+      $$CvWorkExperiencesTableFilterComposer,
+      $$CvWorkExperiencesTableOrderingComposer,
+      $$CvWorkExperiencesTableAnnotationComposer,
+      $$CvWorkExperiencesTableCreateCompanionBuilder,
+      $$CvWorkExperiencesTableUpdateCompanionBuilder,
+      (CvWorkExperience, $$CvWorkExperiencesTableReferences),
+      CvWorkExperience,
+      PrefetchHooks Function({bool applicationId})
+    >;
+typedef $$CvEducationsTableCreateCompanionBuilder =
+    CvEducationsCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      required String institution,
+      required String degree,
+      Value<DateTime?> startDate,
+      Value<DateTime?> endDate,
+      Value<String?> description,
+    });
+typedef $$CvEducationsTableUpdateCompanionBuilder =
+    CvEducationsCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      Value<String> institution,
+      Value<String> degree,
+      Value<DateTime?> startDate,
+      Value<DateTime?> endDate,
+      Value<String?> description,
+    });
+
+final class $$CvEducationsTableReferences
+    extends BaseReferences<_$AppDatabase, $CvEducationsTable, CvEducation> {
+  $$CvEducationsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ApplicationsTable _applicationIdTable(_$AppDatabase db) => db
+      .applications
+      .createAlias('cv_educations__application_id__applications__id');
+
+  $$ApplicationsTableProcessedTableManager? get applicationId {
+    final $_column = $_itemColumn<int>('application_id');
+    if ($_column == null) return null;
+    final manager = $$ApplicationsTableTableManager(
+      $_db,
+      $_db.applications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_applicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CvEducationsTableFilterComposer
+    extends Composer<_$AppDatabase, $CvEducationsTable> {
+  $$CvEducationsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get institution => $composableBuilder(
+    column: $table.institution,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get degree => $composableBuilder(
+    column: $table.degree,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ApplicationsTableFilterComposer get applicationId {
+    final $$ApplicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvEducationsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CvEducationsTable> {
+  $$CvEducationsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get institution => $composableBuilder(
+    column: $table.institution,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get degree => $composableBuilder(
+    column: $table.degree,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ApplicationsTableOrderingComposer get applicationId {
+    final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvEducationsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CvEducationsTable> {
+  $$CvEducationsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get institution => $composableBuilder(
+    column: $table.institution,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get degree =>
+      $composableBuilder(column: $table.degree, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  $$ApplicationsTableAnnotationComposer get applicationId {
+    final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvEducationsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CvEducationsTable,
+          CvEducation,
+          $$CvEducationsTableFilterComposer,
+          $$CvEducationsTableOrderingComposer,
+          $$CvEducationsTableAnnotationComposer,
+          $$CvEducationsTableCreateCompanionBuilder,
+          $$CvEducationsTableUpdateCompanionBuilder,
+          (CvEducation, $$CvEducationsTableReferences),
+          CvEducation,
+          PrefetchHooks Function({bool applicationId})
+        > {
+  $$CvEducationsTableTableManager(_$AppDatabase db, $CvEducationsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CvEducationsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CvEducationsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CvEducationsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String> institution = const Value.absent(),
+                Value<String> degree = const Value.absent(),
+                Value<DateTime?> startDate = const Value.absent(),
+                Value<DateTime?> endDate = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+              }) => CvEducationsCompanion(
+                id: id,
+                applicationId: applicationId,
+                institution: institution,
+                degree: degree,
+                startDate: startDate,
+                endDate: endDate,
+                description: description,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                required String institution,
+                required String degree,
+                Value<DateTime?> startDate = const Value.absent(),
+                Value<DateTime?> endDate = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+              }) => CvEducationsCompanion.insert(
+                id: id,
+                applicationId: applicationId,
+                institution: institution,
+                degree: degree,
+                startDate: startDate,
+                endDate: endDate,
+                description: description,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CvEducationsTable, CvEducation>(table),
+                  $$CvEducationsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({applicationId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (applicationId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.applicationId,
+                        referencedTable: $$CvEducationsTableReferences
+                            ._applicationIdTable(db),
+                        referencedColumn: $$CvEducationsTableReferences
+                            ._applicationIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CvEducationsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CvEducationsTable,
+      CvEducation,
+      $$CvEducationsTableFilterComposer,
+      $$CvEducationsTableOrderingComposer,
+      $$CvEducationsTableAnnotationComposer,
+      $$CvEducationsTableCreateCompanionBuilder,
+      $$CvEducationsTableUpdateCompanionBuilder,
+      (CvEducation, $$CvEducationsTableReferences),
+      CvEducation,
+      PrefetchHooks Function({bool applicationId})
+    >;
+typedef $$CvSkillsTableCreateCompanionBuilder = CvSkillsCompanion Function({
+  Value<int> id,
+  Value<int?> applicationId,
+  required String name,
+  Value<int> level,
+});
+typedef $$CvSkillsTableUpdateCompanionBuilder = CvSkillsCompanion Function({
+  Value<int> id,
+  Value<int?> applicationId,
+  Value<String> name,
+  Value<int> level,
+});
+
+final class $$CvSkillsTableReferences
+    extends BaseReferences<_$AppDatabase, $CvSkillsTable, CvSkill> {
+  $$CvSkillsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ApplicationsTable _applicationIdTable(_$AppDatabase db) => db
+      .applications
+      .createAlias('cv_skills__application_id__applications__id');
+
+  $$ApplicationsTableProcessedTableManager? get applicationId {
+    final $_column = $_itemColumn<int>('application_id');
+    if ($_column == null) return null;
+    final manager = $$ApplicationsTableTableManager(
+      $_db,
+      $_db.applications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_applicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CvSkillsTableFilterComposer
+    extends Composer<_$AppDatabase, $CvSkillsTable> {
+  $$CvSkillsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ApplicationsTableFilterComposer get applicationId {
+    final $$ApplicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvSkillsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CvSkillsTable> {
+  $$CvSkillsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ApplicationsTableOrderingComposer get applicationId {
+    final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvSkillsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CvSkillsTable> {
+  $$CvSkillsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => column);
+
+  $$ApplicationsTableAnnotationComposer get applicationId {
+    final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvSkillsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CvSkillsTable,
+          CvSkill,
+          $$CvSkillsTableFilterComposer,
+          $$CvSkillsTableOrderingComposer,
+          $$CvSkillsTableAnnotationComposer,
+          $$CvSkillsTableCreateCompanionBuilder,
+          $$CvSkillsTableUpdateCompanionBuilder,
+          (CvSkill, $$CvSkillsTableReferences),
+          CvSkill,
+          PrefetchHooks Function({bool applicationId})
+        > {
+  $$CvSkillsTableTableManager(_$AppDatabase db, $CvSkillsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CvSkillsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CvSkillsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CvSkillsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> level = const Value.absent(),
+              }) => CvSkillsCompanion(
+                id: id,
+                applicationId: applicationId,
+                name: name,
+                level: level,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                required String name,
+                Value<int> level = const Value.absent(),
+              }) => CvSkillsCompanion.insert(
+                id: id,
+                applicationId: applicationId,
+                name: name,
+                level: level,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CvSkillsTable, CvSkill>(table),
+                  $$CvSkillsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({applicationId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (applicationId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.applicationId,
+                        referencedTable: $$CvSkillsTableReferences
+                            ._applicationIdTable(db),
+                        referencedColumn: $$CvSkillsTableReferences
+                            ._applicationIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CvSkillsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CvSkillsTable,
+      CvSkill,
+      $$CvSkillsTableFilterComposer,
+      $$CvSkillsTableOrderingComposer,
+      $$CvSkillsTableAnnotationComposer,
+      $$CvSkillsTableCreateCompanionBuilder,
+      $$CvSkillsTableUpdateCompanionBuilder,
+      (CvSkill, $$CvSkillsTableReferences),
+      CvSkill,
+      PrefetchHooks Function({bool applicationId})
+    >;
+typedef $$CvLanguagesTableCreateCompanionBuilder =
+    CvLanguagesCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      required String name,
+      required String level,
+    });
+typedef $$CvLanguagesTableUpdateCompanionBuilder =
+    CvLanguagesCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      Value<String> name,
+      Value<String> level,
+    });
+
+final class $$CvLanguagesTableReferences
+    extends BaseReferences<_$AppDatabase, $CvLanguagesTable, CvLanguage> {
+  $$CvLanguagesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ApplicationsTable _applicationIdTable(_$AppDatabase db) => db
+      .applications
+      .createAlias('cv_languages__application_id__applications__id');
+
+  $$ApplicationsTableProcessedTableManager? get applicationId {
+    final $_column = $_itemColumn<int>('application_id');
+    if ($_column == null) return null;
+    final manager = $$ApplicationsTableTableManager(
+      $_db,
+      $_db.applications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_applicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CvLanguagesTableFilterComposer
+    extends Composer<_$AppDatabase, $CvLanguagesTable> {
+  $$CvLanguagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ApplicationsTableFilterComposer get applicationId {
+    final $$ApplicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvLanguagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CvLanguagesTable> {
+  $$CvLanguagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ApplicationsTableOrderingComposer get applicationId {
+    final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvLanguagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CvLanguagesTable> {
+  $$CvLanguagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => column);
+
+  $$ApplicationsTableAnnotationComposer get applicationId {
+    final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvLanguagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CvLanguagesTable,
+          CvLanguage,
+          $$CvLanguagesTableFilterComposer,
+          $$CvLanguagesTableOrderingComposer,
+          $$CvLanguagesTableAnnotationComposer,
+          $$CvLanguagesTableCreateCompanionBuilder,
+          $$CvLanguagesTableUpdateCompanionBuilder,
+          (CvLanguage, $$CvLanguagesTableReferences),
+          CvLanguage,
+          PrefetchHooks Function({bool applicationId})
+        > {
+  $$CvLanguagesTableTableManager(_$AppDatabase db, $CvLanguagesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CvLanguagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CvLanguagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CvLanguagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String> level = const Value.absent(),
+              }) => CvLanguagesCompanion(
+                id: id,
+                applicationId: applicationId,
+                name: name,
+                level: level,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                required String name,
+                required String level,
+              }) => CvLanguagesCompanion.insert(
+                id: id,
+                applicationId: applicationId,
+                name: name,
+                level: level,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CvLanguagesTable, CvLanguage>(table),
+                  $$CvLanguagesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({applicationId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (applicationId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.applicationId,
+                        referencedTable: $$CvLanguagesTableReferences
+                            ._applicationIdTable(db),
+                        referencedColumn: $$CvLanguagesTableReferences
+                            ._applicationIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CvLanguagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CvLanguagesTable,
+      CvLanguage,
+      $$CvLanguagesTableFilterComposer,
+      $$CvLanguagesTableOrderingComposer,
+      $$CvLanguagesTableAnnotationComposer,
+      $$CvLanguagesTableCreateCompanionBuilder,
+      $$CvLanguagesTableUpdateCompanionBuilder,
+      (CvLanguage, $$CvLanguagesTableReferences),
+      CvLanguage,
+      PrefetchHooks Function({bool applicationId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6774,4 +10086,12 @@ class $AppDatabaseManager {
       $$DocumentsTableTableManager(_db, _db.documents);
   $$ContactsTableTableManager get contacts =>
       $$ContactsTableTableManager(_db, _db.contacts);
+  $$CvWorkExperiencesTableTableManager get cvWorkExperiences =>
+      $$CvWorkExperiencesTableTableManager(_db, _db.cvWorkExperiences);
+  $$CvEducationsTableTableManager get cvEducations =>
+      $$CvEducationsTableTableManager(_db, _db.cvEducations);
+  $$CvSkillsTableTableManager get cvSkills =>
+      $$CvSkillsTableTableManager(_db, _db.cvSkills);
+  $$CvLanguagesTableTableManager get cvLanguages =>
+      $$CvLanguagesTableTableManager(_db, _db.cvLanguages);
 }

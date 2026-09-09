@@ -1,4 +1,5 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/services/ai_correction_service.dart';
 import '../../presentation/providers/database_provider.dart';
 
@@ -12,7 +13,11 @@ class AiCorrectionState {
 
   AiCorrectionState({this.isCorrecting = false, this.error});
 
-  AiCorrectionState copyWith({bool? isCorrecting, String? error, bool clearError = false}) {
+  AiCorrectionState copyWith({
+    bool? isCorrecting,
+    String? error,
+    bool clearError = false,
+  }) {
     return AiCorrectionState(
       isCorrecting: isCorrecting ?? this.isCorrecting,
       error: clearError ? null : (error ?? this.error),
@@ -33,10 +38,16 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
       final db = ref.read(databaseProvider);
       final urlSetting = await db.settingsDao.getSettingByKey('aiServerUrl');
       final modelSetting = await db.settingsDao.getSettingByKey('aiModelName');
-      final baseUrl = urlSetting?.value ?? 'http://localhost:11434/api/generate';
+      final baseUrl =
+          urlSetting?.value ?? 'http://localhost:11434/api/generate';
       final modelName = modelSetting?.value ?? 'llama3.2';
-      
-      final corrected = await service.correctText(text, language, baseUrl, modelName);
+
+      final corrected = await service.correctText(
+        text,
+        language,
+        baseUrl,
+        modelName,
+      );
       state = state.copyWith(isCorrecting: false);
       return corrected;
     } catch (e) {
@@ -46,4 +57,7 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
   }
 }
 
-final aiCorrectionProvider = NotifierProvider<AiCorrectionNotifier, AiCorrectionState>(AiCorrectionNotifier.new);
+final aiCorrectionProvider =
+    NotifierProvider<AiCorrectionNotifier, AiCorrectionState>(
+      AiCorrectionNotifier.new,
+    );

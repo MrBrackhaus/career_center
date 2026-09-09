@@ -10,9 +10,10 @@ import 'package:career_center/l10n/app_localizations.dart';
 import '../../providers/applications_provider.dart';
 import '../../providers/imap_provider.dart';
 import '../../providers/database_provider.dart';
-import '../../providers/custom_columns_provider.dart';
 import '../../../data/database/app_database.dart';
+
 import 'package:drift/drift.dart' as drift;
+
 import 'widgets/ai_cover_letter_dialog.dart';
 import '../onboarding/tutorial_flow.dart';
 import 'widgets/application_card.dart';
@@ -42,7 +43,14 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   @override
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context)!;
-    final statusOptions = [loc.appFilterAll, 'offen', 'versendet', 'interview', 'absage', 'zusage'];
+    final statusOptions = [
+      loc.appFilterAll,
+      'offen',
+      'versendet',
+      'interview',
+      'absage',
+      'zusage',
+    ];
     final currentStatusFilter = _statusFilter ?? loc.appFilterAll;
     final applicationsAsync = ref.watch(applicationsProvider);
 
@@ -54,12 +62,15 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             builder: (context, ref, child) {
               final syncState = ref.watch(imapSyncProvider);
               final lastSync = ref.watch(imapLastSyncProvider).value;
-              
+
               String lastSyncText = '';
               if (lastSync != null) {
                 final now = DateTime.now();
-                if (lastSync.year == now.year && lastSync.month == now.month && lastSync.day == now.day) {
-                  lastSyncText = 'Zuletzt: heute ${lastSync.hour.toString().padLeft(2, '0')}:${lastSync.minute.toString().padLeft(2, '0')}';
+                if (lastSync.year == now.year &&
+                    lastSync.month == now.month &&
+                    lastSync.day == now.day) {
+                  lastSyncText =
+                      'Zuletzt: heute ${lastSync.hour.toString().padLeft(2, '0')}:${lastSync.minute.toString().padLeft(2, '0')}';
                 } else {
                   lastSyncText = 'Zuletzt: ${lastSync.day}.${lastSync.month}.';
                 }
@@ -72,7 +83,10 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       padding: const EdgeInsets.only(right: 8.0),
                       child: Text(
                         lastSyncText,
-                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   if (syncState.isLoading)
@@ -102,13 +116,17 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                           ? null
                           : () async {
                               try {
-                                final count = await ref.read(imapSyncProvider.notifier).syncEmails();
+                                final count = await ref
+                                    .read(imapSyncProvider.notifier)
+                                    .syncEmails();
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text(count > 0
-                                          ? 'Sync abgeschlossen! $count neue/aktualisierte Bewerbungen gefunden.'
-                                          : 'Sync abgeschlossen! Keine neuen Antworten gefunden.'),
+                                      content: Text(
+                                        count > 0
+                                            ? 'Sync abgeschlossen! $count neue/aktualisierte Bewerbungen gefunden.'
+                                            : 'Sync abgeschlossen! Keine neuen Antworten gefunden.',
+                                      ),
                                       backgroundColor: Colors.green,
                                     ),
                                   );
@@ -116,7 +134,10 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                               } catch (e) {
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Fehler beim Sync: $e'), backgroundColor: Colors.red),
+                                    SnackBar(
+                                      content: Text('Fehler beim Sync: $e'),
+                                      backgroundColor: Colors.red,
+                                    ),
                                   );
                                 }
                               }
@@ -134,7 +155,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             onPressed: () {
               setState(() {
                 _isKanbanView = !_isKanbanView;
-                _selectedApplication = null; // Close side panel when switching views
+                _selectedApplication =
+                    null; // Close side panel when switching views
               });
             },
             tooltip: _isKanbanView ? 'Listenansicht' : 'Kanban-Ansicht',
@@ -146,7 +168,10 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         children: [
           // Filter und Suchleiste
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             child: Row(
               children: [
                 SizedBox(
@@ -156,28 +181,45 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       hintText: loc.appSearchHint,
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      fillColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withValues(alpha: 0.3),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                       contentPadding: const EdgeInsets.symmetric(vertical: 0),
                     ),
-                    onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                    onChanged: (value) =>
+                        setState(() => _searchQuery = value.toLowerCase()),
                   ),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: currentStatusFilter,
                       icon: const Icon(Icons.filter_list, size: 18),
-                      items: statusOptions.map<DropdownMenuItem<String>>((String status) {
-                        return DropdownMenuItem(value: status, child: Text(status));
+                      items: statusOptions.map<DropdownMenuItem<String>>((
+                        String status,
+                      ) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(status),
+                        );
                       }).toList(),
-                      onChanged: (value) => setState(() => _statusFilter = value == loc.appFilterAll ? null : value),
+                      onChanged: (value) => setState(
+                        () => _statusFilter = value == loc.appFilterAll
+                            ? null
+                            : value,
+                      ),
                     ),
                   ),
                 ),
@@ -187,8 +229,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                   icon: const Icon(Icons.add),
                   label: Text(loc.btnNewApplication),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ],
@@ -198,9 +245,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             child: applicationsAsync.when(
               data: (applications) {
                 final filteredApps = applications.where((app) {
-                  final matchesSearch = app.company.toLowerCase().contains(_searchQuery) ||
+                  final matchesSearch =
+                      app.company.toLowerCase().contains(_searchQuery) ||
                       app.position.toLowerCase().contains(_searchQuery);
-                  final matchesStatus = _statusFilter == null || _statusFilter == loc.appFilterAll || app.status.toLowerCase() == _statusFilter?.toLowerCase();
+                  final matchesStatus =
+                      _statusFilter == null ||
+                      _statusFilter == loc.appFilterAll ||
+                      app.status.toLowerCase() == _statusFilter?.toLowerCase();
                   return matchesSearch && matchesStatus;
                 }).toList();
 
@@ -212,9 +263,15 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         padding: const EdgeInsets.all(40),
                         constraints: const BoxConstraints(maxWidth: 450),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(32),
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.outlineVariant
+                                .withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
@@ -222,13 +279,17 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primaryContainer,
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
                                 Icons.rocket_launch,
                                 size: 64,
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -236,7 +297,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                               _searchQuery.isEmpty && _statusFilter == null
                                   ? loc.appEmptyTitle
                                   : loc.appNotFoundTitle,
-                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 12),
@@ -244,18 +306,29 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                               _searchQuery.isEmpty && _statusFilter == null
                                   ? loc.appEmptyDesc
                                   : loc.appNotFoundDesc,
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              style: Theme.of(context).textTheme.bodyLarge
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 32),
                             if (_searchQuery.isEmpty && _statusFilter == null)
                               FilledButton.icon(
-                                onPressed: () => context.go('/applications/add'),
+                                onPressed: () =>
+                                    context.go('/applications/add'),
                                 icon: const Icon(Icons.add),
                                 label: Text(loc.btnNewApplication),
                                 style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 32,
+                                    vertical: 20,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
                                 ),
                               ),
                           ],
@@ -325,13 +398,15 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 16,
             offset: const Offset(-4, 4),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -342,8 +417,14 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHigh,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              border: Border(bottom: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5))),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,8 +440,14 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     backgroundColor: colorScheme.primaryContainer,
                     radius: 28,
                     child: Text(
-                      app.company.isNotEmpty ? app.company[0].toUpperCase() : '?',
-                      style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold, fontSize: 24),
+                      app.company.isNotEmpty
+                          ? app.company[0].toUpperCase()
+                          : '?',
+                      style: TextStyle(
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
                     ),
                   ),
                 const SizedBox(width: 16),
@@ -370,12 +457,18 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     children: [
                       Text(
                         app.position,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         app.company,
-                        style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 16),
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -383,7 +476,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => setState(() => _selectedApplication = null),
-                )
+                ),
               ],
             ),
           ),
@@ -396,7 +489,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                   children: [
                     Expanded(
                       child: FilledButton.tonalIcon(
-                        onPressed: () => context.go('/applications/edit/${app.id}'),
+                        onPressed: () =>
+                            context.go('/applications/edit/${app.id}'),
                         icon: const Icon(Icons.edit_document),
                         label: const Text('Komplett bearbeiten'),
                       ),
@@ -409,83 +503,154 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                          backgroundColor: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer,
+                          foregroundColor: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer,
                         ),
                         onPressed: () async {
                           String jobDesc = app.jobDescriptionText ?? '';
                           if (jobDesc.isEmpty) {
-                             final controller = TextEditingController();
-                             jobDesc = await showDialog<String>(
-                               context: context,
-                               builder: (context) => StatefulBuilder(
-                                 builder: (context, setStateDialog) => AlertDialog(
-                                   title: const Text('Stellenanzeige einfügen'),
-                                   content: SizedBox(
-                                     width: 400,
-                                     child: Column(
-                                       mainAxisSize: MainAxisSize.min,
-                                       children: [
-                                         const Text('Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.'),
-                                         const SizedBox(height: 8),
-                                         TextField(
-                                           controller: controller,
-                                           maxLines: 5,
-                                           decoration: const InputDecoration(border: OutlineInputBorder()),
-                                         ),
-                                         const SizedBox(height: 8),
-                                         TextButton.icon(
-                                           onPressed: () async {
-                                             try {
-                                               final typeGroup = const XTypeGroup(label: 'PDF', extensions: ['pdf']);
-                                               final file = await openFile(acceptedTypeGroups: [typeGroup]);
-                                               if (file == null) return;
-                                               final bytes = await file.readAsBytes();
-                                               final doc = await PdfDocument.openData(bytes);
-                                               final StringBuffer textBuf = StringBuffer();
-                                               for (var page in doc.pages) {
-                                                 final pageText = await page.loadText();
-                                                 if (pageText != null) {
-                                                   textBuf.writeln(pageText.fullText);
-                                                 }
-                                               }
-                                               doc.dispose();
-                                               final resultText = textBuf.toString().replaceAll('\u00A0', ' ');
-                                               setStateDialog(() {
-                                                 controller.text = resultText;
-                                               });
-                                             } catch (e) {
-                                               if (context.mounted) {
-                                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler beim Auslesen: ')));
-                                               }
-                                             }
-                                           },
-                                           icon: const Icon(Icons.picture_as_pdf),
-                                           label: const Text('Stellenanzeige als PDF hochladen'),
-                                         ),
-                                       ],
-                                     ),
-                                   ),
-                                   actions: [
-                                     TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
-                                     ElevatedButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Weiter')),
-                                   ],
-                                 )
-                               )
-                             ) ?? '';
-                             
-                             if (jobDesc.isEmpty) return;
-                             
-                             if (jobDesc.trim().startsWith('<') || jobDesc.contains('<!DOCTYPE')) {
-                               try {
-                                 final doc = html_parser.parse(jobDesc);
-                                 jobDesc = doc.body?.text ?? doc.documentElement?.text ?? jobDesc;
-                                 jobDesc = jobDesc.replaceAll(RegExp(r'\s+'), ' ').trim();
-                               } catch (_) {}
-                             }
-                             
-                             final db = ref.read(databaseProvider);
-                             await db.applicationsDao.updateApplication(app.copyWith(jobDescriptionText: drift.Value(jobDesc)));
+                            final controller = TextEditingController();
+                            jobDesc =
+                                await showDialog<String>(
+                                  context: context,
+                                  builder: (context) => StatefulBuilder(
+                                    builder: (context, setStateDialog) =>
+                                        AlertDialog(
+                                          title: const Text(
+                                            'Stellenanzeige einfügen',
+                                          ),
+                                          content: SizedBox(
+                                            width: 400,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Text(
+                                                  'Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.',
+                                                ),
+                                                const SizedBox(height: 8),
+                                                TextField(
+                                                  controller: controller,
+                                                  maxLines: 5,
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        border:
+                                                            OutlineInputBorder(),
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                TextButton.icon(
+                                                  onPressed: () async {
+                                                    try {
+                                                      final typeGroup =
+                                                          const XTypeGroup(
+                                                            label: 'PDF',
+                                                            extensions: ['pdf'],
+                                                          );
+                                                      final file =
+                                                          await openFile(
+                                                            acceptedTypeGroups:
+                                                                [typeGroup],
+                                                          );
+                                                      if (file == null) return;
+                                                      final bytes = await file
+                                                          .readAsBytes();
+                                                      final doc =
+                                                          await PdfDocument.openData(
+                                                            bytes,
+                                                          );
+                                                      final StringBuffer
+                                                      textBuf = StringBuffer();
+                                                      for (var page
+                                                          in doc.pages) {
+                                                        final pageText =
+                                                            await page
+                                                                .loadText();
+                                                        if (pageText != null) {
+                                                          textBuf.writeln(
+                                                            pageText.fullText,
+                                                          );
+                                                        }
+                                                      }
+                                                      doc.dispose();
+                                                      final resultText = textBuf
+                                                          .toString()
+                                                          .replaceAll(
+                                                            '\u00A0',
+                                                            ' ',
+                                                          );
+                                                      setStateDialog(() {
+                                                        controller.text =
+                                                            resultText;
+                                                      });
+                                                    } catch (e) {
+                                                      if (context.mounted) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              'Fehler beim Auslesen: ',
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                  },
+                                                  icon: const Icon(
+                                                    Icons.picture_as_pdf,
+                                                  ),
+                                                  label: const Text(
+                                                    'Stellenanzeige als PDF hochladen',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              child: const Text('Abbrechen'),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () => Navigator.pop(
+                                                context,
+                                                controller.text,
+                                              ),
+                                              child: const Text('Weiter'),
+                                            ),
+                                          ],
+                                        ),
+                                  ),
+                                ) ??
+                                '';
+
+                            if (jobDesc.isEmpty) return;
+
+                            if (jobDesc.trim().startsWith('<') ||
+                                jobDesc.contains('<!DOCTYPE')) {
+                              try {
+                                final doc = html_parser.parse(jobDesc);
+                                jobDesc =
+                                    doc.body?.text ??
+                                    doc.documentElement?.text ??
+                                    jobDesc;
+                                jobDesc = jobDesc
+                                    .replaceAll(RegExp(r'\s+'), ' ')
+                                    .trim();
+                              } catch (_) {}
+                            }
+
+                            final db = ref.read(databaseProvider);
+                            await db.applicationsDao.updateApplication(
+                              app.copyWith(
+                                jobDescriptionText: drift.Value(jobDesc),
+                              ),
+                            );
                           }
 
                           final success = await showDialog<bool>(
@@ -496,25 +661,38 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                               position: app.position,
                               jobDescription: jobDesc,
                               onCoverLetterGenerated: (deltaJson) async {
-                                 final db = ref.read(databaseProvider);
-                                 await db.applicationsDao.updateApplication(app.copyWith(
-                                   coverLetterContent: drift.Value(deltaJson),
-                                   jobDescriptionText: drift.Value(jobDesc),
-                                 ));
-                                 
-                                 final newTemplate = TemplatesCompanion(
-                                   name: drift.Value('Anschreiben - ${app.company}'),
-                                   type: const drift.Value('anschreiben'),
-                                   content: drift.Value(deltaJson),
-                                   applicationId: drift.Value(app.id),
-                                   createdAt: drift.Value(DateTime.now()),
-                                 );
-                                 await db.templatesDao.insertTemplate(newTemplate);
+                                final db = ref.read(databaseProvider);
+                                await db.applicationsDao.updateApplication(
+                                  app.copyWith(
+                                    coverLetterContent: drift.Value(deltaJson),
+                                    jobDescriptionText: drift.Value(jobDesc),
+                                  ),
+                                );
+
+                                final newTemplate = TemplatesCompanion(
+                                  name: drift.Value(
+                                    'Anschreiben - ${app.company}',
+                                  ),
+                                  type: const drift.Value('anschreiben'),
+                                  content: drift.Value(deltaJson),
+                                  applicationId: drift.Value(app.id),
+                                  createdAt: drift.Value(DateTime.now()),
+                                );
+                                await db.templatesDao.insertTemplate(
+                                  newTemplate,
+                                );
                               },
                             ),
                           );
                           if (success == true) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Anschreiben generiert! Klicke auf "Komplett bearbeiten" um es im Editor zu sehen.'), backgroundColor: Colors.green));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  '✅ Anschreiben generiert! Klicke auf "Komplett bearbeiten" um es im Editor zu sehen.',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                           }
                         },
                         icon: const Icon(Icons.auto_awesome),
@@ -533,20 +711,41 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('NOTIZEN / JOB-BESCHREIBUNG', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2)),
+                  const Text(
+                    'NOTIZEN / JOB-BESCHREIBUNG',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   if (app.notes != null && app.notes!.isNotEmpty)
                     Text(
                       app.notes!,
-                      style: TextStyle(fontSize: 14, color: colorScheme.onSurface, height: 1.6),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: colorScheme.onSurface,
+                        height: 1.6,
+                      ),
                     )
                   else
                     Text(
                       'Keine Stellenbeschreibung oder Notizen hinterlegt.',
-                      style: TextStyle(fontStyle: FontStyle.italic, color: colorScheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   const SizedBox(height: 32),
-                  const Text('BEWERBUNGS-VERLAUF', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 1.2)),
+                  const Text(
+                    'BEWERBUNGS-VERLAUF',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   _buildTimelineForApp(app, context),
                   const SizedBox(height: 32),
@@ -559,8 +758,17 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  Widget _buildTimelineEvent(String title, String? dateStr, bool isCompleted, bool isCurrent, bool isLast, BuildContext context) {
-    final color = isCompleted || isCurrent ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant;
+  Widget _buildTimelineEvent(
+    String title,
+    String? dateStr,
+    bool isCompleted,
+    bool isCurrent,
+    bool isLast,
+    BuildContext context,
+  ) {
+    final color = isCompleted || isCurrent
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.outlineVariant;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -571,7 +779,9 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               height: 16,
               margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
-                color: isCurrent ? color : (isCompleted ? color : Colors.transparent),
+                color: isCurrent
+                    ? color
+                    : (isCompleted ? color : Colors.transparent),
                 border: Border.all(color: color, width: 2),
                 shape: BoxShape.circle,
               ),
@@ -580,7 +790,10 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               Container(
                 width: 2,
                 height: 40,
-                color: isCompleted ? color : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                color: isCompleted
+                    ? color
+                    : Theme.of(context).colorScheme.outlineVariant
+                          .withValues(alpha: 0.5),
               ),
           ],
         ),
@@ -589,8 +802,23 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: TextStyle(fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal, color: isCompleted || isCurrent ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant)),
-              if (dateStr != null) Text(dateStr, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                  color: isCompleted || isCurrent
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              if (dateStr != null)
+                Text(
+                  dateStr,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
               if (isLast) const SizedBox(height: 16),
             ],
           ),
@@ -602,21 +830,64 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   Widget _buildTimelineForApp(Application app, BuildContext context) {
     final status = app.status.toLowerCase();
 
-    final isVersendet = status == 'versendet' || status == 'interview' || status == 'zusage' || status == 'absage';
+    final isVersendet =
+        status == 'versendet' ||
+        status == 'interview' ||
+        status == 'zusage' ||
+        status == 'absage';
     final isInterview = status == 'interview' || status == 'zusage';
 
-    final appliedDateStr = app.appliedDate != null ? DateFormat('dd.MM.yyyy').format(app.appliedDate!) : null;
-    final responseDateStr = app.responseDate != null ? DateFormat('dd.MM.yyyy').format(app.responseDate!) : null;
+    final appliedDateStr = app.appliedDate != null
+        ? DateFormat('dd.MM.yyyy').format(app.appliedDate!)
+        : null;
+    final responseDateStr = app.responseDate != null
+        ? DateFormat('dd.MM.yyyy').format(app.responseDate!)
+        : null;
 
     return Column(
       children: [
-        _buildTimelineEvent('In Vorbereitung', appliedDateStr, isVersendet, status == 'offen', false, context),
-        _buildTimelineEvent('Bewerbung versendet', isVersendet ? (appliedDateStr ?? 'Erledigt') : null, isInterview, status == 'versendet', false, context),
-        _buildTimelineEvent('Interview / Gespräch', isInterview ? (responseDateStr ?? 'Eingeladen') : null, status == 'zusage', status == 'interview', false, context),
+        _buildTimelineEvent(
+          'In Vorbereitung',
+          appliedDateStr,
+          isVersendet,
+          status == 'offen',
+          false,
+          context,
+        ),
+        _buildTimelineEvent(
+          'Bewerbung versendet',
+          isVersendet ? (appliedDateStr ?? 'Erledigt') : null,
+          isInterview,
+          status == 'versendet',
+          false,
+          context,
+        ),
+        _buildTimelineEvent(
+          'Interview / Gespräch',
+          isInterview ? (responseDateStr ?? 'Eingeladen') : null,
+          status == 'zusage',
+          status == 'interview',
+          false,
+          context,
+        ),
         if (status == 'absage')
-          _buildTimelineEvent('Abgesagt', responseDateStr ?? 'Abgeschlossen', true, true, true, context)
+          _buildTimelineEvent(
+            'Abgesagt',
+            responseDateStr ?? 'Abgeschlossen',
+            true,
+            true,
+            true,
+            context,
+          )
         else
-          _buildTimelineEvent('Zusage / Angebot', status == 'zusage' ? (responseDateStr ?? 'Angenommen') : null, status == 'zusage', status == 'zusage', true, context),
+          _buildTimelineEvent(
+            'Zusage / Angebot',
+            status == 'zusage' ? (responseDateStr ?? 'Angenommen') : null,
+            status == 'zusage',
+            status == 'zusage',
+            true,
+            context,
+          ),
       ],
     );
   }
@@ -626,12 +897,20 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Bewerbung löschen?'),
-        content: Text('Möchtest du "${app.position}" bei "${app.company}" wirklich löschen?'),
+        content: Text(
+          'Möchtest du "${app.position}" bei "${app.company}" wirklich löschen?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Abbrechen')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Abbrechen'),
+          ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: Text(AppLocalizations.of(context)!.formBasicDelete, style: const TextStyle(color: Colors.red)),
+            child: Text(
+              AppLocalizations.of(context)!.formBasicDelete,
+              style: const TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -642,9 +921,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         setState(() {
           if (_selectedApplication?.id == app.id) _selectedApplication = null;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${app.company} gelöscht')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('${app.company} gelöscht')));
       }
     }
   }
@@ -662,14 +940,19 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       final status = colDef['status']!;
       final title = colDef['title']!;
       final isArchive = status == 'absage';
-      final columnApps = apps.where((a) => a.status.toLowerCase() == status).toList();
-      
+      final columnApps = apps
+          .where((a) => a.status.toLowerCase() == status)
+          .toList();
+
       return DragTarget<Application>(
-        onWillAcceptWithDetails: (details) => details.data.status.toLowerCase() != status,
+        onWillAcceptWithDetails: (details) =>
+            details.data.status.toLowerCase() != status,
         onAcceptWithDetails: (details) async {
           final app = details.data;
           final repository = ref.read(applicationsRepositoryProvider);
-          await repository.updateApplication(app.copyWith(status: status).toCompanion(false));
+          await repository.updateApplication(
+            app.copyWith(status: status).toCompanion(false),
+          );
         },
         builder: (context, candidateData, rejectedData) {
           final isHovering = candidateData.isNotEmpty;
@@ -679,22 +962,60 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
               width: width,
               margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isHovering ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5) : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: isArchive ? 0.3 : 0.5),
+                color: isHovering
+                    ? Theme.of(context).colorScheme.primaryContainer
+                          .withValues(alpha: 0.5)
+                    : Theme.of(context).colorScheme.surfaceContainerHighest
+                          .withValues(alpha: isArchive ? 0.3 : 0.5),
                 borderRadius: BorderRadius.circular(16),
-                border: isHovering ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2) : (isArchive ? Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1) : null),
+                border: isHovering
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2,
+                      )
+                    : (isArchive
+                          ? Border.all(
+                              color: Colors.grey.withValues(alpha: 0.2),
+                              width: 1,
+                            )
+                          : null),
               ),
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 12.0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(12)),
-                          child: Text('${columnApps.length}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '${columnApps.length}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -708,8 +1029,18 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         final app = columnApps[index];
                         return Draggable<Application>(
                           data: app,
-                          feedback: Material(elevation: 8, borderRadius: BorderRadius.circular(12), child: SizedBox(width: width - 16, child: _buildKanbanCard(app, isArchive))),
-                          childWhenDragging: Opacity(opacity: 0.3, child: _buildKanbanCard(app, isArchive)),
+                          feedback: Material(
+                            elevation: 8,
+                            borderRadius: BorderRadius.circular(12),
+                            child: SizedBox(
+                              width: width - 16,
+                              child: _buildKanbanCard(app, isArchive),
+                            ),
+                          ),
+                          childWhenDragging: Opacity(
+                            opacity: 0.3,
+                            child: _buildKanbanCard(app, isArchive),
+                          ),
                           child: _buildKanbanCard(app, isArchive),
                         );
                       },
@@ -729,12 +1060,16 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
           return PageView.builder(
             controller: PageController(viewportFraction: 0.85),
             itemCount: columns.length,
-            itemBuilder: (context, index) => buildColumn(columns[index], constraints.maxWidth * 0.85),
+            itemBuilder: (context, index) =>
+                buildColumn(columns[index], constraints.maxWidth * 0.85),
           );
         } else {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: columns.map((col) => buildColumn(col, 320)).toList()),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: columns.map((col) => buildColumn(col, 320)).toList(),
+            ),
           );
         }
       },
@@ -746,7 +1081,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,
       color: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5))),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant
+              .withValues(alpha: 0.5),
+        ),
+      ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () => context.go('/applications/edit/${app.id}'),
@@ -759,14 +1100,37 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(app.company, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.primary), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(
+                      app.company,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   if (app.appliedDate != null)
-                    Text(DateFormat('dd.MM.').format(app.appliedDate!), style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text(
+                      DateFormat('dd.MM.').format(app.appliedDate!),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: 4),
-              Text(app.position, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(
+                app.position,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),

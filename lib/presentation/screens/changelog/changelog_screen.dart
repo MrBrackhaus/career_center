@@ -6,9 +6,7 @@ class ChangelogScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Changelog & Info'),
-      ),
+      appBar: AppBar(title: const Text('Changelog & Info')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -79,7 +77,7 @@ class ChangelogScreen extends StatelessWidget {
             '📑 Jobcenter-Nachweis (PDF-Export): Generiert per Klick tabellarische Nachweise eurer Eigenbemühungen als PDF.',
             '📅 Wochenbericht: Vergleicht Bewerbungsleistungen der aktuellen Woche mit der Vorwoche.',
             '🌐 Browser-Erweiterung & lokaler Server: Importiert Stellenanzeigen per Klick (über Port 47392) aus Chrome/Edge.',
-            '🌍 Lokalisierung: Vollständige Zwei-Sprachen-Unterstützung (Deutsch & Englisch) eingebaut.'
+            '🌍 Lokalisierung: Vollständige Zwei-Sprachen-Unterstützung (Deutsch & Englisch) eingebaut.',
           ]),
           _buildSection('🛠 Verbesserungen & UI-Upgrades', [
             '📑 Tab-Layout für Bewerbungen: Bessere Übersicht durch Reiter (Basisdaten, E-Mails, Dokumente, Notizen).',
@@ -87,12 +85,12 @@ class ChangelogScreen extends StatelessWidget {
             '📝 Rich-Text Editor: Vorlagen (Anschreiben, Textbausteine) können jetzt dank Quill mit Formatierungen versehen werden.',
             '✉️ E-Mail (IMAP) Integration: Grundlagen für automatische Zuweisung von Firmenantworten an die jeweilige Bewerbung gelegt.',
             '🎨 Pipette / Color Picker: App-Akzentfarbe lässt sich nun über die Einstellungen mit der Pipette präzise anpassen.',
-            '🤖 MCP Funktionen: Implementierung des Model Context Protocol (MCP) für erweiterten KI-Zugriff und Daten-Extraktion.'
+            '🤖 MCP Funktionen: Implementierung des Model Context Protocol (MCP) für erweiterten KI-Zugriff und Daten-Extraktion.',
           ]),
           _buildSection('🐛 Bugfixes', [
             'Code-Optimierungen (Entfernung alter "withOpacity"-Aufrufe, Wechsel auf "withValues").',
             'Behebung des kritischen Layout-Fehlers im Template-Editor (fehlende Klammern beim UI-Aufbau).',
-            'Drift-Datenbank-Migrationspfade auf Version 6 aktualisiert.'
+            'Drift-Datenbank-Migrationspfade auf Version 6 aktualisiert.',
           ]),
         ],
       ),
@@ -105,18 +103,28 @@ class ChangelogScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
-          ...items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('• ', style: TextStyle(fontSize: 16)),
-                    Expanded(child: Text(item, style: const TextStyle(fontSize: 14, height: 1.4))),
-                  ],
-                ),
-              )),
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8, left: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('• ', style: TextStyle(fontSize: 16)),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: const TextStyle(fontSize: 14, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

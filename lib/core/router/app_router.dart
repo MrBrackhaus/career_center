@@ -18,8 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import '../../l10n/app_localizations.dart';
+
 import '../../presentation/screens/dashboard/dashboard_screen.dart';
 import '../../presentation/screens/applications/applications_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
@@ -36,7 +35,8 @@ import '../../presentation/providers/companion_provider.dart';
 import '../services/companion_server_service.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _shellNavigatorKey =
+    GlobalKey<NavigatorState>();
 
 // Provider to watch jobcenterMode setting
 final jobcenterModeProvider = FutureProvider<bool>((ref) async {
@@ -45,7 +45,11 @@ final jobcenterModeProvider = FutureProvider<bool>((ref) async {
   return setting?.value == 'true';
 });
 
-CustomTransitionPage<void> _fadeTransitionPage(BuildContext context, GoRouterState state, Widget child) {
+CustomTransitionPage<void> _fadeTransitionPage(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
@@ -59,10 +63,7 @@ final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/applications',
   routes: [
-    GoRoute(
-      path: '/',
-      redirect: (context, state) => '/applications',
-    ),
+    GoRoute(path: '/', redirect: (context, state) => '/applications'),
     ShellRoute(
       navigatorKey: _shellNavigatorKey,
       builder: (context, state, child) {
@@ -71,7 +72,8 @@ final appRouter = GoRouter(
       routes: [
         GoRoute(
           path: '/applications',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const ApplicationsScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const ApplicationsScreen()),
           routes: [
             GoRoute(
               path: 'add',
@@ -102,35 +104,49 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/report',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const JobcenterReportScreen()),
+          pageBuilder: (context, state) => _fadeTransitionPage(
+            context,
+            state,
+            const JobcenterReportScreen(),
+          ),
         ),
         GoRoute(
           path: '/reports/weekly',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const WeeklyReportScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const WeeklyReportScreen()),
         ),
         GoRoute(
           path: '/calendar',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const CalendarScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const CalendarScreen()),
         ),
         GoRoute(
           path: '/messages',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const MessagesScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const MessagesScreen()),
         ),
         GoRoute(
           path: '/dashboard',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const DashboardScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const DashboardScreen()),
         ),
         GoRoute(
           path: '/templates',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const TemplatesScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const TemplatesScreen()),
         ),
         GoRoute(
           path: '/editor',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const ApplicationEditorScreen()),
+          pageBuilder: (context, state) => _fadeTransitionPage(
+            context,
+            state,
+            const ApplicationEditorScreen(),
+          ),
         ),
         GoRoute(
           path: '/settings',
-          pageBuilder: (context, state) => _fadeTransitionPage(context, state, const SettingsScreen()),
+          pageBuilder: (context, state) =>
+              _fadeTransitionPage(context, state, const SettingsScreen()),
         ),
       ],
     ),
@@ -140,10 +156,7 @@ final appRouter = GoRouter(
 class ScaffoldWithTopBar extends ConsumerWidget {
   final Widget child;
 
-  const ScaffoldWithTopBar({
-    required this.child,
-    super.key,
-  });
+  const ScaffoldWithTopBar({required this.child, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -153,21 +166,24 @@ class ScaffoldWithTopBar extends ConsumerWidget {
         if (next.type == 'import') {
           final url = next.payload['url'] as String?;
           if (url != null) {
-             // We can pass this to /applications/add via extra or we just route there
-             // For now, let's just route to Add and show a snackbar!
-             context.go('/applications/add', extra: {
-               'url': url,
-               'html': next.payload['html'],
-               'screenshot': next.payload['screenshot'],
-             });
+            // We can pass this to /applications/add via extra or we just route there
+            // For now, let's just route to Add and show a snackbar!
+            context.go(
+              '/applications/add',
+              extra: {
+                'url': url,
+                'html': next.payload['html'],
+                'screenshot': next.payload['screenshot'],
+              },
+            );
           }
         } else if (next.type == 'autofill_request') {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(
-               content: Text('🎯 Formular-Modus aktiv (Overlay)'),
-               backgroundColor: Colors.orange,
-             ),
-           );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🎯 Formular-Modus aktiv (Overlay)'),
+              backgroundColor: Colors.orange,
+            ),
+          );
         }
         ref.read(companionProvider.notifier).clearEvent();
       }
@@ -179,13 +195,22 @@ class ScaffoldWithTopBar extends ConsumerWidget {
     return ResponsiveShell(child: child);
   }
 
-  Widget _buildNavButton(BuildContext context, String title, String route, bool isSelected) {
+  Widget _buildNavButton(
+    BuildContext context,
+    String title,
+    String route,
+    bool isSelected,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4.0),
       child: TextButton(
         style: TextButton.styleFrom(
-          backgroundColor: isSelected ? Theme.of(context).colorScheme.primaryContainer : Colors.transparent,
-          foregroundColor: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface,
+          backgroundColor: isSelected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Colors.transparent,
+          foregroundColor: isSelected
+              ? Theme.of(context).colorScheme.onPrimaryContainer
+              : Theme.of(context).colorScheme.onSurface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
         onPressed: () => context.go(route),
@@ -194,14 +219,3 @@ class ScaffoldWithTopBar extends ConsumerWidget {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-

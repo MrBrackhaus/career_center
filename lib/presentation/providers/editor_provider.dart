@@ -1,13 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
+
 import 'dart:convert';
+
 import '../../data/database/app_database.dart';
 import 'database_provider.dart';
 
 class EditorState {
   final bool isSaving;
   final String? errorMessage;
-  
+
   final List<String> missingKeywords;
   final List<String> foundKeywords;
 
@@ -77,4 +79,7 @@ class TemplateEditorNotifier extends Notifier<EditorState> {
   }
 }
 
-final templateEditorProvider = NotifierProvider<TemplateEditorNotifier, EditorState>(TemplateEditorNotifier.new);
+final templateEditorProvider =
+    NotifierProvider<TemplateEditorNotifier, EditorState>(
+      TemplateEditorNotifier.new,
+    );

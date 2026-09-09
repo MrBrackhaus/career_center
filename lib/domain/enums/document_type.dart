@@ -65,4 +65,3 @@ extension DocumentTypeLabel on DocumentType {
     }
   }
 }
-

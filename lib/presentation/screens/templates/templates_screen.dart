@@ -6,12 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'dart:convert';
 
 import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
@@ -332,7 +329,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '🤖 ' + AppLocalizations.of(context)!.promptTitle,
+            '🤖 ${AppLocalizations.of(context)!.promptTitle}',
             style: Theme.of(context).textTheme.headlineMedium
                 ?.copyWith(fontWeight: FontWeight.bold),
           ),

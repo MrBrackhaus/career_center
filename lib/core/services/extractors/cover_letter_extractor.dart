@@ -45,7 +45,11 @@ class CoverLetterExtractor {
             int.parse(match.group(2)!),
             int.parse(match.group(1)!),
           );
-          foundDate = FieldResult(value: date, confidence: 0.95, source: 'regex_date');
+          foundDate = FieldResult(
+            value: date,
+            confidence: 0.95,
+            source: 'regex_date',
+          );
           break;
         } catch (_) {}
       }
@@ -98,7 +102,8 @@ class CoverLetterExtractor {
         titleParts.add(lines[j]);
       }
 
-      String title = titleParts.join(' ')
+      String title = titleParts
+          .join(' ')
           .replaceAll('- ', '-')
           .replaceAll(' -', '-');
 
@@ -112,7 +117,9 @@ class CoverLetterExtractor {
         foundPosition = FieldResult(
           value: title.trim(),
           confidence: titleParts.length > 1 ? 0.75 : 0.9,
-          source: titleParts.length > 1 ? 'cover_letter_subject_merged' : 'cover_letter_subject',
+          source: titleParts.length > 1
+              ? 'cover_letter_subject_merged'
+              : 'cover_letter_subject',
         );
       }
     }
@@ -146,7 +153,10 @@ class CoverLetterExtractor {
 
     if (bestRecipientCityIndex != -1) {
       // â”€â”€ 5. Straße zusammenbauen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      final streetRegex = RegExp(r'[a-zäöüß\.\-\s]+\d{1,4}[a-z]?', caseSensitive: false);
+      final streetRegex = RegExp(
+        r'[a-zäöüß\.\-\s]+\d{1,4}[a-z]?',
+        caseSensitive: false,
+      );
       int companyIdx = bestRecipientCityIndex - 1;
       List<String> streetParts = [];
 
@@ -160,7 +170,8 @@ class CoverLetterExtractor {
           companyIdx--;
         } else if (nonEmptyLines[companyIdx].endsWith('-') ||
             nonEmptyLines[companyIdx] == '-' ||
-            (!nonEmptyLines[companyIdx].contains(' ') && streetParts.isNotEmpty)) {
+            (!nonEmptyLines[companyIdx].contains(' ') &&
+                streetParts.isNotEmpty)) {
           streetParts.insert(0, nonEmptyLines[companyIdx]);
           companyIdx--;
         } else {
@@ -169,7 +180,8 @@ class CoverLetterExtractor {
       }
 
       if (streetParts.isNotEmpty) {
-        String combinedStreet = streetParts.join(' ')
+        String combinedStreet = streetParts
+            .join(' ')
             .replaceAll('- ', '-')
             .replaceAll(' -', '-');
         foundAddress = FieldResult(
@@ -187,8 +199,16 @@ class CoverLetterExtractor {
 
       // â”€â”€ 6. Firmenname â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       final skipMarkers = [
-        'fachbereich', 'abteilung', 'z.hd', 'herr', 'frau',
-        'postfach', 'zentralbereich', 'personal', 'human', 'resources',
+        'fachbereich',
+        'abteilung',
+        'z.hd',
+        'herr',
+        'frau',
+        'postfach',
+        'zentralbereich',
+        'personal',
+        'human',
+        'resources',
       ];
 
       while (companyIdx >= 0 && companyIdx > bestRecipientCityIndex - 8) {
@@ -219,11 +239,14 @@ class CoverLetterExtractor {
     // â”€â”€ 6.5 Fallback für Firma und Adresse (falls keine PLZ gefunden wurde) â”€
     if (foundCompany == null && subjectIndex > 0) {
       int searchStartIndex = subjectIndex - 1;
-      
+
       // Überspringe die Datumszeile, falls sie direkt über dem Betreff steht
-      if (searchStartIndex >= 0 && nonEmptyLines[searchStartIndex].contains(DateTime.now().year.toString().substring(0,2))) {
-          // Check for year like 2024, 2025, 2026
-          searchStartIndex--;
+      if (searchStartIndex >= 0 &&
+          nonEmptyLines[searchStartIndex].contains(
+            DateTime.now().year.toString().substring(0, 2),
+          )) {
+        // Check for year like 2024, 2025, 2026
+        searchStartIndex--;
       }
 
       final legalForms = RegExp(
@@ -232,19 +255,29 @@ class CoverLetterExtractor {
       );
 
       final skipMarkers = [
-        'fachbereich', 'abteilung', 'z.hd', 'herr', 'frau',
-        'postfach', 'zentralbereich', 'personal', 'human', 'resources',
+        'fachbereich',
+        'abteilung',
+        'z.hd',
+        'herr',
+        'frau',
+        'postfach',
+        'zentralbereich',
+        'personal',
+        'human',
+        'resources',
       ];
 
       for (int i = searchStartIndex; i >= 0 && i >= searchStartIndex - 8; i--) {
         final line = nonEmptyLines[i];
         final lLow = line.toLowerCase();
-        
+
         // Absender-Infos ignorieren
-        if (lLow.contains('@') || RegExp(r'(tel|mobil|01[5-7]|\+49)').hasMatch(lLow) || lLow.contains('telefon')) {
+        if (lLow.contains('@') ||
+            RegExp(r'(tel|mobil|01[5-7]|\+49)').hasMatch(lLow) ||
+            lLow.contains('telefon')) {
           continue;
         }
-        
+
         // Abteilung/Z.Hd. ignorieren
         bool isDeptOrContact = false;
         for (final marker in skipMarkers) {
@@ -253,45 +286,49 @@ class CoverLetterExtractor {
             break;
           }
         }
-        
+
         if (isDeptOrContact) {
-           // Wenn wir noch keine Adresse haben, könnte eine der Zeilen nach der Abteilung die Stadt sein (z.B. Neuss)
-           if (foundAddress == null && i + 1 <= searchStartIndex) {
-               final potentialCity = nonEmptyLines[i + 1];
-               if (!potentialCity.contains('202') && potentialCity.length < 30) {
-                   foundAddress = FieldResult(
-                       value: potentialCity,
-                       confidence: 0.6,
-                       source: 'fallback_city_after_dept',
-                   );
-               }
-           }
-           continue;
+          // Wenn wir noch keine Adresse haben, könnte eine der Zeilen nach der Abteilung die Stadt sein (z.B. Neuss)
+          if (foundAddress == null && i + 1 <= searchStartIndex) {
+            final potentialCity = nonEmptyLines[i + 1];
+            if (!potentialCity.contains('202') && potentialCity.length < 30) {
+              foundAddress = FieldResult(
+                value: potentialCity,
+                confidence: 0.6,
+                source: 'fallback_city_after_dept',
+              );
+            }
+          }
+          continue;
         }
 
         // Firmennamen erkennen
-        if (legalForms.hasMatch(line) || lLow.contains('unternehmen') || lLow.contains('klinik') || lLow.contains('firma')) {
-           foundCompany = FieldResult(
+        if (legalForms.hasMatch(line) ||
+            lLow.contains('unternehmen') ||
+            lLow.contains('klinik') ||
+            lLow.contains('firma')) {
+          foundCompany = FieldResult(
             value: line,
             confidence: 0.8, // Relativ sicher, da Rechtsform gefunden
             source: 'company_fallback_scan',
           );
-          
+
           // Wenn wir noch keine Adresse (Stadt) haben und die Zeile direkt unter der Firma keine Abteilung ist, ist es oft die Stadt
           if (foundAddress == null && i + 1 <= searchStartIndex) {
-             bool nextIsDept = false;
-             for (final marker in skipMarkers) {
-                if (nonEmptyLines[i + 1].toLowerCase().contains(marker)) {
-                   nextIsDept = true; break;
-                }
-             }
-             if (!nextIsDept && !nonEmptyLines[i + 1].contains('202')) {
-                foundAddress = FieldResult(
-                    value: nonEmptyLines[i + 1],
-                    confidence: 0.6,
-                    source: 'fallback_city_under_company',
-                );
-             }
+            bool nextIsDept = false;
+            for (final marker in skipMarkers) {
+              if (nonEmptyLines[i + 1].toLowerCase().contains(marker)) {
+                nextIsDept = true;
+                break;
+              }
+            }
+            if (!nextIsDept && !nonEmptyLines[i + 1].contains('202')) {
+              foundAddress = FieldResult(
+                value: nonEmptyLines[i + 1],
+                confidence: 0.6,
+                source: 'fallback_city_under_company',
+              );
+            }
           }
           break;
         }
@@ -300,17 +337,25 @@ class CoverLetterExtractor {
 
     // ── 7. Kontaktperson ───────────────────────────────────────────────────────────────────────
     FieldResult<String>? foundContact;
-    
+
     // 7.1 Versuche den vollen Namen aus der "z. Hd." oder "Herr/Frau" Zeile im Adressblock zu lesen
     final contactBlockRegex = RegExp(
       r'^(?:z\.?\s*hd\.?\s*)?(?:frauen|herrn|frau|herr)\s+(?:dr\.\s+|prof\.\s+)?([a-zäöüß]+\s+[a-zäöüß]+(?:\s+[a-zäöüß]+)?)$',
       caseSensitive: false,
     );
-    for (int i = 0; i < nonEmptyLines.length && i < 20; i++) { // Meist im oberen Drittel
+    for (int i = 0; i < nonEmptyLines.length && i < 20; i++) {
+      // Meist im oberen Drittel
       final match = contactBlockRegex.firstMatch(nonEmptyLines[i].trim());
       if (match != null) {
         String extractedName = match.group(1)!.trim();
-        extractedName = extractedName.split(' ').map((w) => w.isNotEmpty ? w[0].toUpperCase() + w.substring(1).toLowerCase() : '').join(' ');
+        extractedName = extractedName
+            .split(' ')
+            .map(
+              (w) => w.isNotEmpty
+                  ? w[0].toUpperCase() + w.substring(1).toLowerCase()
+                  : '',
+            )
+            .join(' ');
         foundContact = FieldResult(
           value: extractedName,
           confidence: 0.95,
@@ -319,7 +364,7 @@ class CoverLetterExtractor {
         break;
       }
     }
-    
+
     // 7.2 Fallback: Anrede "Sehr geehrte(r)..."
     if (foundContact == null) {
       final contactRegex = RegExp(
@@ -329,7 +374,14 @@ class CoverLetterExtractor {
       final contactMatch = contactRegex.firstMatch(text);
       if (contactMatch != null) {
         String extractedName = ' '.trim();
-        extractedName = extractedName.split(' ').map((w) => w.isNotEmpty ? w[0].toUpperCase() + w.substring(1).toLowerCase() : '').join(' ');
+        extractedName = extractedName
+            .split(' ')
+            .map(
+              (w) => w.isNotEmpty
+                  ? w[0].toUpperCase() + w.substring(1).toLowerCase()
+                  : '',
+            )
+            .join(' ');
         foundContact = FieldResult(
           value: extractedName,
           confidence: 0.9,
@@ -386,7 +438,9 @@ class CoverLetterExtractor {
     }
 
     // E-Mail
-    final emailRegex = RegExp(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}');
+    final emailRegex = RegExp(
+      r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+    );
     final emailMatch = emailRegex.firstMatch(text);
     if (emailMatch != null) {
       foundEmail = FieldResult(
@@ -473,4 +527,3 @@ class CoverLetterExtractor {
     );
   }
 }
-

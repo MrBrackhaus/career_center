@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
+
 import '../../core/secrets.dart';
 
 class FeedbackDialog extends StatefulWidget {
@@ -22,14 +24,20 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
 
     if (title.isEmpty || desc.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte fülle Titel und Beschreibung aus.')),
+        const SnackBar(
+          content: Text('Bitte fülle Titel und Beschreibung aus.'),
+        ),
       );
       return;
     }
 
     if (Secrets.discordWebhookUrl.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tracker ist noch nicht konfiguriert (Webhook URL fehlt).')),
+        const SnackBar(
+          content: Text(
+            'Tracker ist noch nicht konfiguriert (Webhook URL fehlt).',
+          ),
+        ),
       );
       return;
     }
@@ -38,12 +46,14 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
 
     try {
       final client = HttpClient();
-      final request = await client.postUrl(Uri.parse(Secrets.discordWebhookUrl));
+      final request = await client.postUrl(
+        Uri.parse(Secrets.discordWebhookUrl),
+      );
       request.headers.set('Content-Type', 'application/json');
 
       int color = 15158332; // Red (Bug)
       String prefix = "🐛 Neuer Bug-Report";
-      
+
       if (_feedbackType == 'Idee') {
         color = 3066993; // Green
         prefix = "💡 Neue Idee/Vorschlag";
@@ -58,12 +68,10 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
             "title": "$prefix: $title",
             "description": desc,
             "color": color,
-            "footer": {
-              "text": "Gesendet aus der Bewerbungszentrale App"
-            },
-            "timestamp": DateTime.now().toIso8601String()
-          }
-        ]
+            "footer": {"text": "Gesendet aus der Bewerbungszentrale App"},
+            "timestamp": DateTime.now().toIso8601String(),
+          },
+        ],
       });
 
       request.add(utf8.encode(payload));
@@ -74,7 +82,9 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         if (mounted) {
           Navigator.of(context).pop();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Nachricht erfolgreich gesendet! Vielen Dank!')),
+            const SnackBar(
+              content: Text('Nachricht erfolgreich gesendet! Vielen Dank!'),
+            ),
           );
         }
       } else {
@@ -82,9 +92,8 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim Senden: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Fehler beim Senden: $e')));
       }
     } finally {
       if (mounted) {
@@ -109,18 +118,26 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Hast du einen Fehler gefunden oder eine tolle Idee für die App? Lass es uns wissen!'),
+            const Text(
+              'Hast du einen Fehler gefunden oder eine tolle Idee für die App? Lass es uns wissen!',
+            ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _feedbackType,
+              initialValue: _feedbackType,
               decoration: const InputDecoration(
                 labelText: 'Art der Meldung',
                 border: OutlineInputBorder(),
               ),
               items: const [
                 DropdownMenuItem(value: 'Bug', child: Text('🐛 Fehler / Bug')),
-                DropdownMenuItem(value: 'Idee', child: Text('💡 Idee / Vorschlag')),
-                DropdownMenuItem(value: 'Feedback', child: Text('💬 Allgemeines Feedback')),
+                DropdownMenuItem(
+                  value: 'Idee',
+                  child: Text('💡 Idee / Vorschlag'),
+                ),
+                DropdownMenuItem(
+                  value: 'Feedback',
+                  child: Text('💬 Allgemeines Feedback'),
+                ),
               ],
               onChanged: (val) {
                 if (val != null) setState(() => _feedbackType = val);
@@ -153,7 +170,13 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         ),
         ElevatedButton.icon(
           onPressed: _isSending ? null : _sendReport,
-          icon: _isSending ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
+          icon: _isSending
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.send),
           label: const Text('Senden'),
         ),
       ],

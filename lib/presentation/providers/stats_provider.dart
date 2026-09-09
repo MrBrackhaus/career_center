@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/database/app_database.dart';
+
 import 'applications_provider.dart';
 
 class ApplicationStats {
@@ -37,7 +37,7 @@ class ApplicationStats {
 
 final statsProvider = Provider<ApplicationStats>((ref) {
   final applications = ref.watch(applicationsProvider).value ?? [];
-  
+
   int open = 0;
   int rejected = 0;
   int accepted = 0;
@@ -67,4 +67,3 @@ final statsProvider = Provider<ApplicationStats>((ref) {
     interview: interview,
   );
 });
-

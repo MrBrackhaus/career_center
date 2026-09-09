@@ -16,9 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/services/imap_service.dart';
 import 'database_provider.dart';
-import '../../data/database/app_database.dart';
 
 class EmailScannerState {
   final bool isLoading;
@@ -71,7 +71,9 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
       final emailSetting = await db.settingsDao.getSettingByKey('imapEmail');
       final passSetting = await db.settingsDao.getSettingByKey('imapPassword');
 
-      if (serverSetting == null || emailSetting == null || passSetting == null) {
+      if (serverSetting == null ||
+          emailSetting == null ||
+          passSetting == null) {
         throw Exception('IMAP Zugangsdaten nicht konfiguriert.');
       }
 
@@ -123,7 +125,9 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
   }
 
   Future<int> importSelected() async {
-    final toImport = state.emails.where((e) => state.selectedUids.contains(e.uid)).toList();
+    final toImport = state.emails
+        .where((e) => state.selectedUids.contains(e.uid))
+        .toList();
     if (toImport.isEmpty) return 0;
 
     state = state.copyWith(isImporting: true);
@@ -166,5 +170,5 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
 
 final emailScannerProvider =
     NotifierProvider.autoDispose<EmailScannerNotifier, EmailScannerState>(
-        EmailScannerNotifier.new);
-
+      EmailScannerNotifier.new,
+    );

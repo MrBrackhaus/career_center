@@ -1,4 +1,3 @@
-import '../../../../l10n/app_localizations.dart';
 /*
  * JobTracker
  * Copyright (C) 2026 
@@ -18,6 +17,7 @@ import '../../../../l10n/app_localizations.dart';
  */
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../providers/notes_provider.dart';
 
 class NotesWidget extends ConsumerStatefulWidget {
@@ -43,7 +43,10 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
             Expanded(
               child: TextField(
                 controller: _controller,
-                decoration: const InputDecoration(labelText: 'Neue Notiz...', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Neue Notiz...',
+                  border: OutlineInputBorder(),
+                ),
                 maxLines: null,
                 onSubmitted: (_) => _addNote(),
               ),
@@ -53,13 +56,17 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
               icon: const Icon(Icons.send),
               onPressed: _addNote,
               color: Theme.of(context).colorScheme.primary,
-            )
+            ),
           ],
         ),
         const SizedBox(height: 16),
         notesAsync.when(
           data: (notes) {
-            if (notes.isEmpty) return const Text('Noch keine Notizen.', style: TextStyle(color: Colors.grey));
+            if (notes.isEmpty)
+              return const Text(
+                'Noch keine Notizen.',
+                style: TextStyle(color: Colors.grey),
+              );
             return ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -70,10 +77,17 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     title: Text(note.content),
-                    subtitle: Text('${note.createdAt?.day}.${note.createdAt?.month}.${note.createdAt?.year} ${note.createdAt?.hour}:${note.createdAt?.minute.toString().padLeft(2, '0')}'),
+                    subtitle: Text(
+                      '${note.createdAt?.day}.${note.createdAt?.month}.${note.createdAt?.year} ${note.createdAt?.hour}:${note.createdAt?.minute.toString().padLeft(2, '0')}',
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, size: 16),
-                      onPressed: () => ref.read(notesNotifierProvider(widget.applicationId).notifier).deleteNote(note.id),
+                      onPressed: () => ref
+                          .read(
+                            notesNotifierProvider(widget.applicationId)
+                                .notifier,
+                          )
+                          .deleteNote(note.id),
                     ),
                   ),
                 );
@@ -89,8 +103,9 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
 
   void _addNote() {
     if (_controller.text.trim().isEmpty) return;
-    ref.read(notesNotifierProvider(widget.applicationId).notifier).addNote(_controller.text.trim());
+    ref
+        .read(notesNotifierProvider(widget.applicationId).notifier)
+        .addNote(_controller.text.trim());
     _controller.clear();
   }
 }
-

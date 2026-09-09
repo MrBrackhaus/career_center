@@ -4,7 +4,7 @@ import 'package:career_center/domain/enums/document_type.dart';
 
 class ApplicationFormStateBundle {
   final GlobalKey<FormState> formKey;
-  
+
   final TextEditingController companyController;
   final TextEditingController positionController;
   final TextEditingController notesController;
@@ -26,7 +26,7 @@ class ApplicationFormStateBundle {
   final DateTime? followUpDate;
   final List<String> activeCustomColumns;
   final bool isAutoFilling;
-  
+
   final ExtractionResult? lastExtractionResult;
   final bool isEditing;
   final String? activeMarkerField;
@@ -79,4 +79,3 @@ class ApplicationFormStateBundle {
     this.onDelete,
   });
 }
-

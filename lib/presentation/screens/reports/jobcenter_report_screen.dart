@@ -22,13 +22,13 @@ import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/pdf_generator.dart';
-import '../../../data/database/daos/settings_dao.dart';
 
 class JobcenterReportScreen extends ConsumerStatefulWidget {
-  const JobcenterReportScreen({Key? key}) : super(key: key);
+  const JobcenterReportScreen({super.key});
 
   @override
-  ConsumerState<JobcenterReportScreen> createState() => _JobcenterReportScreenState();
+  ConsumerState<JobcenterReportScreen> createState() =>
+      _JobcenterReportScreenState();
 }
 
 class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
@@ -92,7 +92,7 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            AppLocalizations.of(context)!.reportGeneratedAt + ' $nowString' + AppLocalizations.of(context)!.reportTimeSuffix + (_userName.isNotEmpty ? ' | Name: $_userName' : ''),
+            '${AppLocalizations.of(context)!.reportGeneratedAt} $nowString${AppLocalizations.of(context)!.reportTimeSuffix}${_userName.isNotEmpty ? ' | Name: $_userName' : ''}',
             style: const TextStyle(fontSize: 16, color: Colors.grey),
           ),
           const SizedBox(height: 16),
@@ -100,7 +100,9 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
             child: applicationsAsync.when(
               data: (applications) {
                 if (applications.isEmpty) {
-                  return Center(child: Text(AppLocalizations.of(context)!.reportNoApps));
+                  return Center(
+                    child: Text(AppLocalizations.of(context)!.reportNoApps),
+                  );
                 }
                 return SingleChildScrollView(
                   scrollDirection: Axis.vertical,
@@ -108,12 +110,30 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       columns: [
-                        DataColumn(label: Text(AppLocalizations.of(context)!.reportDate)),
-                        DataColumn(label: Text(AppLocalizations.of(context)!.reportCompany)),
-                        DataColumn(label: Text(AppLocalizations.of(context)!.reportPosition)),
+                        DataColumn(
+                          label: Text(AppLocalizations.of(context)!.reportDate),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            AppLocalizations.of(context)!.reportCompany,
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            AppLocalizations.of(context)!.reportPosition,
+                          ),
+                        ),
                         DataColumn(label: Text('KONTAKT')),
-                        DataColumn(label: Text(AppLocalizations.of(context)!.reportStatus)),
-                        DataColumn(label: Text(AppLocalizations.of(context)!.reportRejectionReason)),
+                        DataColumn(
+                          label: Text(
+                            AppLocalizations.of(context)!.reportStatus,
+                          ),
+                        ),
+                        DataColumn(
+                          label: Text(
+                            AppLocalizations.of(context)!.reportRejectionReason,
+                          ),
+                        ),
                       ],
                       rows: applications.map((app) {
                         final contactInfos = [
@@ -125,12 +145,28 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
 
                         return DataRow(
                           cells: [
-                            DataCell(Text(app.appliedDate != null ? _formatDateYMD(app.appliedDate!) : '-')),
+                            DataCell(
+                              Text(
+                                app.appliedDate != null
+                                    ? _formatDateYMD(app.appliedDate!)
+                                    : '-',
+                              ),
+                            ),
                             DataCell(Text(app.company)),
                             DataCell(Text(app.position)),
-                            DataCell(Text(contactInfos.isNotEmpty ? contactInfos : '-')),
+                            DataCell(
+                              Text(
+                                contactInfos.isNotEmpty ? contactInfos : '-',
+                              ),
+                            ),
                             DataCell(Text(app.status)),
-                            DataCell(Text(app.rejectionReason?.isNotEmpty == true ? app.rejectionReason! : '-')),
+                            DataCell(
+                              Text(
+                                app.rejectionReason?.isNotEmpty == true
+                                    ? app.rejectionReason!
+                                    : '-',
+                              ),
+                            ),
                           ],
                         );
                       }).toList(),
@@ -139,7 +175,8 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
                 );
               },
               loading: () => Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Fehler beim Laden der Daten')),
+              error: (error, stack) =>
+                  Center(child: Text('Fehler beim Laden der Daten')),
             ),
           ),
         ],
@@ -147,4 +184,3 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
     );
   }
 }
-

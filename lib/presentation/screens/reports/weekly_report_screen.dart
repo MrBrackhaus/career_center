@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../providers/applications_provider.dart';
 import '../../providers/stats_provider.dart';
 
@@ -22,26 +23,38 @@ class WeeklyReportScreen extends ConsumerWidget {
           final thisWeekApps = applications.where((app) {
             final appliedDate = app.appliedDate;
             if (appliedDate == null) return false;
-            return appliedDate.isAfter(startOfWeek.subtract(const Duration(microseconds: 1))) &&
-                   appliedDate.isBefore(startOfWeek.add(const Duration(days: 7)));
+            return appliedDate.isAfter(
+                  startOfWeek.subtract(const Duration(microseconds: 1)),
+                ) &&
+                appliedDate.isBefore(startOfWeek.add(const Duration(days: 7)));
           }).toList();
 
           final lastWeekApps = applications.where((app) {
             final appliedDate = app.appliedDate;
             if (appliedDate == null) return false;
-            return appliedDate.isAfter(startOfLastWeek.subtract(const Duration(microseconds: 1))) &&
-                   appliedDate.isBefore(startOfWeek);
+            return appliedDate.isAfter(
+                  startOfLastWeek.subtract(const Duration(microseconds: 1)),
+                ) &&
+                appliedDate.isBefore(startOfWeek);
           }).toList();
 
-          final thisWeekRejections = thisWeekApps.where((app) => app.status.toLowerCase() == 'absage').length;
-          final upcomingResponses = applications.where((app) => app.status.toLowerCase() == 'versendet').toList();
-          
+          final thisWeekRejections = thisWeekApps
+              .where((app) => app.status.toLowerCase() == 'absage')
+              .length;
+          final upcomingResponses = applications
+              .where((app) => app.status.toLowerCase() == 'versendet')
+              .toList();
+
           final activeApps = stats.open;
 
-          String motivationTitle = 'Jede Reise beginnt mit dem ersten Schritt! 🚀';
-          if (thisWeekApps.length >= 5) motivationTitle = 'FANTASTISCHE ARBEIT DIESE WOCHE! 🎉';
-          else if (thisWeekApps.length >= 3) motivationTitle = 'Starke Leistung diese Woche! 🌟';
-          else if (thisWeekApps.length >= 1) motivationTitle = 'Guter Start! Weiter so! 💪';
+          String motivationTitle =
+              'Jede Reise beginnt mit dem ersten Schritt! 🚀';
+          if (thisWeekApps.length >= 5) {
+            motivationTitle = 'FANTASTISCHE ARBEIT DIESE WOCHE! 🎉';
+          } else if (thisWeekApps.length >= 3)
+            motivationTitle = 'Starke Leistung diese Woche! 🌟';
+          else if (thisWeekApps.isNotEmpty)
+            motivationTitle = 'Guter Start! Weiter so! 💪';
 
           final goalProgress = (thisWeekApps.length / 5).clamp(0.0, 1.0);
 
@@ -50,7 +63,11 @@ class WeeklyReportScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Dein Wochenbericht', style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'Dein Wochenbericht',
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 24),
                 Card(
                   color: Theme.of(context).colorScheme.primaryContainer,
@@ -69,11 +86,32 @@ class WeeklyReportScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 Row(
                   children: [
-                    Expanded(child: _buildStatCard(context, 'NEUE BEWERBUNGEN', thisWeekApps.length.toString(), Icons.note_add)),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        'NEUE BEWERBUNGEN',
+                        thisWeekApps.length.toString(),
+                        Icons.note_add,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildStatCard(context, 'AKTIVE BEWERBUNGEN', activeApps.toString(), Icons.pending_actions)),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        'AKTIVE BEWERBUNGEN',
+                        activeApps.toString(),
+                        Icons.pending_actions,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildStatCard(context, 'ABSAGEN', thisWeekRejections.toString(), Icons.cancel_outlined)),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        'ABSAGEN',
+                        thisWeekRejections.toString(),
+                        Icons.cancel_outlined,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -83,7 +121,10 @@ class WeeklyReportScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Wochenziel: ${thisWeekApps.length} von 5 Bewerbungen', style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          'Wochenziel: ${thisWeekApps.length} von 5 Bewerbungen',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                         const SizedBox(height: 16),
                         LinearProgressIndicator(
                           value: goalProgress,
@@ -94,42 +135,69 @@ class WeeklyReportScreen extends ConsumerWidget {
                         Row(
                           children: [
                             Icon(
-                              thisWeekApps.length >= lastWeekApps.length ? Icons.arrow_upward : Icons.arrow_downward,
-                              color: thisWeekApps.length >= lastWeekApps.length ? Colors.green : Colors.red,
+                              thisWeekApps.length >= lastWeekApps.length
+                                  ? Icons.arrow_upward
+                                  : Icons.arrow_downward,
+                              color: thisWeekApps.length >= lastWeekApps.length
+                                  ? Colors.green
+                                  : Colors.red,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Diese Woche ${thisWeekApps.length} Bewerbungen vs. letzte Woche ${lastWeekApps.length} Bewerbungen',
                               style: TextStyle(
-                                color: thisWeekApps.length >= lastWeekApps.length ? Colors.green : Colors.red,
+                                color:
+                                    thisWeekApps.length >= lastWeekApps.length
+                                    ? Colors.green
+                                    : Colors.red,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                Text('Anstehende Rückmeldungen', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Anstehende Rückmeldungen',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 if (upcomingResponses.isEmpty)
-                  const Text('Aktuell keine ausstehenden Antworten.', style: TextStyle(fontStyle: FontStyle.italic))
+                  const Text(
+                    'Aktuell keine ausstehenden Antworten.',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  )
                 else
-                  ...upcomingResponses.map((app) => Card(
-                    child: ListTile(
-                      leading: CircleAvatar(child: Text(app.company.isNotEmpty ? app.company[0].toUpperCase() : '?')),
-                      title: Text(app.position),
-                      subtitle: Text(app.company),
-                      trailing: const Text('Wartend', style: TextStyle(color: Colors.orange)),
+                  ...upcomingResponses.map(
+                    (app) => Card(
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Text(
+                            app.company.isNotEmpty
+                                ? app.company[0].toUpperCase()
+                                : '?',
+                          ),
+                        ),
+                        title: Text(app.position),
+                        subtitle: Text(app.company),
+                        trailing: const Text(
+                          'Wartend',
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
                     ),
-                  )),
+                  ),
                 const SizedBox(height: 48),
                 const Text(
                   'Bleib dran! Jeder Schritt bringt dich näher an den perfekten Job. 🚀',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
                 ),
               ],
             ),
@@ -141,7 +209,12 @@ class WeeklyReportScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon) {
+  Widget _buildStatCard(
+    BuildContext context,
+    String title,
+    String value,
+    IconData icon,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -150,9 +223,17 @@ class WeeklyReportScreen extends ConsumerWidget {
           children: [
             Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
             const SizedBox(height: 12),
-            Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
-            Text(title, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

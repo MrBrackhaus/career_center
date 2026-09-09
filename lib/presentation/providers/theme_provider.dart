@@ -17,13 +17,11 @@
  */
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../data/database/app_database.dart';
 import 'database_provider.dart';
 
-enum ThemePreset {
-  standard,
-  obsidian,
-}
+enum ThemePreset { standard, obsidian }
 
 class ThemeState {
   final ThemeMode themeMode;
@@ -83,7 +81,7 @@ ColorScheme _neutralLightScheme(Color seedColor) {
 // Obsidian preset: matches real Obsidian default theme (neutral dark gray + purple accents)
 const obsidianDarkScheme = ColorScheme(
   brightness: Brightness.dark,
-  primary: Color(0xFF7C6AF7),           // Soft purple accent (buttons, links)
+  primary: Color(0xFF7C6AF7), // Soft purple accent (buttons, links)
   onPrimary: Color(0xFFFFFFFF),
   primaryContainer: Color(0xFF3D3560),
   onPrimaryContainer: Color(0xFFD4CEFF),
@@ -141,7 +139,9 @@ class ThemeNotifier extends Notifier<ThemeState> {
 
     Color color = Colors.teal;
     if (colorStr != null && colorStr.value.isNotEmpty) {
-      try { color = Color(int.parse(colorStr.value)); } catch (_) {}
+      try {
+        color = Color(int.parse(colorStr.value));
+      } catch (_) {}
     }
 
     ThemePreset preset = ThemePreset.standard;
@@ -156,24 +156,34 @@ class ThemeNotifier extends Notifier<ThemeState> {
     String modeString = 'system';
     if (mode == ThemeMode.light) modeString = 'light';
     if (mode == ThemeMode.dark) modeString = 'dark';
-    await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themeMode', value: modeString));
+    await db.settingsDao.insertOrUpdateSetting(
+      Setting(key: 'themeMode', value: modeString),
+    );
   }
 
   Future<void> setSeedColor(Color color) async {
     final db = ref.read(databaseProvider);
     state = state.copyWith(seedColor: color, preset: ThemePreset.standard);
-    await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themeColor', value: color.value.toString()));
-    await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themePreset', value: 'standard'));
+    await db.settingsDao.insertOrUpdateSetting(
+      Setting(key: 'themeColor', value: color.toARGB32().toString()),
+    );
+    await db.settingsDao.insertOrUpdateSetting(
+      Setting(key: 'themePreset', value: 'standard'),
+    );
   }
 
   Future<void> setPreset(ThemePreset preset) async {
     final db = ref.read(databaseProvider);
     state = state.copyWith(preset: preset);
-    await db.settingsDao.insertOrUpdateSetting(Setting(key: 'themePreset', value: preset.name));
+    await db.settingsDao.insertOrUpdateSetting(
+      Setting(key: 'themePreset', value: preset.name),
+    );
   }
 }
 
-final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(ThemeNotifier.new);
+final themeProvider = NotifierProvider<ThemeNotifier, ThemeState>(
+  ThemeNotifier.new,
+);
 
 // Helper exposed for use in app.dart
 ColorScheme buildDarkColorScheme(ThemeState state) {
@@ -185,4 +195,3 @@ ColorScheme buildLightColorScheme(ThemeState state) {
   if (state.preset == ThemePreset.obsidian) return obsidianLightScheme;
   return _neutralLightScheme(state.seedColor);
 }
-

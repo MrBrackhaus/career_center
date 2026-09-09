@@ -16,14 +16,17 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:io';
-import 'package:csv/csv.dart';
+
 import 'package:file_selector/file_selector.dart';
+
 import '../../data/database/app_database.dart';
 
 class CsvGenerator {
-  static Future<void> generateAndShareCsv(List<Application> applications) async {
+  static Future<void> generateAndShareCsv(
+    List<Application> applications,
+  ) async {
     List<List<dynamic>> rows = [
-      ['Datum', 'Firma', 'Position', 'Status', 'Absagegrund']
+      ['Datum', 'Firma', 'Position', 'Status', 'Absagegrund'],
     ];
 
     for (var app in applications) {
@@ -36,7 +39,12 @@ class CsvGenerator {
       ]);
     }
 
-    String csv = rows.map((r) => r.map((e) => '"${e.toString().replaceAll('"', '""')}"').join(',')).join('\n');
+    String csv = rows
+        .map(
+          (r) =>
+              r.map((e) => '"${e.toString().replaceAll('"', '""')}"').join(','),
+        )
+        .join('\n');
 
     final saveLocation = await getSaveLocation(
       suggestedName: 'bewerbungen.csv',
@@ -48,4 +56,3 @@ class CsvGenerator {
     }
   }
 }
-

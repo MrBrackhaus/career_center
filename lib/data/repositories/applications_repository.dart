@@ -16,8 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:io';
+
 import '../database/app_database.dart';
-import '../database/daos/applications_dao.dart';
 
 class ApplicationsRepository {
   final AppDatabase _db;
@@ -47,7 +47,9 @@ class ApplicationsRepository {
   Future<void> deleteApplication(Application app) async {
     // 1. Delete associated physical files
     try {
-      final docs = await (_db.select(_db.documents)..where((d) => d.applicationId.equals(app.id))).get();
+      final docs = await (_db.select(
+        _db.documents,
+      )..where((d) => d.applicationId.equals(app.id))).get();
       for (final doc in docs) {
         final file = File(doc.filePath);
         if (await file.exists()) {
@@ -60,9 +62,15 @@ class ApplicationsRepository {
 
     // 2. Database transaction to delete all related rows
     await _db.transaction(() async {
-      await (_db.delete(_db.documents)..where((d) => d.applicationId.equals(app.id))).go();
-      await (_db.delete(_db.notes)..where((n) => n.applicationId.equals(app.id))).go();
-      await (_db.delete(_db.emails)..where((e) => e.applicationId.equals(app.id))).go();
+      await (_db.delete(
+        _db.documents,
+      )..where((d) => d.applicationId.equals(app.id))).go();
+      await (_db.delete(
+        _db.notes,
+      )..where((n) => n.applicationId.equals(app.id))).go();
+      await (_db.delete(
+        _db.emails,
+      )..where((e) => e.applicationId.equals(app.id))).go();
       await _db.applicationsDao.deleteApplication(app);
     });
   }

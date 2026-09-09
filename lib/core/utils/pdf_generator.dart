@@ -16,14 +16,19 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:io';
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:file_selector/file_selector.dart';
+
 import '../../data/database/app_database.dart';
 import '../../data/database/daos/settings_dao.dart';
 
 class PdfGenerator {
-  static Future<void> generateAndSharePdf(List<Application> applications, SettingsDao settingsDao) async {
+  static Future<void> generateAndSharePdf(
+    List<Application> applications,
+    SettingsDao settingsDao,
+  ) async {
     final pdf = pw.Document();
 
     final nameSetting = await settingsDao.getSettingByKey('userName');
@@ -36,7 +41,8 @@ class PdfGenerator {
 
     final userName = nameSetting?.value ?? 'Dein Name';
     final userAddress = addressSetting?.value ?? 'Deine Adresse';
-    final userZipCity = '${zipSetting?.value ?? ''} ${citySetting?.value ?? ''}'.trim();
+    final userZipCity = '${zipSetting?.value ?? ''} ${citySetting?.value ?? ''}'
+        .trim();
     final userEmail = emailSetting?.value ?? '';
     final userPhone = phoneSetting?.value ?? '';
     final userBirthdate = birthdateSetting?.value ?? '';
@@ -46,7 +52,10 @@ class PdfGenerator {
         pageFormat: PdfPageFormat.a4.landscape, // Landscape for more columns
         build: (pw.Context context) {
           return [
-            pw.Text('Nachweis Eigenbemühungen (Bewerbungen)', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+            pw.Text(
+              'Nachweis Eigenbemühungen (Bewerbungen)',
+              style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+            ),
             pw.SizedBox(height: 10),
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -55,7 +64,10 @@ class PdfGenerator {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(userName, style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    pw.Text(
+                      userName,
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
                     if (userAddress.isNotEmpty) pw.Text(userAddress),
                     if (userZipCity.isNotEmpty) pw.Text(userZipCity),
                   ],
@@ -63,7 +75,8 @@ class PdfGenerator {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    if (userBirthdate.isNotEmpty) pw.Text('Geboren am: $userBirthdate'),
+                    if (userBirthdate.isNotEmpty)
+                      pw.Text('Geboren am: $userBirthdate'),
                     if (userEmail.isNotEmpty) pw.Text(userEmail),
                     if (userPhone.isNotEmpty) pw.Text(userPhone),
                   ],
@@ -73,17 +86,29 @@ class PdfGenerator {
             pw.SizedBox(height: 20),
             pw.Table.fromTextArray(
               context: context,
-              headers: ['Datum', 'Firma', 'Position', 'Kontakt', 'Status', 'Absagegrund'],
+              headers: [
+                'Datum',
+                'Firma',
+                'Position',
+                'Kontakt',
+                'Status',
+                'Absagegrund',
+              ],
               data: applications.map((app) {
-                final contactInfos = [
-                  app.contactName,
-                  app.contactEmail,
-                  app.contactPhone,
-                  app.address,
-                ].where((s) => s != null && s.isNotEmpty).join('\n'); // Newline in PDF table
+                final contactInfos =
+                    [
+                          app.contactName,
+                          app.contactEmail,
+                          app.contactPhone,
+                          app.address,
+                        ]
+                        .where((s) => s != null && s.isNotEmpty)
+                        .join('\n'); // Newline in PDF table
 
                 return [
-                  app.appliedDate != null ? '${app.appliedDate!.day}.${app.appliedDate!.month}.${app.appliedDate!.year}' : '-',
+                  app.appliedDate != null
+                      ? '${app.appliedDate!.day}.${app.appliedDate!.month}.${app.appliedDate!.year}'
+                      : '-',
                   app.company,
                   app.position,
                   contactInfos.isNotEmpty ? contactInfos : '-',
@@ -98,7 +123,9 @@ class PdfGenerator {
     );
 
     final saveLocation = await getSaveLocation(
-      acceptedTypeGroups: [const XTypeGroup(label: 'PDF', extensions: ['pdf'])],
+      acceptedTypeGroups: [
+        const XTypeGroup(label: 'PDF', extensions: ['pdf']),
+      ],
       suggestedName: 'bewerbungsnachweis.pdf',
     );
 
@@ -108,4 +135,3 @@ class PdfGenerator {
     await file.writeAsBytes(await pdf.save());
   }
 }
-

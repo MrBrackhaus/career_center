@@ -17,11 +17,18 @@
  */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
+
 import '../../data/database/app_database.dart';
 import 'database_provider.dart';
 
-final contactsProvider = StreamProvider.family.autoDispose<List<Contact>, int>((ref, applicationId) {
-  return ref.watch(databaseProvider).contactsDao.watchContactsForApplication(applicationId);
+final contactsProvider = StreamProvider.family.autoDispose<List<Contact>, int>((
+  ref,
+  applicationId,
+) {
+  return ref
+      .watch(databaseProvider)
+      .contactsDao
+      .watchContactsForApplication(applicationId);
 });
 
 class ContactsNotifier extends Notifier<AsyncValue<void>> {
@@ -31,15 +38,22 @@ class ContactsNotifier extends Notifier<AsyncValue<void>> {
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
 
-  Future<void> addContact(String? name, String? email, String? phone, String? role) async {
+  Future<void> addContact(
+    String? name,
+    String? email,
+    String? phone,
+    String? role,
+  ) async {
     final db = ref.read(databaseProvider);
-    await db.contactsDao.insertContact(ContactsCompanion.insert(
-      applicationId: applicationId,
-      name: drift.Value(name),
-      email: drift.Value(email),
-      phone: drift.Value(phone),
-      role: drift.Value(role),
-    ));
+    await db.contactsDao.insertContact(
+      ContactsCompanion.insert(
+        applicationId: applicationId,
+        name: drift.Value(name),
+        email: drift.Value(email),
+        phone: drift.Value(phone),
+        role: drift.Value(role),
+      ),
+    );
   }
 
   Future<void> updateContact(Contact contact) async {
@@ -53,5 +67,7 @@ class ContactsNotifier extends Notifier<AsyncValue<void>> {
   }
 }
 
-final contactsNotifierProvider = NotifierProvider.autoDispose.family<ContactsNotifier, AsyncValue<void>, int>((id) => ContactsNotifier(id));
-
+final contactsNotifierProvider = NotifierProvider.autoDispose
+    .family<ContactsNotifier, AsyncValue<void>, int>(
+      (id) => ContactsNotifier(id),
+    );

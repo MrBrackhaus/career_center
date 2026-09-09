@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'database_provider.dart';
 
 /// Tick dieser StateProvider hochzählen → customColumnsProvider wird neu geladen
@@ -30,4 +31,3 @@ final customColumnsProvider = FutureProvider<List<String>>((ref) async {
       .where((s) => s.isNotEmpty)
       .toList();
 });
-

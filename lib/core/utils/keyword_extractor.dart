@@ -1,12 +1,61 @@
 class KeywordExtractor {
   // A simple list of German stop words
   static const _stopWords = {
-    'der', 'die', 'das', 'und', 'in', 'im', 'zu', 'für', 'mit', 'als', 'von', 
-    'auf', 'ist', 'sind', 'ein', 'eine', 'einer', 'einen', 'einem', 'des', 'dem', 
-    'den', 'bei', 'an', 'sich', 'auch', 'dass', 'wie', 'wir', 'oder', 'nach', 
-    'werden', 'wird', 'aus', 'kann', 'nicht', 'über', 'es', 'um', 'sie', 'uns', 
-    'unsere', 'unser', 'haben', 'ihre', 'ihr', 'sowie', 'durch', 'zur', 'zum',
-    'diese', 'dieser', 'dieses', 'diesen', 'diesem'
+    'der',
+    'die',
+    'das',
+    'und',
+    'in',
+    'im',
+    'zu',
+    'für',
+    'mit',
+    'als',
+    'von',
+    'auf',
+    'ist',
+    'sind',
+    'ein',
+    'eine',
+    'einer',
+    'einen',
+    'einem',
+    'des',
+    'dem',
+    'den',
+    'bei',
+    'an',
+    'sich',
+    'auch',
+    'dass',
+    'wie',
+    'wir',
+    'oder',
+    'nach',
+    'werden',
+    'wird',
+    'aus',
+    'kann',
+    'nicht',
+    'über',
+    'es',
+    'um',
+    'sie',
+    'uns',
+    'unsere',
+    'unser',
+    'haben',
+    'ihre',
+    'ihr',
+    'sowie',
+    'durch',
+    'zur',
+    'zum',
+    'diese',
+    'dieser',
+    'dieses',
+    'diesen',
+    'diesem',
   };
 
   /// Extracts the most important keywords from a job description using a simplified TF logic.
@@ -30,7 +79,10 @@ class KeywordExtractor {
   }
 
   /// Checks which of the [requiredKeywords] are present in the [text].
-  static Set<String> findMatchingKeywords(String text, List<String> requiredKeywords) {
+  static Set<String> findMatchingKeywords(
+    String text,
+    List<String> requiredKeywords,
+  ) {
     final words = _tokenize(text);
     final found = <String>{};
 
@@ -45,7 +97,10 @@ class KeywordExtractor {
 
   /// Tokenizes text into lowercase words, stripping punctuation.
   static List<String> _tokenize(String text) {
-    final cleanText = text.toLowerCase().replaceAll(RegExp(r'[^\w\säöüß]'), ' ');
+    final cleanText = text.toLowerCase().replaceAll(
+      RegExp(r'[^\w\säöüß]'),
+      ' ',
+    );
     return cleanText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
   }
 }

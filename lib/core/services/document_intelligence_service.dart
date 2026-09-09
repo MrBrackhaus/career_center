@@ -17,6 +17,7 @@
  */
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/services.dart';
 
 import 'package:path_provider/path_provider.dart';
@@ -153,40 +154,53 @@ class DocumentIntelligenceService {
     final warnings = <ExtractionWarning>[];
 
     if (typeConfidence < 0.3) {
-      warnings.add(const ExtractionWarning(
-        field: 'documentType',
-        message: 'Dokumenttyp konnte nicht sicher erkannt werden. Bitte manuell prüfen.',
-        severity: 0.8,
-      ));
+      warnings.add(
+        const ExtractionWarning(
+          field: 'documentType',
+          message: 'Dokumenttyp konnte nicht sicher erkannt werden. Bitte manuell prüfen.',
+          severity: 0.8,
+        ),
+      );
     } else if (typeConfidence < 0.6) {
-      warnings.add(const ExtractionWarning(
-        field: 'documentType',
-        message: 'Dokumenttyp wurde mit mittlerer Sicherheit erkannt.',
-        severity: 0.4,
-      ));
+      warnings.add(
+        const ExtractionWarning(
+          field: 'documentType',
+          message: 'Dokumenttyp wurde mit mittlerer Sicherheit erkannt.',
+          severity: 0.4,
+        ),
+      );
     }
 
     // Feld-spezifische Warnungen
     if (fields.company == null) {
-      warnings.add(const ExtractionWarning(
-        field: 'company',
-        message: 'Firmenname konnte nicht erkannt werden.',
-        severity: 0.6,
-      ));
+      warnings.add(
+        const ExtractionWarning(
+          field: 'company',
+          message: 'Firmenname konnte nicht erkannt werden.',
+          severity: 0.6,
+        ),
+      );
     } else if (fields.company!.confidence < 0.5) {
-      warnings.add(ExtractionWarning(
-        field: 'company',
-        message: 'Firmenname "${fields.company!.value}" wurde mit niedriger Sicherheit erkannt.',
-        severity: 0.5,
-      ));
+      warnings.add(
+        ExtractionWarning(
+          field: 'company',
+          message:
+              'Firmenname "${fields.company!.value}" wurde mit niedriger Sicherheit erkannt.',
+          severity: 0.5,
+        ),
+      );
     }
 
-    if (fields.position == null && detectedType != DocumentType.absage && detectedType != DocumentType.bestaetigung) {
-      warnings.add(const ExtractionWarning(
-        field: 'position',
-        message: 'Stellenbezeichnung konnte nicht erkannt werden.',
-        severity: 0.5,
-      ));
+    if (fields.position == null &&
+        detectedType != DocumentType.absage &&
+        detectedType != DocumentType.bestaetigung) {
+      warnings.add(
+        const ExtractionWarning(
+          field: 'position',
+          message: 'Stellenbezeichnung konnte nicht erkannt werden.',
+          severity: 0.5,
+        ),
+      );
     }
 
     return ExtractionResult(
@@ -205,7 +219,10 @@ class DocumentIntelligenceService {
   ///
   /// Wird aufgerufen, wenn der User den automatisch erkannten Dokumenttyp
   /// manuell korrigiert. Das Modell lernt aus dieser Korrektur.
-  Future<void> learnFromCorrection(String text, DocumentType correctType) async {
+  Future<void> learnFromCorrection(
+    String text,
+    DocumentType correctType,
+  ) async {
     await _ensureInitialized();
 
     _classifier!.update(text, correctType);
@@ -225,11 +242,12 @@ class DocumentIntelligenceService {
     try {
       final path = await _modelPath;
       final file = File(path);
-      
+
       // Load user customized model if it exists
       if (await file.exists()) {
         final length = await file.length();
-        if (length < 1000000) { // If it's less than 1MB, it's the old tiny one. Delete it!
+        if (length < 1000000) {
+          // If it's less than 1MB, it's the old tiny one. Delete it!
           await file.delete();
         } else {
           final jsonStr = await file.readAsString();
@@ -238,10 +256,12 @@ class DocumentIntelligenceService {
           return NaiveBayesClassifier.fromJson(jsonData);
         }
       }
-      
+
       // Load massive pretrained dataset from assets
       try {
-        final assetStr = await rootBundle.loadString('assets/jobtracker_ml_model.json');
+        final assetStr = await rootBundle.loadString(
+          'assets/jobtracker_ml_model.json',
+        );
         final jsonData = json.decode(assetStr) as Map<String, dynamic>;
         _initialized = true;
         return NaiveBayesClassifier.fromJson(jsonData);
@@ -283,7 +303,11 @@ class DocumentIntelligenceService {
   // ── Generische Extraktion für unbekannte Dokumenttypen ─────────────────────
 
   ExtractedFields _extractGeneric(String text) {
-    final lines = text.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final lines = text
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
 
     // Versuche grundlegende Felder zu extrahieren
     String? foundEmail;
@@ -292,7 +316,9 @@ class DocumentIntelligenceService {
     String? foundUrl;
 
     // E-Mail suchen
-    final emailRegex = RegExp(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}');
+    final emailRegex = RegExp(
+      r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
+    );
     final emailMatch = emailRegex.firstMatch(text);
     if (emailMatch != null) foundEmail = emailMatch.group(0);
 
@@ -322,24 +348,47 @@ class DocumentIntelligenceService {
 
     return ExtractedFields(
       company: lines.length > 1
-          ? FieldResult(value: lines[1], confidence: 0.3, source: 'generic_second_line')
+          ? FieldResult(
+              value: lines[1],
+              confidence: 0.3,
+              source: 'generic_second_line',
+            )
           : null,
       position: lines.isNotEmpty
-          ? FieldResult(value: lines.first, confidence: 0.3, source: 'generic_first_line')
+          ? FieldResult(
+              value: lines.first,
+              confidence: 0.3,
+              source: 'generic_first_line',
+            )
           : null,
       contactEmail: foundEmail != null
-          ? FieldResult(value: foundEmail, confidence: 0.7, source: 'generic_regex')
+          ? FieldResult(
+              value: foundEmail,
+              confidence: 0.7,
+              source: 'generic_regex',
+            )
           : null,
       contactPhone: foundPhone != null
-          ? FieldResult(value: foundPhone, confidence: 0.65, source: 'generic_regex')
+          ? FieldResult(
+              value: foundPhone,
+              confidence: 0.65,
+              source: 'generic_regex',
+            )
           : null,
       contactName: foundContact != null
-          ? FieldResult(value: foundContact, confidence: 0.6, source: 'generic_regex')
+          ? FieldResult(
+              value: foundContact,
+              confidence: 0.6,
+              source: 'generic_regex',
+            )
           : null,
       companyUrl: foundUrl != null
-          ? FieldResult(value: foundUrl, confidence: 0.5, source: 'generic_regex')
+          ? FieldResult(
+              value: foundUrl,
+              confidence: 0.5,
+              source: 'generic_regex',
+            )
           : null,
     );
   }
 }
-

@@ -18,12 +18,7 @@
 import '../enums/document_type.dart';
 
 /// Quelle des analysierten Dokuments.
-enum DocumentSource {
-  pdf,
-  email,
-  url,
-  text,
-}
+enum DocumentSource { pdf, email, url, text }
 
 /// Ergebnis eines einzelnen extrahierten Feldes mit Konfidenz-Score.
 class FieldResult<T> {
@@ -43,7 +38,8 @@ class FieldResult<T> {
   });
 
   @override
-  String toString() => 'FieldResult(value: $value, confidence: ${(confidence * 100).toStringAsFixed(0)}%, source: $source)';
+  String toString() =>
+      'FieldResult(value: $value, confidence: ${(confidence * 100).toStringAsFixed(0)}%, source: $source)';
 }
 
 /// Warnung bei der Dokumentenanalyse.
@@ -164,4 +160,3 @@ class ExtractionResult {
   String toString() =>
       'ExtractionResult(type: ${documentType.name}, confidence: ${(typeConfidence * 100).toStringAsFixed(0)}%, fields: ${fields.filledFieldCount})';
 }
-

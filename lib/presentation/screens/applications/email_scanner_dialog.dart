@@ -18,6 +18,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import '../../providers/email_scanner_provider.dart';
 import '../../../core/services/imap_service.dart';
 
@@ -50,26 +51,43 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
 
   Color _statusColor(String? status) {
     switch (status) {
-      case 'versendet': return const Color(0xFF7C6AF7);
-      case 'absage': return Colors.red;
-      case 'interview': return Colors.orange;
-      default: return Colors.grey;
+      case 'versendet':
+        return const Color(0xFF7C6AF7);
+      case 'absage':
+        return Colors.red;
+      case 'interview':
+        return Colors.orange;
+      default:
+        return Colors.grey;
     }
   }
 
   String _statusLabel(String? status) {
     switch (status) {
-      case 'versendet': return 'BEWERBUNG';
-      case 'absage': return 'ABSAGE';
-      case 'interview': return 'INTERVIEW';
-      default: return '';
+      case 'versendet':
+        return 'BEWERBUNG';
+      case 'absage':
+        return 'ABSAGE';
+      case 'interview':
+        return 'INTERVIEW';
+      default:
+        return '';
     }
   }
 
-  Widget _buildEmailList(List<ScannableEmail> emails, String folder, EmailScannerState scanState) {
+  Widget _buildEmailList(
+    List<ScannableEmail> emails,
+    String folder,
+    EmailScannerState scanState,
+  ) {
     final filtered = emails.where((e) => e.folder == folder).toList();
     if (filtered.isEmpty) {
-      return const Center(child: Text('Keine E-Mails gefunden.', style: TextStyle(color: Colors.grey)));
+      return const Center(
+        child: Text(
+          'Keine E-Mails gefunden.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
     }
 
     return ListView.builder(
@@ -95,7 +113,9 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
               value: isSelected,
               onChanged: isImported
                   ? null
-                  : (_) => ref.read(emailScannerProvider.notifier).toggleSelection(mail.uid),
+                  : (_) => ref
+                        .read(emailScannerProvider.notifier)
+                        .toggleSelection(mail.uid),
               activeColor: const Color(0xFF7C6AF7),
               checkColor: Colors.white,
               controlAffinity: ListTileControlAffinity.leading,
@@ -105,7 +125,9 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                     child: Text(
                       mail.subject.isNotEmpty ? mail.subject : '(Kein Betreff)',
                       style: TextStyle(
-                        fontWeight: isDetected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isDetected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: Colors.white,
                         fontSize: 13,
                       ),
@@ -116,26 +138,49 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                   if (isImported)
                     Container(
                       margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.green.withOpacity(0.5)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
                       ),
-                      child: const Text('✓ IMPORTIERT', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: const Text(
+                        '✓ IMPORTIERT',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     )
                   else if (mail.detectedStatus != null)
                     Container(
                       margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
-                        color: _statusColor(mail.detectedStatus).withOpacity(0.2),
+                        color: _statusColor(mail.detectedStatus)
+                            .withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: _statusColor(mail.detectedStatus).withOpacity(0.5)),
+                        border: Border.all(
+                          color: _statusColor(mail.detectedStatus)
+                              .withValues(alpha: 0.5),
+                        ),
                       ),
                       child: Text(
                         _statusLabel(mail.detectedStatus),
-                        style: TextStyle(color: _statusColor(mail.detectedStatus), fontSize: 10, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: _statusColor(mail.detectedStatus),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                 ],
@@ -147,7 +192,11 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                   if (mail.company.isNotEmpty)
                     Text(
                       mail.company,
-                      style: const TextStyle(color: Color(0xFF7C6AF7), fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: Color(0xFF7C6AF7),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   Text(
                     '${mail.fromTo}  •  ${DateFormat('dd.MM.yyyy', 'de').format(mail.date)}',
@@ -157,8 +206,13 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                     Padding(
                       padding: const EdgeInsets.only(top: 3),
                       child: Text(
-                        mail.bodySnippet.replaceAll('\n', ' ').replaceAll('\r', ''),
-                        style: const TextStyle(color: Color(0xFF999999), fontSize: 11),
+                        mail.bodySnippet
+                            .replaceAll('\n', ' ')
+                            .replaceAll('\r', ''),
+                        style: const TextStyle(
+                          color: Color(0xFF999999),
+                          fontSize: 11,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -179,7 +233,9 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
 
     final selectedCount = scanState.selectedUids.length;
     final sentCount = scanState.emails.where((e) => e.folder == 'sent').length;
-    final inboxCount = scanState.emails.where((e) => e.folder == 'inbox').length;
+    final inboxCount = scanState.emails
+        .where((e) => e.folder == 'inbox')
+        .length;
 
     return Dialog(
       backgroundColor: const Color(0xFF262626),
@@ -195,9 +251,20 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
               padding: const EdgeInsets.fromLTRB(20, 16, 12, 0),
               child: Row(
                 children: [
-                  const Icon(Icons.manage_search, color: Color(0xFF7C6AF7), size: 22),
+                  const Icon(
+                    Icons.manage_search,
+                    color: Color(0xFF7C6AF7),
+                    size: 22,
+                  ),
                   const SizedBox(width: 10),
-                  const Text('E-Mail-Scanner', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  const Text(
+                    'E-Mail-Scanner',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                   const Spacer(),
                   if (!scanState.isLoading)
                     IconButton(
@@ -223,7 +290,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
               child: TabBar(
                 controller: _tabController,
                 indicator: BoxDecoration(
-                  color: const Color(0xFF7C6AF7).withOpacity(0.3),
+                  color: const Color(0xFF7C6AF7).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 labelColor: const Color(0xFF7C6AF7),
@@ -244,24 +311,38 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                         children: [
                           CircularProgressIndicator(color: Color(0xFF7C6AF7)),
                           SizedBox(height: 16),
-                          Text('E-Mails werden geladen...', style: TextStyle(color: Colors.grey)),
+                          Text(
+                            'E-Mails werden geladen...',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                           SizedBox(height: 6),
-                          Text('(kann 20–40 Sekunden dauern)', style: TextStyle(color: Color(0xFF666666), fontSize: 12)),
+                          Text(
+                            '(kann 20–40 Sekunden dauern)',
+                            style: TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 12,
+                            ),
+                          ),
                         ],
                       ),
                     )
                   : scanState.error != null
-                      ? Center(child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text('Fehler: ${scanState.error}', style: const TextStyle(color: Colors.red)),
-                        ))
-                      : TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildEmailList(scanState.emails, 'sent', scanState),
-                            _buildEmailList(scanState.emails, 'inbox', scanState),
-                          ],
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          'Fehler: ${scanState.error}',
+                          style: const TextStyle(color: Colors.red),
                         ),
+                      ),
+                    )
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildEmailList(scanState.emails, 'sent', scanState),
+                        _buildEmailList(scanState.emails, 'inbox', scanState),
+                      ],
+                    ),
             ),
 
             // Footer
@@ -276,18 +357,33 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                     children: [
                       Text(
                         '$selectedCount ausgewählt',
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       TextButton(
                         onPressed: notifier.selectAllDetected,
-                        style: TextButton.styleFrom(foregroundColor: const Color(0xFF7C6AF7), padding: EdgeInsets.zero),
-                        child: const Text('Alle Bewerbungen', style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFF7C6AF7),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Text(
+                          'Alle Bewerbungen',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ),
                       TextButton(
                         onPressed: notifier.deselectAll,
-                        style: TextButton.styleFrom(foregroundColor: Colors.grey, padding: EdgeInsets.zero),
-                        child: const Text('Keine', style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.grey,
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const Text(
+                          'Keine',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -300,22 +396,39 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                           : () async {
                               final count = await notifier.importSelected();
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('$count Bewerbung(en) erfolgreich importiert!'),
-                                  backgroundColor: Colors.green,
-                                  duration: const Duration(seconds: 3),
-                                ));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '$count Bewerbung(en) erfolgreich importiert!',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
                               }
                             },
                       icon: scanState.isImporting
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
                           : const Icon(Icons.download_done_rounded),
-                      label: Text(scanState.isImporting ? 'Wird importiert...' : 'Ausgewählte importieren ($selectedCount)'),
+                      label: Text(
+                        scanState.isImporting
+                            ? 'Wird importiert...'
+                            : 'Ausgewählte importieren ($selectedCount)',
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF7C6AF7),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
@@ -328,4 +441,3 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
     );
   }
 }
-

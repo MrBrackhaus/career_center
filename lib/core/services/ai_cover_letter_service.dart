@@ -1,4 +1,5 @@
-﻿import 'dart:convert';
+import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 
 class AiCoverLetterService {
@@ -19,7 +20,8 @@ REGELN:
 5. Das Anschreiben muss komplett sein (Absender, Empfänger, Datum, Betreff, Anrede, Text, Grußformel).
 6. KEINE Erklärungen. KEINE Entschuldigungen. NUR der Text des Anschreibens.""";
 
-    final userPrompt = """Hier sind meine Daten:
+    final userPrompt =
+        """Hier sind meine Daten:
 
 === MEIN PROFIL (Absender & Lebenslauf) ===
 $userProfile
@@ -42,26 +44,41 @@ Schreibe nun das Anschreiben basierend auf diesen Daten.
         'prompt': userPrompt,
         'system': systemPrompt,
         'stream': false,
-        'options': {
-          'temperature': 0.3,
-        }
+        'options': {'temperature': 0.3},
       }),
     );
 
     if (response.statusCode == 200) {
       final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
       String result = jsonResponse['response'] ?? '';
-      
+
       // Post-Processing um evtl. Markdown und Gesprächsfetzen zu entfernen
-      result = result.replaceAll(RegExp(r'\*\*.*?\*\*'), ''); // Entfernt fettgedruckte Hinweise wie **Anschreiben**
-      result = result.replaceAll(RegExp(r'Hier ist.*?:', caseSensitive: false), '');
-      result = result.replaceAll(RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false), '');
-      result = result.replaceAll(RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false), '');
-      result = result.replaceAll(RegExp(r'Hier ist ein.*?:', caseSensitive: false), '');
-      
+      result = result.replaceAll(
+        RegExp(r'\*\*.*?\*\*'),
+        '',
+      ); // Entfernt fettgedruckte Hinweise wie **Anschreiben**
+      result = result.replaceAll(
+        RegExp(r'Hier ist.*?:', caseSensitive: false),
+        '',
+      );
+      result = result.replaceAll(
+        RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false),
+        '',
+      );
+      result = result.replaceAll(
+        RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false),
+        '',
+      );
+      result = result.replaceAll(
+        RegExp(r'Hier ist ein.*?:', caseSensitive: false),
+        '',
+      );
+
       return result.trim();
     } else {
-      throw Exception('Fehler beim Generieren: ${response.statusCode} ${response.body}');
+      throw Exception(
+        'Fehler beim Generieren: ${response.statusCode} ${response.body}',
+      );
     }
   }
 }

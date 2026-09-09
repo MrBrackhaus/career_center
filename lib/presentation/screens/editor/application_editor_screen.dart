@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -12,11 +12,12 @@ import '../../../data/database/app_database.dart';
 import '../../providers/database_provider.dart';
 import '../../../core/utils/keyword_extractor.dart';
 import '../../../core/utils/spell_checker.dart';
+import '../../../core/utils/font_scanner.dart';
 import 'editor_ruler.dart';
 import '../../providers/ai_correction_provider.dart';
 import '../../providers/document_template_provider.dart';
-
-import 'package:intl/intl.dart';
+import '../../../core/themes/designs/document_design.dart';
+import '../../../core/themes/designs/monogram_design.dart';
 
 class ApplicationEditorScreen extends ConsumerStatefulWidget {
   final int? applicationId;
@@ -60,18 +61,35 @@ class _ApplicationEditorScreenState
   String _userProfession = '';
 
   // Header Editing Controllers
-  final TextEditingController _headerCompanyNameCtrl = TextEditingController(text: 'Unternehmensname');
-  final TextEditingController _headerContactNameCtrl = TextEditingController(text: 'Personalabteilung');
-  final TextEditingController _headerCompanyAddressCtrl = TextEditingController(text: 'Adresse');
-  final TextEditingController _headerDateCtrl = TextEditingController(text: 'Datum');
-  
-  final TextEditingController _headerUserEmailCtrl = TextEditingController(text: 'email');
-  final TextEditingController _headerUserPhoneCtrl = TextEditingController(text: 'telefon');
-  final TextEditingController _headerUserAddressCtrl = TextEditingController(text: 'adresse');
+  final TextEditingController _headerCompanyNameCtrl = TextEditingController(
+    text: 'Unternehmensname',
+  );
+  final TextEditingController _headerContactNameCtrl = TextEditingController(
+    text: 'Personalabteilung',
+  );
+  final TextEditingController _headerCompanyAddressCtrl = TextEditingController(
+    text: 'Adresse',
+  );
+  final TextEditingController _headerDateCtrl = TextEditingController(
+    text: 'Datum',
+  );
 
-  final TextEditingController _headerUserNameCtrl = TextEditingController(text: 'Name');
-  final TextEditingController _headerUserProfessionCtrl = TextEditingController(text: 'Beruf');
+  final TextEditingController _headerUserEmailCtrl = TextEditingController(
+    text: 'email',
+  );
+  final TextEditingController _headerUserPhoneCtrl = TextEditingController(
+    text: 'telefon',
+  );
+  final TextEditingController _headerUserAddressCtrl = TextEditingController(
+    text: 'adresse',
+  );
 
+  final TextEditingController _headerUserNameCtrl = TextEditingController(
+    text: 'Name',
+  );
+  final TextEditingController _headerUserProfessionCtrl = TextEditingController(
+    text: 'Beruf',
+  );
 
   double _marginLeft = 94.0;
   double _marginRight = 75.0;
@@ -88,6 +106,10 @@ class _ApplicationEditorScreenState
 
   List<String> _missingKeywords = [];
   List<String> _foundKeywords = [];
+
+  bool _showLeftSidebar = true;
+  bool _showRightSidebar = true;
+  bool _isCvMode = false;
 
   Future<void> _runAiCorrection() async {
     final text = _controller.document.toPlainText();
@@ -117,9 +139,9 @@ class _ApplicationEditorScreenState
     _controller.document.insert(0, headerText);
 
     String subjectPrefix = 'Bewerbung als ';
-    if (lang == 'en')
+    if (lang == 'en') {
       subjectPrefix = 'Application for ';
-    else if (lang == 'fr')
+    } else if (lang == 'fr')
       subjectPrefix = 'Candidature pour le poste de ';
     else if (lang == 'es')
       subjectPrefix = 'Candidatura para el puesto de ';
@@ -142,10 +164,70 @@ class _ApplicationEditorScreenState
     _controller.document.insert(len - 1, footer);
   }
 
+  // CV State
+  String? _cvProfileImagePath;
+
+  Future<void> _pickProfileImage() async {
+    const XTypeGroup typeGroup = XTypeGroup(
+      label: 'images',
+      extensions: ['jpg', 'png', 'jpeg'],
+    );
+    final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file != null) {
+      setState(() => _cvProfileImagePath = file.path);
+    }
+  }
+
+  final _cvNameCtrl = TextEditingController(text: 'Michael Kurz');
+  final _cvTitleCtrl = TextEditingController(
+    text: 'Fachinformatiker für Systemintegration',
+  );
+  final _cvIntroCtrl = TextEditingController(
+    text: 'Lösungsorientierter Fachinformatiker...',
+  );
+  final _cvEmailCtrl = TextEditingController(text: 'bewerbung.kurz@gmail.com');
+  final _cvPhoneCtrl = TextEditingController(text: '0157 / 3 7879 672');
+  final _cvAddressCtrl = TextEditingController(
+    text: 'Breyeller Str. 114, 41334 Nettetal',
+  );
+  final _cvBirthplaceCtrl = TextEditingController(text: 'Berlin / Zehlendorf');
+  final _cvBirthdateCtrl = TextEditingController(text: '06.12.1984');
+  final _cvMaritalStatusCtrl = TextEditingController(text: 'Ledig');
+
+  final List<CvTimelineItem> _cvExperiences = [
+    const CvTimelineItem(
+      dateRange: '06/2026 - bis jetzt',
+      title: 'Arbeitssuchend',
+      description: 'Volle Verfügbarkeit...',
+    ),
+    const CvTimelineItem(
+      dateRange: '08/2023 - 05/2026',
+      title: 'Häusliche Pflege',
+      description: 'Übernahme der Pflege...',
+    ),
+    const CvTimelineItem(
+      dateRange: '07/2023 - 09/2023',
+      title: 'Weiterbildung Azure',
+      subtitle: 'WBS Training',
+      description: 'Microsoft Azure Administrator',
+    ),
+  ];
+  final List<CvTimelineItem> _cvEducations = [
+    const CvTimelineItem(
+      dateRange: '06/2019 - 06/2021',
+      title: 'Umschulung Fachinformatiker',
+      subtitle: 'COMCAVE.COLLEGE',
+      description: 'inkl. MCSA, SAP, LPIC 1',
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadApplication();
+    FontScanner.loadSystemFonts().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _loadApplication() async {
@@ -161,7 +243,7 @@ class _ApplicationEditorScreenState
     final addressSetting = await db.settingsDao.getSettingByKey('userAddress');
     final zipSetting = await db.settingsDao.getSettingByKey('userZip');
     final citySetting = await db.settingsDao.getSettingByKey('userCity');
-    
+
     if (mounted) {
       setState(() {
         _userName = nameSetting?.value ?? 'Dein Name';
@@ -170,18 +252,18 @@ class _ApplicationEditorScreenState
         _userAddress = addressSetting?.value ?? 'Musterstraße 1';
         _userZip = zipSetting?.value ?? '12345';
         _userCity = citySetting?.value ?? 'Musterstadt';
-          _userProfession = 'FACHINFORMATIKER FÜR SYSTEMINTEGRATION';
-          
-          _headerUserNameCtrl.text = _userName;
-          _headerUserProfessionCtrl.text = _userProfession;
-          _headerUserEmailCtrl.text = _userEmail;
-          _headerUserPhoneCtrl.text = _userPhone;
-          _headerUserAddressCtrl.text = '${_userAddress}\n${_userZip} ${_userCity}';
-          
-          _headerDateCtrl.text = "${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}";
+        _userProfession = 'FACHINFORMATIKER FÜR SYSTEMINTEGRATION';
+
+        _headerUserNameCtrl.text = _userName;
+        _headerUserProfessionCtrl.text = _userProfession;
+        _headerUserEmailCtrl.text = _userEmail;
+        _headerUserPhoneCtrl.text = _userPhone;
+        _headerUserAddressCtrl.text = '$_userAddress\n$_userZip $_userCity';
+
+        _headerDateCtrl.text =
+            "${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}";
       });
     }
-
 
     _nameController.text = widget.template?.name ?? '';
 
@@ -220,15 +302,11 @@ class _ApplicationEditorScreenState
         widget.applicationId!,
       );
 
-      if (app == null) {
-        if (mounted) Navigator.pop(context);
-        return;
-      }
-
       _application = app;
-          _headerCompanyNameCtrl.text = app.company;
-          _headerContactNameCtrl.text = app.contactName ?? 'Personalabteilung';
-          _headerCompanyAddressCtrl.text = app.address ?? 'Musterstraße 1, 12345 Stadt';
+      _headerCompanyNameCtrl.text = app.company;
+      _headerContactNameCtrl.text = app.contactName ?? 'Personalabteilung';
+      _headerCompanyAddressCtrl.text =
+          app.address ?? 'Musterstraße 1, 12345 Stadt';
       if (app.coverLetterContent?.isNotEmpty == true) {
         try {
           final decoded = jsonDecode(app.coverLetterContent!);
@@ -378,19 +456,66 @@ class _ApplicationEditorScreenState
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.surfaceContainerHighest, // The 'Desk' background
+      backgroundColor:
+          colorScheme.surfaceContainerHighest, // The 'Desk' background
       appBar: AppBar(
-        title: widget.applicationId != null
-            ? Text('Anschreiben: ${_application?.company}')
-            : TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'Dokumentname (z.B. Lebenslauf)',
+        title: Row(
+          children: [
+            Expanded(
+              child: widget.applicationId != null
+                  ? Text('Anschreiben: ${_application?.company}')
+                  : TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: 'Dokumentname (z.B. Lebenslauf)',
+                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 20),
+                    ),
+            ),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: false,
+                  label: Text('Anschreiben'),
+                  icon: Icon(Icons.edit_document),
                 ),
-                style: const TextStyle(color: Colors.white, fontSize: 20),
-              ),
+                ButtonSegment(
+                  value: true,
+                  label: Text('Lebenslauf'),
+                  icon: Icon(Icons.contact_page),
+                ),
+              ],
+              selected: {_isCvMode},
+              onSelectionChanged: (Set<bool> newSelection) {
+                setState(() {
+                  _isCvMode = newSelection.first;
+                });
+              },
+            ),
+          ],
+        ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _showLeftSidebar
+                  ? Icons.keyboard_double_arrow_left
+                  : Icons.keyboard_double_arrow_right,
+            ),
+            tooltip: 'Linke Seitenleiste umschalten',
+            onPressed: () =>
+                setState(() => _showLeftSidebar = !_showLeftSidebar),
+          ),
+          IconButton(
+            icon: Icon(
+              _showRightSidebar
+                  ? Icons.keyboard_double_arrow_right
+                  : Icons.keyboard_double_arrow_left,
+            ),
+            tooltip: 'Rechte Seitenleiste umschalten',
+            onPressed: () =>
+                setState(() => _showRightSidebar = !_showRightSidebar),
+          ),
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -413,6 +538,31 @@ class _ApplicationEditorScreenState
                         : (_hasChanges ? 'Ungespeichert' : 'Gespeichert'),
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
+                  const SizedBox(width: 16),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.save, size: 16),
+                    label: const Text('Speichern'),
+                    onPressed: () {
+                      _save();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Dokument gespeichert.')),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    icon: const Icon(Icons.picture_as_pdf, size: 16),
+                    label: const Text('PDF Export'),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'PDF Export folgt im nächsten Schritt!',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -422,14 +572,323 @@ class _ApplicationEditorScreenState
       body: Row(
         children: [
           // LEFT COLUMN: Structure & Resume Palette
-          Expanded(flex: 2, child: _buildLeftSidebar(colorScheme)),
+          if (_showLeftSidebar)
+            Expanded(
+              flex: 2,
+              child: _isCvMode
+                  ? _buildCvLeftSidebar(colorScheme)
+                  : _buildLeftSidebar(colorScheme),
+            ),
 
           // MIDDLE COLUMN: Editor
-          Expanded(flex: 6, child: _buildEditorArea(colorScheme)),
+          Expanded(
+            flex: 6,
+            child: _isCvMode
+                ? _buildCvArea(colorScheme)
+                : _buildEditorArea(colorScheme),
+          ),
 
           // RIGHT COLUMN: ATS Scanner & Analysis
-          Expanded(flex: 2, child: _buildRightSidebar(colorScheme)),
+          if (_showRightSidebar && !_isCvMode)
+            Expanded(flex: 2, child: _buildRightSidebar(colorScheme)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCvArea(ColorScheme colorScheme) {
+    // Dynamisches Design laden
+    DocumentDesign design;
+    switch (_currentDesignId) {
+      case 'monogram':
+        design = const MonogramDesign();
+        break;
+      // TODO: Add Klassisch, Modern, Kompakt when implemented
+      default:
+        design = const MonogramDesign(); // Fallback für MVP
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Container(
+              width: 794, // A4 width at 96 DPI
+              constraints: const BoxConstraints(
+                minHeight: 1123, // A4 height at 96 DPI
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: design.buildCurriculumVitae(
+                context,
+                _currentAccentColor,
+                CvData(
+                  initials: _cvNameCtrl.text
+                      .split(' ')
+                      .where((e) => e.isNotEmpty)
+                      .map((e) => e[0].toUpperCase())
+                      .take(2)
+                      .join(''),
+                  name: _cvNameCtrl.text,
+                  title: _cvTitleCtrl.text,
+                  introText: _cvIntroCtrl.text,
+                  email: _cvEmailCtrl.text,
+                  phone: _cvPhoneCtrl.text,
+                  address: _cvAddressCtrl.text,
+                  birthplace: _cvBirthplaceCtrl.text,
+                  birthdate: _cvBirthdateCtrl.text,
+                  maritalStatus: _cvMaritalStatusCtrl.text,
+                  profileImagePath: _cvProfileImagePath,
+                  experiences: _cvExperiences,
+                  educations: _cvEducations,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCvLeftSidebar(ColorScheme colorScheme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        border: Border(right: BorderSide(color: colorScheme.outlineVariant)),
+      ),
+      child: DefaultTabController(
+        length: 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              child: const TabBar(
+                tabs: [
+                  Tab(icon: Icon(Icons.list_alt), text: 'Daten'),
+                  Tab(icon: Icon(Icons.format_paint), text: 'Design'),
+                ],
+              ),
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // Tab 1: Daten (Baukasten)
+                  ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _buildCvFormGroup('Persönliche Daten', Icons.person, [
+                        ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 0,
+                          ),
+                          title: const Text(
+                            'Bewerbungsfoto',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          subtitle: Text(
+                            _cvProfileImagePath != null
+                                ? 'Foto ausgewählt'
+                                : 'Kein Foto',
+                            style: const TextStyle(fontSize: 10),
+                          ),
+                          trailing: TextButton(
+                            onPressed: _pickProfileImage,
+                            child: const Text(
+                              'Auswählen',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        _buildSidebarTextField('Name', _cvNameCtrl),
+                        _buildSidebarTextField(
+                          'Berufsbezeichnung',
+                          _cvTitleCtrl,
+                        ),
+                        _buildSidebarTextField(
+                          'Intro-Text',
+                          _cvIntroCtrl,
+                          maxLines: 3,
+                        ),
+                        _buildSidebarTextField('E-Mail', _cvEmailCtrl),
+                        _buildSidebarTextField('Telefon', _cvPhoneCtrl),
+                        _buildSidebarTextField('Anschrift', _cvAddressCtrl),
+                        _buildSidebarTextField('Geburtsort', _cvBirthplaceCtrl),
+                        _buildSidebarTextField(
+                          'Geburtsdatum',
+                          _cvBirthdateCtrl,
+                        ),
+                        _buildSidebarTextField(
+                          'Familienstand',
+                          _cvMaritalStatusCtrl,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () {},
+                          child: const Text('Speichern'),
+                        ),
+                        const SizedBox(height: 8),
+                      ]),
+                      _buildCvFormGroup('Berufserfahrung', Icons.work, [
+                        ListTile(
+                          title: const Text(
+                            'Arbeitssuchend',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            '06/2026 - bis jetzt',
+                            style: TextStyle(fontSize: 10),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 16),
+                                onPressed: () {},
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  size: 16,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ),
+                        ListTile(
+                          title: const Text(
+                            'Häusliche Pflege...',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            '08/2023 - 05/2026',
+                            style: TextStyle(fontSize: 10),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 16),
+                                onPressed: () {},
+                              ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  size: 16,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: FilledButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Dialog zum Hinzufügen öffnet sich hier...',
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('Neue Station hinzufügen'),
+                          ),
+                        ),
+                      ]),
+                      _buildCvFormGroup('Ausbildung', Icons.school, [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: FilledButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.add),
+                            label: const Text('Ausbildung hinzufügen'),
+                          ),
+                        ),
+                      ]),
+                      _buildCvFormGroup('Fähigkeiten', Icons.star, [
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: FilledButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.add),
+                            label: const Text('Skill hinzufügen'),
+                          ),
+                        ),
+                      ]),
+                    ],
+                  ),
+                  // Tab 2: Design
+                  _buildDesignTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarTextField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        onChanged: (value) => setState(() {}),
+        style: const TextStyle(fontSize: 12),
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCvFormGroup(String title, IconData icon, List<Widget> children) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ExpansionTile(
+        leading: Icon(icon),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        children: children,
       ),
     );
   }
@@ -446,7 +905,7 @@ class _ApplicationEditorScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               child: const TabBar(
                 tabs: [
                   Tab(icon: Icon(Icons.dashboard_customize), text: 'Bausteine'),
@@ -465,9 +924,7 @@ class _ApplicationEditorScreenState
     );
   }
 
-  
-  
-    Widget _buildDesignTab() {
+  Widget _buildDesignTab() {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -476,13 +933,21 @@ class _ApplicationEditorScreenState
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         SizedBox(height: 16),
-        _buildDesignCard('Klassisch', 'Serife Schrift, seriös & zeitlos', 'klassisch'),
+        _buildDesignCard(
+          'Klassisch',
+          'Serife Schrift, seriös & zeitlos',
+          'klassisch',
+        ),
         _buildDesignCard('Modern', 'Klare Kanten, serifenlos', 'modern'),
         _buildDesignCard('Kompakt', 'Für viel Text auf einer Seite', 'kompakt'),
-        _buildDesignCard('Monogram', 'Professionelles Layout mit blauem Monogramm', 'monogram'),
-        
-          Divider(height: 32),
-          
+        _buildDesignCard(
+          'Monogram',
+          'Professionelles Layout mit blauem Monogramm',
+          'monogram',
+        ),
+
+        Divider(height: 32),
+
         Text(
           'Seitenränder',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -542,24 +1007,24 @@ class _ApplicationEditorScreenState
         ),
         SizedBox(height: 8),
         Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildColorDot(Colors.black),
-              _buildColorDot(Colors.grey[800]!),
-              _buildColorDot(Colors.blueGrey[800]!),
-              _buildColorDot(Colors.blue[900]!),
-              _buildColorDot(Colors.lightBlue[800]!),
-              _buildColorDot(Colors.indigo[800]!),
-              _buildColorDot(Colors.purple[800]!),
-              _buildColorDot(Colors.teal[800]!),
-              _buildColorDot(Colors.green[800]!),
-              _buildColorDot(Colors.deepOrange[800]!),
-              _buildColorDot(Colors.red[800]!),
-              _buildColorDot(Colors.brown[800]!),
-            ],
-          ),
-          const SizedBox(height: 60),
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildColorDot(Colors.black),
+            _buildColorDot(Colors.grey[800]!),
+            _buildColorDot(Colors.blueGrey[800]!),
+            _buildColorDot(Colors.blue[900]!),
+            _buildColorDot(Colors.lightBlue[800]!),
+            _buildColorDot(Colors.indigo[800]!),
+            _buildColorDot(Colors.purple[800]!),
+            _buildColorDot(Colors.teal[800]!),
+            _buildColorDot(Colors.green[800]!),
+            _buildColorDot(Colors.deepOrange[800]!),
+            _buildColorDot(Colors.red[800]!),
+            _buildColorDot(Colors.brown[800]!),
+          ],
+        ),
+        const SizedBox(height: 60),
       ],
     );
   }
@@ -581,7 +1046,7 @@ class _ApplicationEditorScreenState
           border: Border.all(
             color: isSelected
                 ? _currentAccentColor
-                : Colors.grey.withOpacity(0.5),
+                : Colors.grey.withValues(alpha: 0.5),
             width: isSelected ? 3 : 1,
           ),
         ),
@@ -637,11 +1102,7 @@ class _ApplicationEditorScreenState
     );
   }
 
-  Widget _buildDesignCard(
-    String title,
-    String subtitle,
-    String designId,
-  ) {
+  Widget _buildDesignCard(String title, String subtitle, String designId) {
     bool isSelected = _currentDesignId == designId;
     return Card(
       elevation: 0,
@@ -686,8 +1147,6 @@ class _ApplicationEditorScreenState
       ),
     );
   }
-
-  
 
   Widget _buildBausteineTab() {
     final db = ref.read(databaseProvider);
@@ -856,11 +1315,21 @@ class _ApplicationEditorScreenState
     );
   }
 
-  
-  Widget _buildEditableText(TextEditingController controller, double fontSize, {FontWeight? fontWeight, int? maxLines = 1, Color color = Colors.black87, TextAlign textAlign = TextAlign.left}) {
+  Widget _buildEditableText(
+    TextEditingController controller,
+    double fontSize, {
+    FontWeight? fontWeight,
+    int? maxLines = 1,
+    Color color = Colors.black87,
+    TextAlign textAlign = TextAlign.left,
+  }) {
     return TextFormField(
       controller: controller,
-      style: TextStyle(fontSize: fontSize, color: color, fontWeight: fontWeight),
+      style: TextStyle(
+        fontSize: fontSize,
+        color: color,
+        fontWeight: fontWeight,
+      ),
       textAlign: textAlign,
       decoration: const InputDecoration(
         border: InputBorder.none,
@@ -873,9 +1342,16 @@ class _ApplicationEditorScreenState
 
   Widget _buildProfessionalHeader() {
     if (_currentDesignId != 'monogram') return const SizedBox.shrink();
-    
-    final name = _userName.trim().isNotEmpty ? _userName.trim() : 'Max Mustermann';
-    final initials = name.split(' ').where((e) => e.isNotEmpty).map((e) => e[0].toUpperCase()).take(2).join('');
+
+    final name = _userName.trim().isNotEmpty
+        ? _userName.trim()
+        : 'Max Mustermann';
+    final initials = name
+        .split(' ')
+        .where((e) => e.isNotEmpty)
+        .map((e) => e[0].toUpperCase())
+        .take(2)
+        .join('');
 
     return Padding(
       padding: const EdgeInsets.only(left: 94, right: 75, top: 50, bottom: 20),
@@ -892,7 +1368,12 @@ class _ApplicationEditorScreenState
                     bottom: BorderSide(color: _currentAccentColor, width: 3),
                   ),
                 ),
-                padding: const EdgeInsets.only(left: 12, bottom: 4, right: 12, top: 4),
+                padding: const EdgeInsets.only(
+                  left: 12,
+                  bottom: 4,
+                  right: 12,
+                  top: 4,
+                ),
                 child: Text(
                   initials,
                   style: const TextStyle(
@@ -908,9 +1389,18 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildEditableText(_headerUserNameCtrl, 32, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
+                    _buildEditableText(
+                      _headerUserNameCtrl,
+                      32,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xFF1F2937),
+                    ),
                     const SizedBox(height: 4),
-                    _buildEditableText(_headerUserProfessionCtrl, 14, color: const Color(0xFF4B5563)),
+                    _buildEditableText(
+                      _headerUserProfessionCtrl,
+                      14,
+                      color: const Color(0xFF4B5563),
+                    ),
                   ],
                 ),
               ),
@@ -935,9 +1425,19 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('E-MAIL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'E-MAIL',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    _buildEditableText(_headerUserEmailCtrl, 12, color: const Color(0xFF4B5563)),
+                    _buildEditableText(
+                      _headerUserEmailCtrl,
+                      12,
+                      color: const Color(0xFF4B5563),
+                    ),
                   ],
                 ),
               ),
@@ -945,9 +1445,20 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'ANSCHRIFT',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    _buildEditableText(_headerUserAddressCtrl, 12, color: const Color(0xFF4B5563), maxLines: null),
+                    _buildEditableText(
+                      _headerUserAddressCtrl,
+                      12,
+                      color: const Color(0xFF4B5563),
+                      maxLines: null,
+                    ),
                   ],
                 ),
               ),
@@ -955,9 +1466,19 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'TELEFON',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    _buildEditableText(_headerUserPhoneCtrl, 12, color: const Color(0xFF4B5563)),
+                    _buildEditableText(
+                      _headerUserPhoneCtrl,
+                      12,
+                      color: const Color(0xFF4B5563),
+                    ),
                   ],
                 ),
               ),
@@ -973,13 +1494,21 @@ class _ApplicationEditorScreenState
                   children: [
                     _buildEditableText(_headerCompanyNameCtrl, 12),
                     _buildEditableText(_headerContactNameCtrl, 12),
-                    _buildEditableText(_headerCompanyAddressCtrl, 12, maxLines: null),
+                    _buildEditableText(
+                      _headerCompanyAddressCtrl,
+                      12,
+                      maxLines: null,
+                    ),
                   ],
                 ),
               ),
               SizedBox(
                 width: 150,
-                child: _buildEditableText(_headerDateCtrl, 12, textAlign: TextAlign.right),
+                child: _buildEditableText(
+                  _headerDateCtrl,
+                  12,
+                  textAlign: TextAlign.right,
+                ),
               ),
             ],
           ),
@@ -990,14 +1519,12 @@ class _ApplicationEditorScreenState
 
   Widget _buildProfessionalFooter() {
     if (_currentDesignId != 'monogram') return const SizedBox.shrink();
-    
+
     return Container(
       width: double.infinity,
       height: 40,
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: _currentAccentColor, width: 3),
-        ),
+        border: Border(top: BorderSide(color: _currentAccentColor, width: 3)),
       ),
     );
   }
@@ -1036,19 +1563,7 @@ class _ApplicationEditorScreenState
                         },
                       ),
                       fontFamily: quill.QuillToolbarFontFamilyButtonOptions(
-                        items: {
-                          'Segoe UI (Original)': 'Segoe UI',
-                          'Calibri': 'Calibri',
-                          'Arial': 'Arial',
-                          'Roboto': 'Roboto',
-                          'Times New Roman': 'Times New Roman',
-                          'Cambria': 'Cambria',
-                          'Georgia': 'Georgia',
-                          'Verdana': 'Verdana',
-                          'Tahoma': 'Tahoma',
-                          'Courier': 'Courier',
-                          'Standard': 'Clear',
-                        },
+                        items: FontScanner.getEditorFontMap(),
                       ),
                     ),
                     showFontFamily: true,
@@ -1148,7 +1663,7 @@ class _ApplicationEditorScreenState
                               borderRadius: BorderRadius.circular(2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
+                                  color: Colors.black.withValues(alpha: 0.15),
                                   blurRadius: 15,
                                   spreadRadius: 2,
                                   offset: Offset(0, 4),
@@ -1161,14 +1676,17 @@ class _ApplicationEditorScreenState
                             child: Stack(
                               children: [
                                 Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     _buildProfessionalHeader(),
                                     Padding(
                                       padding: EdgeInsets.only(
                                         left: 94, // 25mm
                                         right: 75, // 20mm
-                                        top: _currentDesignId != 'monogram' ? 170 : 40,
+                                        top: _currentDesignId != 'monogram'
+                                            ? 170
+                                            : 40,
                                         bottom: 75, // 20mm
                                       ),
                                       child: DefaultTextStyle(
@@ -1183,21 +1701,27 @@ class _ApplicationEditorScreenState
                                           controller: _controller,
                                           config: quill.QuillEditorConfig(
                                             customStyles: quill.DefaultStyles(
-                                              paragraph: quill.DefaultTextBlockStyle(
-                                                TextStyle(
-                                                  fontFamily: _currentFontFamily,
-                                                  fontSize: _currentFontSize,
-                                                  color: Colors.black,
-                                                  height: _currentLineHeight,
-                                                ),
-                                                quill.HorizontalSpacing(0, 0),
-                                                quill.VerticalSpacing(0, 0),
-                                                quill.VerticalSpacing(0, 0),
-                                                null,
-                                              ),
+                                              paragraph:
+                                                  quill.DefaultTextBlockStyle(
+                                                    TextStyle(
+                                                      fontFamily:
+                                                          _currentFontFamily,
+                                                      fontSize:
+                                                          _currentFontSize,
+                                                      color: Colors.black,
+                                                      height:
+                                                          _currentLineHeight,
+                                                    ),
+                                                    quill.HorizontalSpacing(
+                                                      0,
+                                                      0,
+                                                    ),
+                                                    quill.VerticalSpacing(0, 0),
+                                                    quill.VerticalSpacing(0, 0),
+                                                    null,
+                                                  ),
                                             ),
-                                            placeholder:
-                                                'Schreibe hier dein Anschreiben...',
+                                            placeholder: 'Schreibe hier dein Anschreiben...',
                                             padding: EdgeInsets.zero,
                                             embedBuilders:
                                                 FlutterQuillEmbeds.editorBuilders(),
@@ -1208,7 +1732,9 @@ class _ApplicationEditorScreenState
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(height: 60), // Space so text doesn't hit the footer
+                                    const SizedBox(
+                                      height: 60,
+                                    ), // Space so text doesn't hit the footer
                                   ],
                                 ),
                                 Positioned(
@@ -1270,10 +1796,7 @@ class _ApplicationEditorScreenState
                   ..._grammarWarnings.map(
                     (w) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                      ),
+                      leading: Icon(Icons.error_outline, color: Colors.red),
                       title: Text(
                         w['title'] as String,
                         style: TextStyle(
@@ -1348,10 +1871,11 @@ class _ApplicationEditorScreenState
                                                 SpellChecker.checkText(
                                                   plainText,
                                                 ).then((issues) {
-                                                  if (mounted)
+                                                  if (mounted) {
                                                     setState(() {
                                                       _grammarWarnings = issues;
                                                     });
+                                                  }
                                                 });
                                               } catch (e) {
                                                 ScaffoldMessenger.of(context)
@@ -1371,9 +1895,7 @@ class _ApplicationEditorScreenState
                                         ),
                                       Divider(),
                                       ListTile(
-                                        leading: Icon(
-                                          Icons.visibility_off,
-                                        ),
+                                        leading: Icon(Icons.visibility_off),
                                         title: Text('Wort ignorieren'),
                                         onTap: () {
                                           SpellChecker.ignoreWord(
@@ -1383,10 +1905,11 @@ class _ApplicationEditorScreenState
                                               .toPlainText();
                                           SpellChecker.checkText(plainText)
                                               .then((issues) {
-                                                if (mounted)
+                                                if (mounted) {
                                                   setState(() {
                                                     _grammarWarnings = issues;
                                                   });
+                                                }
                                               });
                                           Navigator.pop(
                                             context,
@@ -1497,10 +2020,12 @@ class _ApplicationEditorScreenState
 
   Widget _buildKeywordChip(BuildContext context, String keyword, bool found) {
     final colorScheme = Theme.of(context).colorScheme;
-    final color = found ? Colors.green : colorScheme.onSurface.withOpacity(0.5);
+    final color = found
+        ? Colors.green
+        : colorScheme.onSurface.withValues(alpha: 0.5);
     final textColor = found
         ? colorScheme.onSurface
-        : colorScheme.onSurface.withOpacity(0.5);
+        : colorScheme.onSurface.withValues(alpha: 0.5);
 
     return Padding(
       padding: EdgeInsets.only(bottom: 4.0),

@@ -27,11 +27,11 @@ class WebReaderWidget extends StatelessWidget {
   final ValueChanged<String>? onTextSelected;
 
   const WebReaderWidget({
-    Key? key,
+    super.key,
     required this.htmlContent,
     this.url,
     this.onTextSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +55,11 @@ class WebReaderWidget extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(Icons.language, size: 16, color: colorScheme.onSurfaceVariant),
+                Icon(
+                  Icons.language,
+                  size: 16,
+                  color: colorScheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -88,9 +92,10 @@ class WebReaderWidget extends StatelessWidget {
                   ),
                   contextMenuBuilder: (context, editableTextState) {
                     final selectedText = editableTextState
-                        .textEditingValue.selection
+                        .textEditingValue
+                        .selection
                         .textInside(editableTextState.textEditingValue.text);
-                    
+
                     return AdaptiveTextSelectionToolbar.buttonItems(
                       anchors: editableTextState.contextMenuAnchors,
                       buttonItems: [
@@ -124,11 +129,9 @@ class WebReaderWidget extends StatelessWidget {
 
       final buffer = StringBuffer();
       _walkNodes(body, buffer);
-      
+
       // Clean up multiple newlines
-      return buffer.toString()
-          .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-          .trim();
+      return buffer.toString().replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
     } catch (e) {
       return html;
     }
@@ -147,12 +150,30 @@ class WebReaderWidget extends StatelessWidget {
       final tag = node.localName?.toLowerCase() ?? '';
 
       // Skip invisible elements
-      if (tag == 'script' || tag == 'style' || tag == 'noscript' || tag == 'nav' || tag == 'footer') {
+      if (tag == 'script' ||
+          tag == 'style' ||
+          tag == 'noscript' ||
+          tag == 'nav' ||
+          tag == 'footer') {
         return;
       }
 
       // Add newlines before block elements
-      if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'div', 'br', 'li', 'tr', 'section', 'article'].contains(tag)) {
+      if ([
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'p',
+        'div',
+        'br',
+        'li',
+        'tr',
+        'section',
+        'article',
+      ].contains(tag)) {
         buffer.write('\n');
       }
 
@@ -182,4 +203,3 @@ class WebReaderWidget extends StatelessWidget {
     }
   }
 }
-

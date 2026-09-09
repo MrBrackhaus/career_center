@@ -16,17 +16,20 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:drift/drift.dart';
+
 import '../app_database.dart';
 
 part 'applications_dao.g.dart';
 
 @DriftAccessor(tables: [Applications])
-class ApplicationsDao extends DatabaseAccessor<AppDatabase> with _$ApplicationsDaoMixin {
-  ApplicationsDao(AppDatabase db) : super(db);
+class ApplicationsDao extends DatabaseAccessor<AppDatabase>
+    with _$ApplicationsDaoMixin {
+  ApplicationsDao(super.db);
 
   Future<List<Application>> getAllApplications() => select(applications).get();
-  
-  Stream<List<Application>> watchAllApplications() => select(applications).watch();
+
+  Stream<List<Application>> watchAllApplications() =>
+      select(applications).watch();
 
   Future<Application> getApplicationById(int id) {
     return (select(applications)..where((t) => t.id.equals(id))).getSingle();
@@ -44,4 +47,3 @@ class ApplicationsDao extends DatabaseAccessor<AppDatabase> with _$ApplicationsD
     return delete(applications).delete(application);
   }
 }
-

@@ -24,19 +24,14 @@ import 'package:drift/drift.dart' as drift;
 import 'package:html/parser.dart' as html_parser;
 import 'package:file_selector/file_selector.dart';
 
-import '../../../core/utils/pdf_generator.dart';
 import '../../../data/database/app_database.dart';
 import 'email_composer_dialog.dart';
-import '../../../core/utils/file_picker_web.dart'
-    if (dart.library.io) 'package:file_selector/file_selector.dart';
 import '../../../core/services/document_intelligence_service.dart';
 import '../../../domain/enums/document_type.dart';
 import '../../../domain/models/extraction_result.dart';
-import '../../providers/document_intelligence_provider.dart';
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -45,14 +40,12 @@ import 'package:desktop_drop/desktop_drop.dart';
 
 import 'widgets/web_reader_widget.dart';
 import 'widgets/notes_widget.dart';
-import 'widgets/contacts_widget.dart';
 import 'widgets/documents_widget.dart';
 import 'widgets/basic_data_tab.dart';
 import 'widgets/emails_contacts_tab.dart';
 import 'application_form_state_bundle.dart';
 import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
-import '../../providers/imap_provider.dart';
 
 class ApplicationFormScreen extends ConsumerStatefulWidget {
   final int? applicationId;
@@ -61,12 +54,12 @@ class ApplicationFormScreen extends ConsumerStatefulWidget {
   final String? initialScreenshotBase64;
 
   const ApplicationFormScreen({
-    Key? key,
+    super.key,
     this.applicationId,
     this.initialUrl,
     this.initialHtml,
     this.initialScreenshotBase64,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<ApplicationFormScreen> createState() =>
@@ -146,7 +139,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     _contactPhoneController.dispose();
     _addressController.dispose();
     _jobDescriptionTextController.dispose();
-    for (final c in _customFieldControllers.values) c.dispose();
+    for (final c in _customFieldControllers.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -697,7 +692,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                         .read(databaseProvider)
                         .applicationsDao
                         .getApplicationById(widget.applicationId!);
-                    if (app != null && context.mounted) {
+                    if (context.mounted) {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
@@ -749,7 +744,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                     ),
               if (_isDragging)
                 Container(
-                  color: Colors.blue.withOpacity(0.2),
+                  color: Colors.blue.withValues(alpha: 0.2),
                   child: const Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -881,7 +876,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.2),
+                        color: Colors.orange.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -912,7 +907,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                   backgroundColor: Colors.white,
                   textSelectionParams: PdfTextSelectionParams(
                     onTextSelectionChange: (selection) async {
-                      if (selection != null && selection.hasSelectedText) {
+                      if (selection.hasSelectedText) {
                         final selectedText = await selection.getSelectedText();
                         if (selectedText.isNotEmpty &&
                             _activeMarkerField != null) {

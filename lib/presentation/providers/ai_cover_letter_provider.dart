@@ -1,4 +1,5 @@
-﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/services/ai_cover_letter_service.dart';
 import 'database_provider.dart';
 
@@ -37,8 +38,9 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
       final dao = ref.read(databaseProvider).settingsDao;
       final aiUrlSetting = await dao.getSettingByKey('aiServerUrl');
       final aiModelSetting = await dao.getSettingByKey('aiModelName');
-      
-      final baseUrl = aiUrlSetting?.value ?? 'http://localhost:11434/api/generate';
+
+      final baseUrl =
+          aiUrlSetting?.value ?? 'http://localhost:11434/api/generate';
       final modelName = aiModelSetting?.value ?? 'llama3.2';
 
       final service = ref.read(aiCoverLetterServiceProvider);
@@ -60,4 +62,7 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
   }
 }
 
-final aiCoverLetterProvider = NotifierProvider<AiCoverLetterNotifier, AiCoverLetterState>(AiCoverLetterNotifier.new);
+final aiCoverLetterProvider =
+    NotifierProvider<AiCoverLetterNotifier, AiCoverLetterState>(
+      AiCoverLetterNotifier.new,
+    );

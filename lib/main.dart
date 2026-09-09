@@ -17,15 +17,17 @@
  */
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'app.dart';
 
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     await windowManager.ensureInitialized();
     WindowOptions windowOptions = const WindowOptions(
@@ -40,14 +42,5 @@ void main() async {
     });
   }
 
-  runApp(
-    const ProviderScope(
-      child: JobTrackerApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: JobTrackerApp()));
 }
-
-
-
-
-

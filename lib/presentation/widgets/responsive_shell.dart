@@ -15,40 +15,53 @@ class ResponsiveShell extends ConsumerWidget {
   Widget _buildStreakBadge(AsyncValue<StreakData> streakAsync, bool expanded) {
     return streakAsync.when(
       data: (data) {
-        if (data.streakCount == 0 && data.currentWeekCount == 0) return const SizedBox.shrink();
+        if (data.streakCount == 0 && data.currentWeekCount == 0)
+          return const SizedBox.shrink();
         return Tooltip(
-          message: 'Ziel: ${data.weeklyGoal} Bewerbungen/Woche\nAktuell: ${data.currentWeekCount} Bewerbungen',
+          message:
+              'Ziel: ${data.weeklyGoal} Bewerbungen/Woche\nAktuell: ${data.currentWeekCount} Bewerbungen',
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: data.isGoalMetThisWeek ? Colors.orange.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+              color: data.isGoalMetThisWeek
+                  ? Colors.orange.withValues(alpha: 0.15)
+                  : Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey.withOpacity(0.3),
-              )
+                color: data.isGoalMetThisWeek
+                    ? Colors.orange
+                    : Colors.grey.withValues(alpha: 0.3),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.local_fire_department, color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey, size: 20),
-                if (expanded) const SizedBox(width: 8),
-                if (expanded) Text(
-                  '${data.streakCount} Wochen',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey,
-                  ),
+                Icon(
+                  Icons.local_fire_department,
+                  color: data.isGoalMetThisWeek ? Colors.orange : Colors.grey,
+                  size: 20,
                 ),
+                if (expanded) const SizedBox(width: 8),
+                if (expanded)
+                  Text(
+                    '${data.streakCount} Wochen',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: data.isGoalMetThisWeek
+                          ? Colors.orange
+                          : Colors.grey,
+                    ),
+                  ),
               ],
             ),
           ),
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
-  
+
   Widget _buildAppLogo(BuildContext context, {double size = 32}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return ClipRRect(
@@ -138,7 +151,15 @@ class ResponsiveShell extends ConsumerWidget {
         children: [
           if (!kIsWeb &&
               (Platform.isWindows || Platform.isLinux || Platform.isMacOS))
-            SizedBox(width: double.infinity, height: 32, child: WindowCaption(brightness: Theme.of(context).brightness, backgroundColor: Theme.of(context).colorScheme.surface, title: const Text(''))),
+            SizedBox(
+              width: double.infinity,
+              height: 32,
+              child: WindowCaption(
+                brightness: Theme.of(context).brightness,
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                title: const Text(''),
+              ),
+            ),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -197,12 +218,14 @@ class ResponsiveShell extends ConsumerWidget {
                                     _buildStreakBadge(streakAsync, false),
                                     const SizedBox(height: 16),
                                     IconButton(
-
-                                      icon: const Icon(Icons.rate_review_outlined),
+                                      icon: const Icon(
+                                        Icons.rate_review_outlined,
+                                      ),
                                       onPressed: () {
                                         showDialog(
                                           context: context,
-                                          builder: (context) => const FeedbackDialog(),
+                                          builder: (context) =>
+                                              const FeedbackDialog(),
                                         );
                                       },
                                       tooltip: 'Feedback & Bugs',
@@ -211,7 +234,8 @@ class ResponsiveShell extends ConsumerWidget {
                                     IconButton(
                                       icon: const Icon(Icons.settings_outlined),
                                       onPressed: () => context.go('/settings'),
-                                      tooltip: loc?.navSettings ?? 'Einstellungen',
+                                      tooltip:
+                                          loc?.navSettings ?? 'Einstellungen',
                                     ),
                                   ],
                                 ),
@@ -261,65 +285,66 @@ class ResponsiveShell extends ConsumerWidget {
                             ),
                           ),
                           trailing: Expanded(
-                              child: Align(
-                                alignment: Alignment.bottomLeft,
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      _buildStreakBadge(streakAsync, true),
-                                      const SizedBox(height: 16),
-                                      InkWell(
+                            child: Align(
+                              alignment: Alignment.bottomLeft,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildStreakBadge(streakAsync, true),
+                                    const SizedBox(height: 16),
+                                    InkWell(
+                                      onTap: () {
+                                        showDialog(
+                                          context: context,
 
-                                        onTap: () {
-
-                                          showDialog(
-
-                                            context: context,
-
-                                            builder: (context) => const FeedbackDialog(),
-                                          );
-                                        },
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16.0,
-                                            vertical: 12.0,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.bug_report_outlined),
-                                              const SizedBox(width: 12),
-                                              const Text('Bug melden'),
-                                            ],
-                                          ),
+                                          builder: (context) =>
+                                              const FeedbackDialog(),
+                                        );
+                                      },
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 12.0,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.bug_report_outlined,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            const Text('Bug melden'),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      InkWell(
-                                        onTap: () => context.go('/settings'),
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16.0,
-                                            vertical: 12.0,
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              const Icon(Icons.settings_outlined),
-                                              const SizedBox(width: 12),
-                                              Text(
-                                                loc?.navSettings ?? 'Einstellungen',
-                                              ),
-                                            ],
-                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: () => context.go('/settings'),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16.0,
+                                          vertical: 12.0,
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.settings_outlined),
+                                            const SizedBox(width: 12),
+                                            Text(
+                                              loc?.navSettings ??
+                                                  'Einstellungen',
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
+                            ),
                           ),
                           destinations: navItems.map((item) {
                             return NavigationRailDestination(

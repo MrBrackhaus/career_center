@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../core/services/imap_service.dart';
 import 'database_provider.dart';
 import '../../data/database/app_database.dart';
@@ -37,10 +38,14 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
       final emailSetting = await db.settingsDao.getSettingByKey('imapEmail');
       final passSetting = await db.settingsDao.getSettingByKey('imapPassword');
 
-      if (serverSetting == null || serverSetting.value.isEmpty ||
-          portSetting == null || portSetting.value.isEmpty ||
-          emailSetting == null || emailSetting.value.isEmpty ||
-          passSetting == null || passSetting.value.isEmpty) {
+      if (serverSetting == null ||
+          serverSetting.value.isEmpty ||
+          portSetting == null ||
+          portSetting.value.isEmpty ||
+          emailSetting == null ||
+          emailSetting.value.isEmpty ||
+          passSetting == null ||
+          passSetting.value.isEmpty) {
         throw Exception('IMAP Zugangsdaten nicht konfiguriert.');
       }
 
@@ -56,15 +61,15 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
         emailSetting.value,
         password,
       );
-      
+
       await db.settingsDao.insertOrUpdateSetting(
-        Setting(key: 'imapLastSync', value: DateTime.now().toIso8601String())
+        Setting(key: 'imapLastSync', value: DateTime.now().toIso8601String()),
       );
       await db.settingsDao.insertOrUpdateSetting(
-        Setting(key: 'imapLastImportCount', value: imported.toString())
+        Setting(key: 'imapLastImportCount', value: imported.toString()),
       );
       ref.invalidate(imapLastSyncProvider);
-      
+
       state = const AsyncValue.data(null);
       return imported;
     } catch (e, st) {
@@ -83,10 +88,14 @@ final imapLastSyncProvider = FutureProvider.autoDispose<DateTime?>((ref) async {
   return null;
 });
 
-final imapSyncProvider = NotifierProvider<ImapSyncNotifier, AsyncValue<void>>(ImapSyncNotifier.new);
+final imapSyncProvider = NotifierProvider<ImapSyncNotifier, AsyncValue<void>>(
+  ImapSyncNotifier.new,
+);
 
-final applicationEmailsProvider = FutureProvider.family.autoDispose((ref, int applicationId) async {
+final applicationEmailsProvider = FutureProvider.family.autoDispose((
+  ref,
+  int applicationId,
+) async {
   final db = ref.watch(databaseProvider);
   return db.emailsDao.getEmailsForApplication(applicationId);
 });
-

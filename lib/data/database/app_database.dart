@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
@@ -28,53 +29,59 @@ import 'daos/emails_dao.dart';
 import 'daos/notes_dao.dart';
 import 'daos/documents_dao.dart';
 import 'daos/contacts_dao.dart';
+import 'daos/cv_dao.dart';
 
 part 'app_database.g.dart';
 
 class Applications extends Table {
-  IntColumn get id            => integer().autoIncrement()();
-  TextColumn get company      => text()();
-  TextColumn get position     => text()();
-  TextColumn get address      => text().nullable()();
-  TextColumn get industry     => text().nullable()();
-  TextColumn get contactName  => text().nullable()();
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get company => text()();
+  TextColumn get position => text()();
+  TextColumn get address => text().nullable()();
+  TextColumn get industry => text().nullable()();
+  TextColumn get contactName => text().nullable()();
   TextColumn get contactEmail => text().nullable()();
   TextColumn get contactPhone => text().nullable()();
-  TextColumn get status       => text().withDefault(const Constant('offen'))();
-  IntColumn  get priority     => integer().withDefault(const Constant(2))();
-  DateTimeColumn get appliedDate   => dateTime().nullable()();
-  DateTimeColumn get responseDate  => dateTime().nullable()();
-  DateTimeColumn get followupDate  => dateTime().nullable()();
-  IntColumn  get commuteCar        => integer().nullable()(); // Minuten
-  IntColumn  get commuteTransit    => integer().nullable()();
-  IntColumn  get salaryWish        => integer().nullable()();
-  IntColumn  get salaryOffered     => integer().nullable()();
-  TextColumn get nextStep          => text().nullable()();
-  TextColumn get notes             => text().nullable()();
-  TextColumn get rejectionReason   => text().nullable()();
-  TextColumn get jobUrl            => text().nullable()();
-  TextColumn get companyUrl        => text().nullable()();
-  TextColumn get customFields      => text().nullable()(); // JSON string for dynamic columns
-  TextColumn get coverLetterContent => text().nullable()(); // JSON string for Quill document
-  TextColumn get jobDescriptionText => text().nullable()(); // Plain text for ATS analysis
-  DateTimeColumn get createdAt     => dateTime().nullable()();
-  DateTimeColumn get updatedAt     => dateTime().nullable()();
+  TextColumn get status => text().withDefault(const Constant('offen'))();
+  IntColumn get priority => integer().withDefault(const Constant(2))();
+  DateTimeColumn get appliedDate => dateTime().nullable()();
+  DateTimeColumn get responseDate => dateTime().nullable()();
+  DateTimeColumn get followupDate => dateTime().nullable()();
+  IntColumn get commuteCar => integer().nullable()(); // Minuten
+  IntColumn get commuteTransit => integer().nullable()();
+  IntColumn get salaryWish => integer().nullable()();
+  IntColumn get salaryOffered => integer().nullable()();
+  TextColumn get nextStep => text().nullable()();
+  TextColumn get notes => text().nullable()();
+  TextColumn get rejectionReason => text().nullable()();
+  TextColumn get jobUrl => text().nullable()();
+  TextColumn get companyUrl => text().nullable()();
+  TextColumn get customFields =>
+      text().nullable()(); // JSON string for dynamic columns
+  TextColumn get coverLetterContent =>
+      text().nullable()(); // JSON string for Quill document
+  TextColumn get jobDescriptionText =>
+      text().nullable()(); // Plain text for ATS analysis
+  DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
 class Templates extends Table {
-  IntColumn  get id        => integer().autoIncrement()();
-  TextColumn get name      => text()();
-  TextColumn get type      => text()(); // anschreiben | textbaustein | lebenslauf
-  TextColumn get content   => text().nullable()();
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+  TextColumn get type => text()(); // anschreiben | textbaustein | lebenslauf
+  TextColumn get content => text().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
-  IntColumn get applicationId => integer().nullable().references(Applications, #id)();
-  TextColumn get filePath => text().nullable()(); // NEW: Für originale PDF-Dateien
+  IntColumn get applicationId =>
+      integer().nullable().references(Applications, #id)();
+  TextColumn get filePath =>
+      text().nullable()(); // NEW: Für originale PDF-Dateien
 }
 
 class Settings extends Table {
-  TextColumn get key   => text()();
+  TextColumn get key => text()();
   TextColumn get value => text()();
-  
+
   @override
   Set<Column> get primaryKey => {key};
 }
@@ -91,44 +98,114 @@ class Emails extends Table {
 }
 
 class Notes extends Table {
-  IntColumn get id            => integer().autoIncrement()();
+  IntColumn get id => integer().autoIncrement()();
   IntColumn get applicationId => integer().references(Applications, #id)();
-  TextColumn get content      => text()();
+  TextColumn get content => text()();
   DateTimeColumn get createdAt => dateTime().nullable()();
 }
 
 class Documents extends Table {
-  IntColumn get id            => integer().autoIncrement()();
+  IntColumn get id => integer().autoIncrement()();
   IntColumn get applicationId => integer().references(Applications, #id)();
-  TextColumn get fileName     => text()();
-  TextColumn get filePath     => text()(); // absolute path in AppDocuments
-  TextColumn get fileType     => text()(); // pdf, docx, other
+  TextColumn get fileName => text()();
+  TextColumn get filePath => text()(); // absolute path in AppDocuments
+  TextColumn get fileType => text()(); // pdf, docx, other
   DateTimeColumn get uploadedAt => dateTime().nullable()();
 }
 
 class Contacts extends Table {
-  IntColumn get id            => integer().autoIncrement()();
+  IntColumn get id => integer().autoIncrement()();
   IntColumn get applicationId => integer().references(Applications, #id)();
-  TextColumn get name         => text().nullable()();
-  TextColumn get email        => text().nullable()();
-  TextColumn get phone        => text().nullable()();
-  TextColumn get role         => text().nullable()(); // e.g. "HR-Managerin", "Recruiter"
+  TextColumn get name => text().nullable()();
+  TextColumn get email => text().nullable()();
+  TextColumn get phone => text().nullable()();
+  TextColumn get role =>
+      text().nullable()(); // e.g. "HR-Managerin", "Recruiter"
+}
+
+// === NEW CV TABLES ===
+class CvWorkExperiences extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get applicationId => integer().nullable().references(
+    Applications,
+    #id,
+  )(); // null = Master-Pool
+  TextColumn get company => text()();
+  TextColumn get position => text()();
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+  BoolColumn get isCurrent => boolean().withDefault(const Constant(false))();
+  TextColumn get description => text().nullable()();
+}
+
+class CvEducations extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get applicationId =>
+      integer().nullable().references(Applications, #id)();
+  TextColumn get institution => text()();
+  TextColumn get degree => text()();
+  DateTimeColumn get startDate => dateTime().nullable()();
+  DateTimeColumn get endDate => dateTime().nullable()();
+  TextColumn get description => text().nullable()();
+}
+
+class CvSkills extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get applicationId =>
+      integer().nullable().references(Applications, #id)();
+  TextColumn get name => text()();
+  IntColumn get level => integer().withDefault(const Constant(3))(); // 1-5
+}
+
+class CvLanguages extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get applicationId =>
+      integer().nullable().references(Applications, #id)();
+  TextColumn get name => text()();
+  TextColumn get level => text()(); // e.g. "Muttersprache", "B2"
 }
 
 @DriftDatabase(
-  tables: [Applications, Templates, Settings, Emails, Notes, Documents, Contacts],
-  daos: [ApplicationsDao, TemplatesDao, SettingsDao, EmailsDao, NotesDao, DocumentsDao, ContactsDao],
+  tables: [
+    Applications,
+    Templates,
+    Settings,
+    Emails,
+    Notes,
+    Documents,
+    Contacts,
+    CvWorkExperiences,
+    CvEducations,
+    CvSkills,
+    CvLanguages,
+  ],
+  daos: [
+    ApplicationsDao,
+    TemplatesDao,
+    SettingsDao,
+    EmailsDao,
+    NotesDao,
+    DocumentsDao,
+    ContactsDao,
+    CvDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  @override
   EmailsDao get emailsDao => EmailsDao(this);
+  @override
   NotesDao get notesDao => NotesDao(this);
+  @override
   DocumentsDao get documentsDao => DocumentsDao(this);
+  @override
   ContactsDao get contactsDao => ContactsDao(this);
+  @override
+  CvDao get cvDao => CvDao(this);
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration {
@@ -162,6 +239,12 @@ class AppDatabase extends _$AppDatabase {
         if (from < 9) {
           await m.addColumn(templates, templates.filePath);
         }
+        if (from < 10) {
+          await m.createTable(cvWorkExperiences);
+          await m.createTable(cvEducations);
+          await m.createTable(cvSkills);
+          await m.createTable(cvLanguages);
+        }
       },
     );
   }
@@ -174,5 +257,3 @@ LazyDatabase _openConnection() {
     return NativeDatabase.createInBackground(file);
   });
 }
-
-

@@ -41,10 +41,14 @@ class EmailResponseExtractor {
 
     // ── Position ─────────────────────────────────────────────────────────────
     FieldResult<String>? foundPosition;
-    final posRegex1 = RegExp(r'[Bb]ewerbung\s+als\s+(.+?)(?:\s*[-–—]|\s*\(m|$)');
+    final posRegex1 = RegExp(
+      r'[Bb]ewerbung\s+als\s+(.+?)(?:\s*[-–—]|\s*\(m|$)',
+    );
     final posRegex2 = RegExp(r'[Bb]ewerbung\s*[-–—]\s*(.+?)(?:\s*\(m|$)');
 
-    final subjMatch = posRegex1.firstMatch(cleanSubject) ?? posRegex2.firstMatch(cleanSubject);
+    final subjMatch =
+        posRegex1.firstMatch(cleanSubject) ??
+        posRegex2.firstMatch(cleanSubject);
     if (subjMatch != null) {
       final pos = subjMatch.group(1)?.trim() ?? '';
       if (pos.isNotEmpty) {
@@ -55,7 +59,8 @@ class EmailResponseExtractor {
         );
       }
     } else {
-      final bodyMatch = posRegex1.firstMatch(body) ?? posRegex2.firstMatch(body);
+      final bodyMatch =
+          posRegex1.firstMatch(body) ?? posRegex2.firstMatch(body);
       if (bodyMatch != null) {
         final pos = bodyMatch.group(1)?.trim() ?? '';
         if (pos.isNotEmpty) {
@@ -75,7 +80,8 @@ class EmailResponseExtractor {
     );
     final companyMatch = companyRegex.firstMatch(body);
     if (companyMatch != null) {
-      final name = companyMatch.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+      final name =
+          companyMatch.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
       if (name.isNotEmpty && name.length < 60) {
         foundCompany = FieldResult(
           value: name,
@@ -150,7 +156,8 @@ class EmailResponseExtractor {
     // Wenn es eine direkte Antwort (Reply) ist oder bestimmte Keywords im Betreff hat
     final isRep = isReply(subject);
     final cleanSubject = stripReplyPrefix(subject).toLowerCase();
-    final subjectIsApplication = cleanSubject.contains('bewerbung') ||
+    final subjectIsApplication =
+        cleanSubject.contains('bewerbung') ||
         cleanSubject.contains('ihre unterlagen') ||
         cleanSubject.contains('kennenlernen') ||
         cleanSubject.contains('vorstellungsgespräch') ||
@@ -159,15 +166,22 @@ class EmailResponseExtractor {
         cleanSubject.contains('zusage');
 
     if (isRep || subjectIsApplication) {
-      if (_isRejection(lowerBody) || lowerSubject.contains('absage')) return 'absage';
-      if (_isInterview(lowerBody) || lowerSubject.contains('einladung')) return 'interview';
-      if (_isConfirmation(lowerBody) || lowerSubject.contains('eingangsbestätigung')) return 'bestaetigung';
+      if (_isRejection(lowerBody) || lowerSubject.contains('absage'))
+        return 'absage';
+      if (_isInterview(lowerBody) || lowerSubject.contains('einladung'))
+        return 'interview';
+      if (_isConfirmation(lowerBody) ||
+          lowerSubject.contains('eingangsbestätigung'))
+        return 'bestaetigung';
     }
 
     // Falls gar nichts im Body erkannt wurde, es aber sicher eine gesendete Bewerbung ist (Sent Folder logic):
-    final hasCoverLetterSigns = lowerBody.contains('sehr geehrte') &&
-        (lowerBody.contains('bewerbe') || lowerBody.contains('bewerbung auf') || lowerBody.contains('interesse'));
-    
+    final hasCoverLetterSigns =
+        lowerBody.contains('sehr geehrte') &&
+        (lowerBody.contains('bewerbe') ||
+            lowerBody.contains('bewerbung auf') ||
+            lowerBody.contains('interesse'));
+
     if (hasCoverLetterSigns && subjectIsApplication) return 'versendet';
 
     return null;
@@ -204,7 +218,11 @@ class EmailResponseExtractor {
     return hostPart
         .split('-')
         .where((w) => w.isNotEmpty)
-        .map((w) => (w.length <= 3) ? w.toUpperCase() : w[0].toUpperCase() + w.substring(1))
+        .map(
+          (w) => (w.length <= 3)
+              ? w.toUpperCase()
+              : w[0].toUpperCase() + w.substring(1),
+        )
         .join(' ');
   }
 
@@ -216,10 +234,29 @@ class EmailResponseExtractor {
   );
 
   static const _genericDomains = {
-    'gmail', 'gmx', 'web', 'outlook', 'hotmail', 'yahoo', 'icloud',
-    'live', 'msn', 'aol', 't-online', 'freenet', 'posteo', 'protonmail',
-    'proton', 'mailbox', 'tutanota', 'hey', 'pm', 'googlemail',
-    'jobcenter-ge', 'jobcenter', 'arbeitsagentur',
+    'gmail',
+    'gmx',
+    'web',
+    'outlook',
+    'hotmail',
+    'yahoo',
+    'icloud',
+    'live',
+    'msn',
+    'aol',
+    't-online',
+    'freenet',
+    'posteo',
+    'protonmail',
+    'proton',
+    'mailbox',
+    'tutanota',
+    'hey',
+    'pm',
+    'googlemail',
+    'jobcenter-ge',
+    'jobcenter',
+    'arbeitsagentur',
   };
 
   static bool _isRejection(String lowerBody) {
@@ -285,4 +322,3 @@ class EmailResponseExtractor {
     return 0.65;
   }
 }
-

@@ -534,14 +534,24 @@ class _ApplicationEditorScreenState
         ),
         SizedBox(height: 8),
         Wrap(
-          spacing: 8,
-          children: [
-            _buildColorDot(Colors.black),
-            _buildColorDot(Colors.blue[900]!),
-            _buildColorDot(Colors.teal[800]!),
-            _buildColorDot(Colors.deepOrange[800]!),
-          ],
-        ),
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildColorDot(Colors.black),
+              _buildColorDot(Colors.grey[800]!),
+              _buildColorDot(Colors.blueGrey[800]!),
+              _buildColorDot(Colors.blue[900]!),
+              _buildColorDot(Colors.lightBlue[800]!),
+              _buildColorDot(Colors.indigo[800]!),
+              _buildColorDot(Colors.purple[800]!),
+              _buildColorDot(Colors.teal[800]!),
+              _buildColorDot(Colors.green[800]!),
+              _buildColorDot(Colors.deepOrange[800]!),
+              _buildColorDot(Colors.red[800]!),
+              _buildColorDot(Colors.brown[800]!),
+            ],
+          ),
+          const SizedBox(height: 60),
       ],
     );
   }

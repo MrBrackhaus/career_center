@@ -463,23 +463,23 @@ class _ApplicationEditorScreenState
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
+        Text(
           'Dokument-Design',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         _buildDesignCard('Klassisch', 'Serife Schrift, seriös & zeitlos', 'klassisch'),
         _buildDesignCard('Modern', 'Klare Kanten, serifenlos', 'modern'),
         _buildDesignCard('Kompakt', 'Für viel Text auf einer Seite', 'kompakt'),
         _buildDesignCard('Monogram', 'Professionelles Layout mit blauem Monogramm', 'monogram'),
         
-          const Divider(height: 32),
+          Divider(height: 32),
           
-        const Text(
+        Text(
           'Seitenränder',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         _buildMarginSlider(
           'Oben',
           _marginTop,
@@ -508,31 +508,31 @@ class _ApplicationEditorScreenState
           37.8,
           151.2,
         ),
-        const Divider(height: 32),
-        const Text(
+        Divider(height: 32),
+        Text(
           'DIN 5008 Elemente',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         FilledButton.icon(
           onPressed: () => _insertHeader(),
-          icon: const Icon(Icons.contact_mail),
-          label: const Text('Briefkopf einfuegen'),
+          icon: Icon(Icons.contact_mail),
+          label: Text('Briefkopf einfuegen'),
           style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         FilledButton.icon(
           onPressed: _insertFooter,
-          icon: const Icon(Icons.draw),
-          label: const Text('Unterschrift & Fusszeile einfuegen'),
+          icon: Icon(Icons.draw),
+          label: Text('Unterschrift & Fusszeile einfuegen'),
           style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
         ),
-        const Divider(height: 32),
-        const Text(
+        Divider(height: 32),
+        Text(
           'Farbe (Akzent)',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Wrap(
           spacing: 8,
           children: [
@@ -687,15 +687,15 @@ class _ApplicationEditorScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Keine Textbausteine gefunden.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.add_to_photos),
-                    label: const Text('Beispiele laden'),
+                    icon: Icon(Icons.add_to_photos),
+                    label: Text('Beispiele laden'),
                     onPressed: () async {
                       final samples = [
                         TemplatesCompanion.insert(
@@ -745,7 +745,7 @@ class _ApplicationEditorScreenState
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(8),
           itemCount: templates.length,
           itemBuilder: (context, index) {
             final t = templates[index];
@@ -768,7 +768,7 @@ class _ApplicationEditorScreenState
     } catch (_) {}
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: 8),
       elevation: 0,
       color: Theme.of(context).colorScheme.surfaceContainerHighest,
       shape: RoundedRectangleBorder(
@@ -854,10 +854,10 @@ class _ApplicationEditorScreenState
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: Color(0xFF1E3A8A), width: 3), // Dark blue border
-                    bottom: BorderSide(color: Color(0xFF1E3A8A), width: 3),
+                    left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
+                    bottom: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
                   ),
                 ),
                 padding: const EdgeInsets.only(left: 12, bottom: 4, right: 12, top: 4),
@@ -897,16 +897,16 @@ class _ApplicationEditorScreenState
             ],
           ),
           const SizedBox(height: 32),
-          const Text(
+          Text(
             'PERSÖNLICHE DATEN',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A8A), // Dark blue
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: 4),
-          Container(height: 1, color: const Color(0xFF1E3A8A)),
+          Container(height: 1, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -915,9 +915,9 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('E-MAIL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(_userEmail, style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                    Text('E-MAIL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text(_userEmail, style: TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
                   ],
                 ),
               ),
@@ -925,9 +925,9 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text('$_userAddress\n$_userZip $_userCity', style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                    Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      SizedBox(height: 4),
+                      Text('$_userAddress\n$_userZip $_userCity', style: TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
                   ],
                 ),
               ),
@@ -935,15 +935,15 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(_userPhone, style: const TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                    Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text(_userPhone, style: TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
                     ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: 40),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
@@ -951,15 +951,15 @@ class _ApplicationEditorScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_application?.company ?? 'Unternehmensname', style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                      Text(_application?.contactName ?? 'Personalabteilung', style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                      Text(_application?.address ?? 'Musterstraße 1, 12345 Stadt', style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                      Text(_application?.company ?? 'Unternehmensname', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                      Text(_application?.contactName ?? 'Personalabteilung', style: TextStyle(fontSize: 12, color: Colors.black87)),
+                      Text(_application?.address ?? 'Musterstraße 1, 12345 Stadt', style: TextStyle(fontSize: 12, color: Colors.black87)),
                     ],
                   ),
                 ),
                 Text(
                   '${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}',
-                  style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
                 ),
               ],
             ),
@@ -970,15 +970,15 @@ class _ApplicationEditorScreenState
 
   
   Widget _buildProfessionalFooter() {
-    if (_currentDesignId != 'monogram') return const SizedBox.shrink();
+    if (_currentDesignId != 'monogram') return SizedBox.shrink();
     
     return Container(
       width: double.infinity,
       height: 20,
-      margin: const EdgeInsets.only(top: 40),
-      decoration: const BoxDecoration(
+      margin: EdgeInsets.only(top: 40),
+      decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Color(0xFF1E3A8A), width: 3),
+          top: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
         ),
       ),
     );
@@ -1080,7 +1080,7 @@ class _ApplicationEditorScreenState
                         ),
                       )
                     : const Icon(Icons.auto_fix_high),
-                label: const Text('KI Korrektur'),
+                label: Text('KI Korrektur'),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.purple,
                   foregroundColor: Colors.white,
@@ -1095,14 +1095,14 @@ class _ApplicationEditorScreenState
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 40),
+                padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Vertical Ruler
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(
                           top: 24,
                         ), // Offset for the horizontal ruler height
@@ -1115,14 +1115,14 @@ class _ApplicationEditorScreenState
                       Column(
                         children: [
                           // Horizontal Ruler
-                          const EditorRuler(
+                          EditorRuler(
                             isHorizontal: true,
                             length: 794,
                             offset: 94,
                           ),
                           Container(
                             width: 794, // A4 width at 96 DPI
-                            constraints: const BoxConstraints(
+                            constraints: BoxConstraints(
                               minHeight: 1123, // A4 height at 96 DPI
                             ),
                             decoration: BoxDecoration(
@@ -1133,7 +1133,7 @@ class _ApplicationEditorScreenState
                                   color: Colors.black.withOpacity(0.15),
                                   blurRadius: 15,
                                   spreadRadius: 2,
-                                  offset: const Offset(0, 4),
+                                  offset: Offset(0, 4),
                                 ),
                               ],
                             ),
@@ -1171,9 +1171,9 @@ class _ApplicationEditorScreenState
                                                   color: Colors.black,
                                                   height: _currentLineHeight,
                                                 ),
-                                                const quill.HorizontalSpacing(0, 0),
-                                                const quill.VerticalSpacing(0, 0),
-                                                const quill.VerticalSpacing(0, 0),
+                                                quill.HorizontalSpacing(0, 0),
+                                                quill.VerticalSpacing(0, 0),
+                                                quill.VerticalSpacing(0, 0),
                                                 null,
                                               ),
                                             ),
@@ -1216,27 +1216,27 @@ class _ApplicationEditorScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(16.0),
             child: Text(
               'Live Job-Fit (ATS)',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               children: [
-                const Text(
+                Text(
                   'Rechtschreibung (Offline)',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 if (_isSpellChecking)
-                  const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                  Center(child: CircularProgressIndicator(strokeWidth: 2))
                 else if (_grammarWarnings.isEmpty)
-                  const Text(
+                  Text(
                     'Keine Fehler gefunden.',
                     style: TextStyle(color: Colors.green, fontSize: 12),
                   )
@@ -1244,13 +1244,13 @@ class _ApplicationEditorScreenState
                   ..._grammarWarnings.map(
                     (w) => ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(
+                      leading: Icon(
                         Icons.error_outline,
                         color: Colors.red,
                       ),
                       title: Text(
                         w['title'] as String,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
                           decoration: TextDecoration.underline,
@@ -1260,7 +1260,7 @@ class _ApplicationEditorScreenState
                       ),
                       subtitle: Text(
                         w['subtitle'] as String,
-                        style: const TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 12),
                       ),
                       onTap: () {
                         showDialog(
@@ -1272,7 +1272,7 @@ class _ApplicationEditorScreenState
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
-                                return const AlertDialog(
+                                return AlertDialog(
                                   content: Row(
                                     children: [
                                       CircularProgressIndicator(),
@@ -1294,7 +1294,7 @@ class _ApplicationEditorScreenState
                                     shrinkWrap: true,
                                     children: [
                                       if (suggestions.isEmpty)
-                                        const Padding(
+                                        Padding(
                                           padding: EdgeInsets.all(16.0),
                                           child: Text(
                                             'Keine passenden W\u00f6rter gefunden.',
@@ -1304,7 +1304,7 @@ class _ApplicationEditorScreenState
                                         ...suggestions.map(
                                           (s) => ListTile(
                                             title: Text(s),
-                                            trailing: const Icon(
+                                            trailing: Icon(
                                               Icons.check_circle_outline,
                                               color: Colors.green,
                                             ),
@@ -1330,7 +1330,7 @@ class _ApplicationEditorScreenState
                                               } catch (e) {
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
-                                                      const SnackBar(
+                                                      SnackBar(
                                                         content: Text(
                                                           'Korrektur fehlgeschlagen.',
                                                         ),
@@ -1343,12 +1343,12 @@ class _ApplicationEditorScreenState
                                             },
                                           ),
                                         ),
-                                      const Divider(),
+                                      Divider(),
                                       ListTile(
-                                        leading: const Icon(
+                                        leading: Icon(
                                           Icons.visibility_off,
                                         ),
-                                        title: const Text('Wort ignorieren'),
+                                        title: Text('Wort ignorieren'),
                                         onTap: () {
                                           SpellChecker.ignoreWord(
                                             w['title'] as String,
@@ -1373,7 +1373,7 @@ class _ApplicationEditorScreenState
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(context),
-                                    child: const Text('Abbrechen'),
+                                    child: Text('Abbrechen'),
                                   ),
                                 ],
                               );
@@ -1381,25 +1381,25 @@ class _ApplicationEditorScreenState
                           ),
                         );
                       },
-                      trailing: const Icon(Icons.chevron_right, size: 16),
+                      trailing: Icon(Icons.chevron_right, size: 16),
                     ),
                   ),
-                const Divider(height: 32),
-                const Text(
+                Divider(height: 32),
+                Text(
                   'Keywords (Stellenanzeige)',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 if (_application?.jobDescriptionText == null ||
                     _application!.jobDescriptionText!.isEmpty)
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.paste),
-                    label: const Text('Anzeige einfügen'),
+                    icon: Icon(Icons.paste),
+                    label: Text('Anzeige einfügen'),
                     onPressed: _pasteJobDescription,
                   )
                 else ...[
                   if (_foundKeywords.isEmpty && _missingKeywords.isEmpty)
-                    const Text(
+                    Text(
                       'Keine Keywords gefunden.',
                       style: TextStyle(color: Colors.grey, fontSize: 12),
                     )
@@ -1425,13 +1425,13 @@ class _ApplicationEditorScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Stellenanzeige einfügen'),
+        title: Text('Stellenanzeige einfügen'),
         content: SizedBox(
           width: 500,
           child: TextField(
             controller: ctrl,
             maxLines: 10,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Füge hier den Text der Stellenanzeige ein...',
               border: OutlineInputBorder(),
             ),
@@ -1440,7 +1440,7 @@ class _ApplicationEditorScreenState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
+            child: Text('Abbrechen'),
           ),
           FilledButton(
             onPressed: () async {
@@ -1462,7 +1462,7 @@ class _ApplicationEditorScreenState
               }
               if (context.mounted) Navigator.pop(ctx);
             },
-            child: const Text('Speichern & Analysieren'),
+            child: Text('Speichern & Analysieren'),
           ),
         ],
       ),
@@ -1477,7 +1477,7 @@ class _ApplicationEditorScreenState
         : colorScheme.onSurface.withOpacity(0.5);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
+      padding: EdgeInsets.only(bottom: 4.0),
       child: Row(
         children: [
           Icon(

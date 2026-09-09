@@ -67,7 +67,7 @@ class _ApplicationEditorScreenState
   List<Map<String, dynamic>> _grammarWarnings = [];
 
   // Design / Typography State
-  String _currentFontFamily = 'Arial';
+  String _currentFontFamily = 'Segoe UI';
   double _currentFontSize = 14;
   double _currentLineHeight = 1.5;
   Color _currentAccentColor = Colors.blue[900]!;
@@ -562,7 +562,7 @@ class _ApplicationEditorScreenState
         _currentFontSize = 12;
         _currentLineHeight = 1.5;
       } else if (designId == 'modern') {
-        _currentFontFamily = 'Arial';
+        _currentFontFamily = 'Segoe UI';
         _currentFontSize = 14;
         _currentLineHeight = 1.6;
       } else if (designId == 'kompakt') {
@@ -570,7 +570,7 @@ class _ApplicationEditorScreenState
         _currentFontSize = 10;
         _currentLineHeight = 1.3;
       } else if (designId == 'monogram') {
-        _currentFontFamily = 'Arial';
+        _currentFontFamily = 'Segoe UI';
         _currentFontSize = 12;
         _currentLineHeight = 1.5;
       }
@@ -997,16 +997,22 @@ class _ApplicationEditorScreenState
                           '14pt': '14.0',
                           '18pt': '18.0',
                           '24pt': '24.0',
-                          'Löschen': '0',
+                          'Standard': '0',
                         },
                       ),
                       fontFamily: quill.QuillToolbarFontFamilyButtonOptions(
                         items: {
+                          'Segoe UI (Original)': 'Segoe UI',
+                          'Calibri': 'Calibri',
                           'Arial': 'Arial',
-                          'Times New Roman': 'Times New Roman',
-                          'Courier': 'Courier',
                           'Roboto': 'Roboto',
-                          'Löschen': 'Clear',
+                          'Times New Roman': 'Times New Roman',
+                          'Cambria': 'Cambria',
+                          'Georgia': 'Georgia',
+                          'Verdana': 'Verdana',
+                          'Tahoma': 'Tahoma',
+                          'Courier': 'Courier',
+                          'Standard': 'Clear',
                         },
                       ),
                     ),

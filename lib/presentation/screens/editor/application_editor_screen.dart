@@ -562,7 +562,7 @@ class _ApplicationEditorScreenState
           shape: BoxShape.circle,
           border: Border.all(
             color: isSelected
-                ? Theme.of(context).colorScheme.primary
+                ? _currentAccentColor
                 : Colors.grey.withOpacity(0.5),
             width: isSelected ? 3 : 1,
           ),
@@ -634,7 +634,7 @@ class _ApplicationEditorScreenState
       shape: RoundedRectangleBorder(
         side: BorderSide(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary
+              ? _currentAccentColor
               : Theme.of(context).colorScheme.outlineVariant,
           width: isSelected ? 2 : 1,
         ),
@@ -856,8 +856,8 @@ class _ApplicationEditorScreenState
               Container(
                 decoration: BoxDecoration(
                   border: Border(
-                    left: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
-                    bottom: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
+                    left: BorderSide(color: _currentAccentColor, width: 3),
+                    bottom: BorderSide(color: _currentAccentColor, width: 3),
                   ),
                 ),
                 padding: const EdgeInsets.only(left: 12, bottom: 4, right: 12, top: 4),
@@ -902,11 +902,11 @@ class _ApplicationEditorScreenState
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
+              color: _currentAccentColor,
             ),
           ),
           const SizedBox(height: 4),
-          Container(height: 1, color: Theme.of(context).colorScheme.primary),
+          Container(height: 1, color: _currentAccentColor),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -978,7 +978,7 @@ class _ApplicationEditorScreenState
       margin: EdgeInsets.only(top: 40),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
+          top: BorderSide(color: _currentAccentColor, width: 3),
         ),
       ),
     );

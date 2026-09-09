@@ -59,6 +59,20 @@ class _ApplicationEditorScreenState
   String _userCity = '';
   String _userProfession = '';
 
+  // Header Editing Controllers
+  final TextEditingController _headerCompanyNameCtrl = TextEditingController(text: 'Unternehmensname');
+  final TextEditingController _headerContactNameCtrl = TextEditingController(text: 'Personalabteilung');
+  final TextEditingController _headerCompanyAddressCtrl = TextEditingController(text: 'Adresse');
+  final TextEditingController _headerDateCtrl = TextEditingController(text: 'Datum');
+  
+  final TextEditingController _headerUserEmailCtrl = TextEditingController(text: 'email');
+  final TextEditingController _headerUserPhoneCtrl = TextEditingController(text: 'telefon');
+  final TextEditingController _headerUserAddressCtrl = TextEditingController(text: 'adresse');
+
+  final TextEditingController _headerUserNameCtrl = TextEditingController(text: 'Name');
+  final TextEditingController _headerUserProfessionCtrl = TextEditingController(text: 'Beruf');
+
+
   double _marginLeft = 94.0;
   double _marginRight = 75.0;
 
@@ -204,6 +218,9 @@ class _ApplicationEditorScreenState
       }
 
       _application = app;
+          _headerCompanyNameCtrl.text = app.company;
+          _headerContactNameCtrl.text = app.contactName ?? 'Personalabteilung';
+          _headerCompanyAddressCtrl.text = app.address ?? 'Musterstraße 1, 12345 Stadt';
       if (app.coverLetterContent?.isNotEmpty == true) {
         try {
           final decoded = jsonDecode(app.coverLetterContent!);

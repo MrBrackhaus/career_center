@@ -170,7 +170,15 @@ class _ApplicationEditorScreenState
         _userAddress = addressSetting?.value ?? 'Musterstraße 1';
         _userZip = zipSetting?.value ?? '12345';
         _userCity = citySetting?.value ?? 'Musterstadt';
-        _userProfession = 'FACHINFORMATIKER FÜR SYSTEMINTEGRATION';
+          _userProfession = 'FACHINFORMATIKER FÜR SYSTEMINTEGRATION';
+          
+          _headerUserNameCtrl.text = _userName;
+          _headerUserProfessionCtrl.text = _userProfession;
+          _headerUserEmailCtrl.text = _userEmail;
+          _headerUserPhoneCtrl.text = _userPhone;
+          _headerUserAddressCtrl.text = '${_userAddress}\n${_userZip} ${_userCity}';
+          
+          _headerDateCtrl.text = "${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}";
       });
     }
 
@@ -849,6 +857,20 @@ class _ApplicationEditorScreenState
   }
 
   
+  Widget _buildEditableText(TextEditingController controller, double fontSize, {FontWeight? fontWeight, int? maxLines = 1, Color color = Colors.black87, TextAlign textAlign = TextAlign.left}) {
+    return TextFormField(
+      controller: controller,
+      style: TextStyle(fontSize: fontSize, color: color, fontWeight: fontWeight),
+      textAlign: textAlign,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        isDense: true,
+        contentPadding: EdgeInsets.zero,
+      ),
+      maxLines: maxLines,
+    );
+  }
+
   Widget _buildProfessionalHeader() {
     if (_currentDesignId != 'monogram') return const SizedBox.shrink();
     
@@ -882,27 +904,15 @@ class _ApplicationEditorScreenState
                 ),
               ),
               const SizedBox(width: 24),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _userName,
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _userProfession,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      letterSpacing: 1.2,
-                      color: Color(0xFF4B5563),
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildEditableText(_headerUserNameCtrl, 32, fontWeight: FontWeight.bold, color: const Color(0xFF1F2937)),
+                    const SizedBox(height: 4),
+                    _buildEditableText(_headerUserProfessionCtrl, 14, color: const Color(0xFF4B5563)),
+                  ],
+                ),
               ),
             ],
           ),
@@ -925,9 +935,9 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('E-MAIL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4),
-                    Text(_userEmail, style: TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                    const Text('E-MAIL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    _buildEditableText(_headerUserEmailCtrl, 12, color: const Color(0xFF4B5563)),
                   ],
                 ),
               ),
@@ -935,9 +945,9 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text('$_userAddress\n$_userZip $_userCity', style: TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
+                    const Text('ANSCHRIFT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    _buildEditableText(_headerUserAddressCtrl, 12, color: const Color(0xFF4B5563), maxLines: null),
                   ],
                 ),
               ),
@@ -945,40 +955,39 @@ class _ApplicationEditorScreenState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 4),
-                    Text(_userPhone, style: TextStyle(fontSize: 12, color: Color(0xFF4B5563))),
-                    ],
-                  ),
+                    const Text('TELEFON', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    _buildEditableText(_headerUserPhoneCtrl, 12, color: const Color(0xFF4B5563)),
+                  ],
                 ),
-              ],
-            ),
-            SizedBox(height: 40),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_application?.company ?? 'Unternehmensname', style: TextStyle(fontSize: 12, color: Colors.black87)),
-                      Text(_application?.contactName ?? 'Personalabteilung', style: TextStyle(fontSize: 12, color: Colors.black87)),
-                      Text(_application?.address ?? 'Musterstraße 1, 12345 Stadt', style: TextStyle(fontSize: 12, color: Colors.black87)),
-                    ],
-                  ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildEditableText(_headerCompanyNameCtrl, 12),
+                    _buildEditableText(_headerContactNameCtrl, 12),
+                    _buildEditableText(_headerCompanyAddressCtrl, 12, maxLines: null),
+                  ],
                 ),
-                Text(
-                  '${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}',
-                  style: TextStyle(fontSize: 12, color: Colors.black87),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
+              ),
+              SizedBox(
+                width: 150,
+                child: _buildEditableText(_headerDateCtrl, 12, textAlign: TextAlign.right),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-  
   Widget _buildProfessionalFooter() {
     if (_currentDesignId != 'monogram') return SizedBox.shrink();
     

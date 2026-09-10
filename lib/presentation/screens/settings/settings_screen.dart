@@ -76,6 +76,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   bool _isLoading = true;
   bool _jobcenterMode = false;
+  bool _aiCvAssistantEnabled = false;
 
   final _presets = {
     'IT / Software': 'Tech-Stack, Portfolio-Link, Remote-Anteil',
@@ -123,6 +124,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final aiModelSetting = await dao.getSettingByKey('aiModelName');
     _aiModelController.text = aiModelSetting?.value ?? 'llama3.2';
     final imapEmailSetting = await dao.getSettingByKey('imapEmail');
+    final aiCvSetting = await dao.getSettingByKey('aiCvAssistantEnabled');
 
     if (mounted) {
       setState(() {
@@ -142,6 +144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _customColumnsController.text = _customColumns;
         _jobcenterMode = jobcenterSetting?.value == 'true';
         _spellCheckLanguage = spellLangSetting?.value ?? 'de';
+        _aiCvAssistantEnabled = aiCvSetting?.value == 'true';
 
         _selectedMailProvider = imapProviderSetting?.value ?? 'Manuell';
         _imapServerController.text = imapServerSetting?.value ?? '';
@@ -196,6 +199,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
     await dao.insertOrUpdateSetting(
       Setting(key: 'aiModelName', value: _aiModelController.text),
+    );
+    await dao.insertOrUpdateSetting(
+      Setting(key: 'aiCvAssistantEnabled', value: _aiCvAssistantEnabled.toString()),
     );
 
     await dao.insertOrUpdateSetting(
@@ -832,6 +838,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
               ),
+              // Lokale KI-Assistenz
+              Card(
+                elevation: 0,
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.auto_awesome),
+                          SizedBox(width: 8),
+                          Text('Lokale KI-Assistenz', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SwitchListTile(
+                        secondary: const Icon(Icons.auto_awesome),
+                        title: const Text('KI-Zauberstab im Lebenslauf-Editor aktivieren'),
+                        subtitle: const Text('Nutzt den lokalen Ollama Server, um Beschreibungstexte im Lebenslauf professioneller zu formulieren.'),
+                        value: _aiCvAssistantEnabled,
+                        onChanged: (val) {
+                          setState(() => _aiCvAssistantEnabled = val);
+                          _saveSettings();
+                        },
+                      ),
+                      if (_aiCvAssistantEnabled) ...[
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextField(
+                                controller: _aiUrlController,
+                                decoration: const InputDecoration(labelText: 'Ollama API URL', border: OutlineInputBorder(), hintText: 'http://localhost:11434/api/generate'),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextField(
+                                controller: _aiModelController,
+                                decoration: const InputDecoration(labelText: 'Modell Name', border: OutlineInputBorder(), hintText: 'llama3.2'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: ElevatedButton(onPressed: _saveSettings, child: Text(AppLocalizations.of(context)!.settingsImapSave)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
 
               // IMAP E-Mail Integration
@@ -1309,6 +1372,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             MaterialPageRoute(
                               builder: (_) => const ChangelogScreen(),
                             ),
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.description_outlined),
+                        title: const Text('Open-Source-Lizenzen'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          showLicensePage(
+                            context: context,
+                            applicationName: 'Bewerbungszentrale',
+                            applicationVersion: '0.6.1 Alpha',
+                            applicationLegalese: '© 2026 Alle Rechte vorbehalten.',
                           );
                         },
                       ),

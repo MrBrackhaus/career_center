@@ -6,14 +6,31 @@ import 'package:intl/intl.dart';
 import '../../providers/streak_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../providers/applications_provider.dart';
+import '../../providers/auto_updater_provider.dart';
+import '../settings/widgets/update_banner.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../data/database/app_database.dart';
+import '../../../domain/entities/application_entity.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(autoUpdaterProvider.notifier).checkForUpdates();
+    });
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
     final applicationsAsync = ref.watch(applicationsProvider);
     final stats = ref.watch(statsProvider);
 
@@ -28,7 +45,7 @@ class DashboardScreen extends ConsumerWidget {
                 Tab(text: AppLocalizations.of(context)!.dashboardTabTotal),
               ],
             ),
-            body: TabBarView(
+            body: Column(children: [const UpdateBanner(), Expanded(child: TabBarView(
               children: [
                 _buildWeeklyTab(
                   context,
@@ -40,6 +57,9 @@ class DashboardScreen extends ConsumerWidget {
               ],
             ),
           ),
+        ],
+      ),
+          ),
         );
       },
       loading: () =>
@@ -50,7 +70,7 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildWeeklyTab(
     BuildContext context,
-    List<Application> applications,
+    List<ApplicationEntity> applications,
     ApplicationStats stats,
     AsyncValue<StreakData> streakAsync,
   ) {
@@ -72,7 +92,7 @@ class DashboardScreen extends ConsumerWidget {
     }).toList();
 
     final thisWeekRejections = thisWeekApps
-        .where((app) => app.status.toLowerCase() == 'absage')
+        .where((ApplicationEntity app) => app.status.toLowerCase() == 'absage')
         .length;
 
     final overdueFollowUps = applications
@@ -261,7 +281,7 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildOverallTab(
     BuildContext context,
-    List<Application> applications,
+    List<ApplicationEntity> applications,
     ApplicationStats stats,
   ) {
     final total = stats.total;
@@ -273,7 +293,7 @@ class DashboardScreen extends ConsumerWidget {
     double rejectionRate = total > 0 ? (rejected / total * 100) : 0.0;
 
     int validCommuteCount = 0;
-    int totalCommute = 0;
+    double totalCommute = 0;
     for (var app in applications) {
       if (app.commuteCar != null) {
         totalCommute += app.commuteCar!;

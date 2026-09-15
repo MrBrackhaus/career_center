@@ -1,31 +1,14 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../data/database/app_database.dart';
+import '../../domain/models/application_form_dto.dart';
+import '../../domain/entities/application_entity.dart';
 import 'database_provider.dart';
 
-final applicationsProvider = StreamProvider<List<Application>>((ref) {
+final applicationsProvider = StreamProvider.autoDispose<List<ApplicationEntity>>((ref) {
   final repository = ref.watch(applicationsRepositoryProvider);
   return repository.watchAllApplications();
 });
 
-final applicationByIdProvider = FutureProvider.family<Application, int>((
+final applicationByIdProvider = FutureProvider.autoDispose.family<ApplicationEntity?, int>((
   ref,
   id,
 ) async {
@@ -33,25 +16,34 @@ final applicationByIdProvider = FutureProvider.family<Application, int>((
   return await repository.getApplicationById(id);
 });
 
-// A simple state notifier to handle adding/updating without returning streams
 class ApplicationNotifier {
   final Ref _ref;
 
   ApplicationNotifier(this._ref);
 
-  Future<int> addApplication(ApplicationsCompanion app) async {
+  Future<int> addApplication(ApplicationFormDto dto) async {
     final repository = _ref.read(applicationsRepositoryProvider);
-    return await repository.addApplication(app);
+    return await repository.addApplication(dto);
   }
 
-  Future<void> updateApplication(ApplicationsCompanion app) async {
+  Future<void> updateApplication(ApplicationFormDto dto) async {
     final repository = _ref.read(applicationsRepositoryProvider);
-    await repository.updateApplication(app);
+    await repository.updateApplication(dto);
   }
 
-  Future<void> deleteApplication(Application app) async {
+  Future<void> updateCoverLetterContent(int id, String content) async {
     final repository = _ref.read(applicationsRepositoryProvider);
-    await repository.deleteApplication(app);
+    await repository.updateCoverLetterContent(id, content);
+  }
+
+  Future<void> updateJobDescription(int id, String text) async {
+    final repository = _ref.read(applicationsRepositoryProvider);
+    await repository.updateJobDescription(id, text);
+  }
+
+  Future<void> deleteApplication(ApplicationEntity app) async {
+    final repository = _ref.read(applicationsRepositoryProvider);
+    await repository.deleteApplication(app.id);
   }
 }
 

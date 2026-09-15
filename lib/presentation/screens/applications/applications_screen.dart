@@ -1,23 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:pdfrx/pdfrx.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:html/parser.dart' as html_parser;
+import '../../../core/services/document_sanitizer_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:career_center/l10n/app_localizations.dart';
 
+import '../../../domain/entities/application_entity.dart';
+import '../../../domain/models/application_form_dto.dart';
 import '../../providers/applications_provider.dart';
-import '../../providers/imap_provider.dart';
 import '../../providers/database_provider.dart';
-import '../../../data/database/app_database.dart';
-
-import 'package:drift/drift.dart' as drift;
+import '../../providers/imap_provider.dart';
 
 import 'widgets/ai_cover_letter_dialog.dart';
 import '../onboarding/tutorial_flow.dart';
 import 'widgets/application_card.dart';
 import 'email_scanner_dialog.dart';
+import 'dart:developer' show log;
 
 class ApplicationsScreen extends ConsumerStatefulWidget {
   const ApplicationsScreen({super.key});
@@ -30,7 +29,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   String _searchQuery = '';
   String? _statusFilter;
   bool _isKanbanView = false;
-  Application? _selectedApplication;
+  ApplicationEntity? _selectedApplication;
 
   @override
   void initState() {
@@ -119,27 +118,26 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                 final count = await ref
                                     .read(imapSyncProvider.notifier)
                                     .syncEmails();
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        count > 0
-                                            ? 'Sync abgeschlossen! $count neue/aktualisierte Bewerbungen gefunden.'
-                                            : 'Sync abgeschlossen! Keine neuen Antworten gefunden.',
-                                      ),
-                                      backgroundColor: Colors.green,
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      count > 0
+                                          ? 'Sync abgeschlossen! $count neue/aktualisierte Bewerbungen gefunden.'
+                                          : 'Sync abgeschlossen! Keine neuen Antworten gefunden.',
                                     ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Fehler beim Sync: $e'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } on Exception catch (e, st) {
+                                log('An error occurred: $e', error: e, stackTrace: st);
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Fehler beim Sync: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
                               }
                             },
                       icon: const Icon(Icons.sync),
@@ -258,9 +256,9 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 if (filteredApps.isEmpty) {
                   return Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: const EdgeInsets.all(16.0),
                       child: Container(
-                        padding: const EdgeInsets.all(40),
+                        padding: const EdgeInsets.all(24),
                         constraints: const BoxConstraints(maxWidth: 450),
                         decoration: BoxDecoration(
                           color: Theme.of(context)
@@ -381,7 +379,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  Widget _buildDossierPanel(Application app) {
+  Widget _buildDossierPanel(ApplicationEntity app) {
     final colorScheme = Theme.of(context).colorScheme;
     final hasLogoUrl = app.companyUrl != null && app.companyUrl!.isNotEmpty;
     String? logoUrl;
@@ -390,6 +388,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         final uri = Uri.parse(app.companyUrl!);
         logoUrl = 'https://logo.clearbit.com/${uri.host}';
       } catch (_) {}
+        log('An error occurred');
     }
 
     return Container(
@@ -558,46 +557,23 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                                       if (file == null) return;
                                                       final bytes = await file
                                                           .readAsBytes();
-                                                      final doc =
-                                                          await PdfDocument.openData(
-                                                            bytes,
-                                                          );
-                                                      final StringBuffer
-                                                      textBuf = StringBuffer();
-                                                      for (var page
-                                                          in doc.pages) {
-                                                        final pageText =
-                                                            await page
-                                                                .loadText();
-                                                        if (pageText != null) {
-                                                          textBuf.writeln(
-                                                            pageText.fullText,
-                                                          );
-                                                        }
-                                                      }
-                                                      doc.dispose();
-                                                      final resultText = textBuf
-                                                          .toString()
-                                                          .replaceAll(
-                                                            '\u00A0',
-                                                            ' ',
-                                                          );
+                                                      final resultText = await DocumentSanitizerService.extractTextFromPdf(bytes);
                                                       setStateDialog(() {
                                                         controller.text =
                                                             resultText;
                                                       });
-                                                    } catch (e) {
-                                                      if (context.mounted) {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                              'Fehler beim Auslesen: ',
-                                                            ),
+                                                    } on Exception catch (e, st) {
+                                                      log('An error occurred: $e', error: e, stackTrace: st);
+                                                      if (!context.mounted) return;
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Fehler beim Auslesen: ',
                                                           ),
-                                                        );
-                                                      }
+                                                        ),
+                                                      );
                                                     }
                                                   },
                                                   icon: const Icon(
@@ -633,26 +609,14 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
 
                             if (jobDesc.trim().startsWith('<') ||
                                 jobDesc.contains('<!DOCTYPE')) {
-                              try {
-                                final doc = html_parser.parse(jobDesc);
-                                jobDesc =
-                                    doc.body?.text ??
-                                    doc.documentElement?.text ??
-                                    jobDesc;
-                                jobDesc = jobDesc
-                                    .replaceAll(RegExp(r'\s+'), ' ')
-                                    .trim();
-                              } catch (_) {}
+                              jobDesc = DocumentSanitizerService.sanitizeHtml(jobDesc);
                             }
 
-                            final db = ref.read(databaseProvider);
-                            await db.applicationsDao.updateApplication(
-                              app.copyWith(
-                                jobDescriptionText: drift.Value(jobDesc),
-                              ),
-                            );
+                            final notifier = ref.read(applicationNotifierProvider);
+                            await notifier.updateJobDescription(app.id, jobDesc);
                           }
 
+                          if (!mounted) return;
                           final success = await showDialog<bool>(
                             context: context,
                             barrierDismissible: false,
@@ -661,29 +625,21 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                               position: app.position,
                               jobDescription: jobDesc,
                               onCoverLetterGenerated: (deltaJson) async {
-                                final db = ref.read(databaseProvider);
-                                await db.applicationsDao.updateApplication(
-                                  app.copyWith(
-                                    coverLetterContent: drift.Value(deltaJson),
-                                    jobDescriptionText: drift.Value(jobDesc),
-                                  ),
-                                );
+                                final notifier = ref.read(applicationNotifierProvider);
+                                await notifier.updateCoverLetterContent(app.id, deltaJson);
+                                await notifier.updateJobDescription(app.id, jobDesc);
 
-                                final newTemplate = TemplatesCompanion(
-                                  name: drift.Value(
-                                    'Anschreiben - ${app.company}',
-                                  ),
-                                  type: const drift.Value('anschreiben'),
-                                  content: drift.Value(deltaJson),
-                                  applicationId: drift.Value(app.id),
-                                  createdAt: drift.Value(DateTime.now()),
-                                );
-                                await db.templatesDao.insertTemplate(
-                                  newTemplate,
+                                final tRepo = ref.read(templatesRepositoryProvider);
+                                await tRepo.addTemplate(
+                                  'Anschreiben - ${app.company}',
+                                  'anschreiben',
+                                  deltaJson,
+                                  applicationId: app.id,
                                 );
                               },
                             ),
                           );
+                          if (!mounted) return;
                           if (success == true) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -827,7 +783,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  Widget _buildTimelineForApp(Application app, BuildContext context) {
+  Widget _buildTimelineForApp(ApplicationEntity app, BuildContext context) {
     final status = app.status.toLowerCase();
 
     final isVersendet =
@@ -892,7 +848,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, Application app) async {
+  Future<void> _confirmDelete(BuildContext context, ApplicationEntity app) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -917,7 +873,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
     if (confirmed == true) {
       ref.read(applicationNotifierProvider).deleteApplication(app);
-      if (mounted) {
+      if (context.mounted) {
         setState(() {
           if (_selectedApplication?.id == app.id) _selectedApplication = null;
         });
@@ -927,7 +883,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     }
   }
 
-  Widget _buildKanbanBoard(List<Application> apps) {
+  Widget _buildKanbanBoard(List<ApplicationEntity> apps) {
     final columns = [
       {'status': 'offen', 'title': 'In Vorbereitung'},
       {'status': 'versendet', 'title': 'Warten auf Antwort'},
@@ -944,15 +900,33 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
           .where((a) => a.status.toLowerCase() == status)
           .toList();
 
-      return DragTarget<Application>(
+      return DragTarget<ApplicationEntity>(
         onWillAcceptWithDetails: (details) =>
             details.data.status.toLowerCase() != status,
         onAcceptWithDetails: (details) async {
           final app = details.data;
-          final repository = ref.read(applicationsRepositoryProvider);
-          await repository.updateApplication(
-            app.copyWith(status: status).toCompanion(false),
+          final notifier = ref.read(applicationNotifierProvider);
+          final dto = ApplicationFormDto(
+            id: app.id,
+            company: app.company,
+            position: app.position,
+            status: status,
+            notes: app.notes,
+            rejectionReason: app.rejectionReason,
+            appliedDate: app.appliedDate,
+            followupDate: app.followupDate,
+            commuteCar: app.commuteCar,
+            salaryWish: app.salaryWish,
+            jobUrl: app.jobUrl,
+            companyUrl: app.companyUrl,
+            contactName: app.contactName,
+            contactEmail: app.contactEmail,
+            contactPhone: app.contactPhone,
+            address: app.address,
+            customFields: app.customFields,
+            jobDescriptionText: app.jobDescriptionText,
           );
+          await notifier.updateApplication(dto);
         },
         builder: (context, candidateData, rejectedData) {
           final isHovering = candidateData.isNotEmpty;
@@ -1027,7 +1001,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       itemCount: columnApps.length,
                       itemBuilder: (context, index) {
                         final app = columnApps[index];
-                        return Draggable<Application>(
+                        return Draggable<ApplicationEntity>(
                           data: app,
                           feedback: Material(
                             elevation: 8,
@@ -1076,7 +1050,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  Widget _buildKanbanCard(Application app, bool isArchive) {
+  Widget _buildKanbanCard(ApplicationEntity app, bool isArchive) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 0,

@@ -32,6 +32,12 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
   final _controller = TextEditingController();
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final notesAsync = ref.watch(notesProvider(widget.applicationId));
 
@@ -62,23 +68,20 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
         const SizedBox(height: 16),
         notesAsync.when(
           data: (notes) {
-            if (notes.isEmpty)
-              return const Text(
+            if (notes.isEmpty) {
+              return Text(
                 'Noch keine Notizen.',
-                style: TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               );
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: notes.length,
-              itemBuilder: (context, i) {
-                final note = notes[i];
+            }
+            return Column(
+              children: notes.map((note) {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 8),
                   child: ListTile(
                     title: Text(note.content),
                     subtitle: Text(
-                      '${note.createdAt?.day}.${note.createdAt?.month}.${note.createdAt?.year} ${note.createdAt?.hour}:${note.createdAt?.minute.toString().padLeft(2, '0')}',
+                      '${note.createdAt.day}.${note.createdAt.month}.${note.createdAt.year} ${note.createdAt.hour}:${note.createdAt.minute.toString().padLeft(2, '0')}',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, size: 16),
@@ -91,7 +94,7 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
                     ),
                   ),
                 );
-              },
+              }).toList(),
             );
           },
           loading: () => const CircularProgressIndicator(),
@@ -102,7 +105,7 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
   }
 
   void _addNote() {
-    if (_controller.text.trim().isEmpty) return;
+    if (_controller.text.trim().isEmpty) { return; }
     ref
         .read(notesNotifierProvider(widget.applicationId).notifier)
         .addNote(_controller.text.trim());

@@ -3,15 +3,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/database/app_database.dart';
+import '../../../domain/entities/application_entity.dart';
+import '../../../domain/entities/document_entity.dart';
+import '../../../domain/models/application_form_dto.dart';
+
+import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
 
-import 'package:drift/drift.dart' as drift;
-
 import '../../providers/smtp_provider.dart';
+import 'dart:developer' show log;
 
 class EmailComposerDialog extends ConsumerStatefulWidget {
-  final Application application;
+  final ApplicationEntity application;
 
   const EmailComposerDialog({super.key, required this.application});
 
@@ -26,8 +29,16 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
   final _bodyController = TextEditingController();
   bool _isLoading = false;
   bool _isGenerating = false;
-  List<Document> _documents = [];
+  List<DocumentEntity> _documents = [];
   Set<int> _selectedDocIds = {};
+
+  @override
+  void dispose() {
+    _toController.dispose();
+    _subjectController.dispose();
+    _bodyController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -38,8 +49,7 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
   }
 
   Future<void> _loadDocuments() async {
-    final db = ref.read(databaseProvider);
-    final docs = await db.documentsDao
+    final docs = await ref.read(documentsRepositoryProvider)
         .watchDocumentsForApplication(widget.application.id)
         .first;
     if (mounted) {
@@ -53,8 +63,7 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
   Future<void> _generateDraft() async {
     setState(() => _isGenerating = true);
     try {
-      final db = ref.read(databaseProvider);
-      final profileDao = db.settingsDao;
+      final profileDao = ref.read(settingsRepositoryProvider);
       final name =
           (await profileDao.getSettingByKey('userName'))?.value ?? 'Bewerber';
       final skills =
@@ -70,7 +79,6 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
           : 'Sehr geehrte/r $contact';
 
       // Simple rule-based generation (Local Template)
-      await Future.delayed(const Duration(seconds: 1)); // Simulate AI thinking
 
       final draft =
           '''
@@ -92,13 +100,15 @@ $name
       if (mounted) {
         _bodyController.text = draft;
       }
-    } catch (e) {
-      if (mounted)
+    } on Exception catch (e, st) {
+      log('An error occurred: $e', error: e, stackTrace: st);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Fehler bei Entwurf-Generierung: $e')),
         );
+      }
     } finally {
-      if (mounted) setState(() => _isGenerating = false);
+      if (mounted) { setState(() => _isGenerating = false); }
     }
   }
 
@@ -114,14 +124,13 @@ $name
 
     setState(() => _isLoading = true);
     try {
-      final db = ref.read(databaseProvider);
 
       final smtpServer =
-          (await db.settingsDao.getSettingByKey('smtpServer'))?.value ?? '';
+          (await ref.read(settingsRepositoryProvider).getSettingByKey('smtpServer'))?.value ?? '';
       final smtpPortStr =
-          (await db.settingsDao.getSettingByKey('smtpPort'))?.value ?? '465';
+          (await ref.read(settingsRepositoryProvider).getSettingByKey('smtpPort'))?.value ?? '465';
       final userEmail =
-          (await db.settingsDao.getSettingByKey('imapEmail'))?.value ?? '';
+          (await ref.read(settingsRepositoryProvider).getSettingByKey('imapEmail'))?.value ?? '';
 
       if (smtpServer.isEmpty || userEmail.isEmpty) {
         throw Exception(
@@ -134,6 +143,7 @@ $name
       final attachments = _documents
           .where((d) => _selectedDocIds.contains(d.id))
           .map((d) => File(d.filePath))
+          .where((f) => f.existsSync())
           .toList();
 
       await ref
@@ -150,14 +160,30 @@ $name
 
       // E-Mail erfolgreich versendet -> Bewerbungsstatus anpassen
       if (widget.application.status == 'offen') {
-        await db.applicationsDao.updateApplication(
-          widget.application.copyWith(
-            status: 'versendet',
-            appliedDate: drift.Value(DateTime.now()),
-          ),
+        final dto = ApplicationFormDto(
+          id: widget.application.id,
+          company: widget.application.company,
+          position: widget.application.position,
+          status: 'versendet',
+          notes: widget.application.notes,
+          rejectionReason: widget.application.rejectionReason,
+          appliedDate: DateTime.now(),
+          followupDate: widget.application.followupDate,
+          commuteCar: widget.application.commuteCar,
+          salaryWish: widget.application.salaryWish,
+          jobUrl: widget.application.jobUrl,
+          companyUrl: widget.application.companyUrl,
+          contactName: widget.application.contactName,
+          contactEmail: widget.application.contactEmail,
+          contactPhone: widget.application.contactPhone,
+          address: widget.application.address,
+          customFields: widget.application.customFields,
+          jobDescriptionText: widget.application.jobDescriptionText,
         );
+        await ref.read(applicationNotifierProvider).updateApplication(dto);
       }
 
+      if (!mounted) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -167,16 +193,18 @@ $name
         );
         Navigator.of(context).pop(true);
       }
-    } catch (e) {
-      if (mounted)
+    } on Exception catch (e, st) {
+      log('An error occurred: $e', error: e, stackTrace: st);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Fehler beim Senden: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) { setState(() => _isLoading = false); }
     }
   }
 
@@ -185,8 +213,9 @@ $name
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: 800,
-        height: 600,
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.9,
+        constraints: const BoxConstraints(maxWidth: 800, maxHeight: 600),
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -211,10 +240,10 @@ $name
                             strokeWidth: 2,
                           ),
                         )
-                      : const Icon(Icons.auto_awesome),
-                  label: const Text('KI-Entwurf'),
+                      : const Icon(Icons.draw_outlined),
+                  label: const Text('Text-Entwurf'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C6AF7),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 8),

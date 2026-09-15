@@ -17,6 +17,7 @@
  */
 import 'package:enough_mail/enough_mail.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:developer' show log;
 import 'package:drift/drift.dart' as drift;
 
 import '../../data/database/app_database.dart';
@@ -64,42 +65,39 @@ class ImapService {
 
   // ── Parsing helpers (delegiert an EmailResponseExtractor) ──────────────────
 
+  static final _companyPattern = RegExp(
+    r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([A-Za-zÄÖÜäöüß\s\-\&.,]{1,60}(?:GmbH(?:\s*\&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
+    caseSensitive: false,
+  );
+
+  static final _contactPattern = RegExp(
+    r'Sehr\s+geehrte[r]?\s+(Frau|Herr)\s+([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+){0,3})',
+  );
+
+  static final _positionPattern1 = RegExp(
+    r'[Bb]ewerbung\s+als\s+(.+?)(?:\s*[-\u2013\u2014]|\s*\(m|$)',
+    caseSensitive: false,
+  );
+
+  static final _positionPattern2 = RegExp(
+    r'[Bb]ewerbung\s*[-\u2013\u2014]\s*(.+?)(?:\s*\(m|$)',
+    caseSensitive: false,
+  );
+
   static String _extractPosition(String subject) {
     final cleanSubject = EmailResponseExtractor.stripReplyPrefix(subject);
-    final patterns = [
-      RegExp(
-        r'[Bb]ewerbung\s+als\s+(.+?)(?:\s*[-\u2013\u2014]|\s*\(m|$)',
-        caseSensitive: false,
-      ),
-      RegExp(
-        r'[Bb]ewerbung\s*[-\u2013\u2014]\s*(.+?)(?:\s*\(m|$)',
-        caseSensitive: false,
-      ),
-    ];
-    for (final p in patterns) {
-      final m = p.firstMatch(cleanSubject);
-      if (m != null) {
-        final pos = m.group(1)?.trim() ?? '';
-        if (pos.isNotEmpty) return pos;
-      }
+    final match = _positionPattern1.firstMatch(cleanSubject) ?? _positionPattern2.firstMatch(cleanSubject);
+    if (match != null) {
+      return match.group(1)?.trim() ?? cleanSubject.trim();
     }
     return cleanSubject.trim();
   }
 
   static String _extractCompanyFromBody(String body) {
-    final companyPatterns = [
-      RegExp(
-        r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?'
-        r'([\w\s\-\&.,\u00c4\u00d6\u00dc\u00e4\u00f6\u00fc\u00df]+?(?:GmbH(?:\s*\&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
-        caseSensitive: false,
-      ),
-    ];
-    for (final p in companyPatterns) {
-      final m = p.firstMatch(body);
-      if (m != null) {
-        final name = m.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
-        if (name.isNotEmpty && name.length < 60) return name;
-      }
+    final m = _companyPattern.firstMatch(body);
+    if (m != null) {
+      final name = m.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+      if (name.isNotEmpty && name.length < 60) return name;
     }
     return '';
   }
@@ -108,19 +106,13 @@ class ImapService {
       EmailResponseExtractor.extractCompanyFromDomain(recipientEmail);
 
   static String _extractContact(String body) {
-    final p = RegExp(
-      r'Sehr\s+geehrte[r]?\s+(Frau|Herr)\s+([A-Z\u00c4\u00d6\u00dc][a-z\u00e4\u00f6\u00fc\u00df]+(?:\s+[A-Z\u00c4\u00d6\u00dc][a-z\u00e4\u00f6\u00fc\u00df]+)*)',
-    );
-    final m = p.firstMatch(body);
+    final m = _contactPattern.firstMatch(body);
     if (m != null) return '${m.group(1)} ${m.group(2)}'.trim();
     return '';
   }
 
   static String _stripReplyPrefix(String subject) =>
       EmailResponseExtractor.stripReplyPrefix(subject);
-
-  static bool _isReply(String subject) =>
-      EmailResponseExtractor.isReply(subject);
 
   static String? _detectApplicationStatus(String subject, String body) =>
       EmailResponseExtractor.detectStatus(subject, body);
@@ -191,6 +183,14 @@ class ImapService {
         );
         final sentMessages = fetchResult.messages;
 
+        final companyRegexes = <int, RegExp>{};
+        for (final app in applications) {
+          final appCompany = app.company.toLowerCase();
+          if (appCompany.isNotEmpty && appCompany.length > 2) {
+            companyRegexes[app.id] = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
+          }
+        }
+
         for (final msg in sentMessages) {
           final rawToAddresses =
               msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
@@ -213,11 +213,8 @@ class ImapService {
               if (appEmail.isNotEmpty && toAddresses.contains(appEmail)) {
                 matched = true;
               } else if (appCompany.isNotEmpty && appCompany.length > 2) {
-                final companyRegex = RegExp(
-                  r'\b' + RegExp.escape(appCompany) + r'\b',
-                );
-                if (companyRegex.hasMatch(subjectLower) ||
-                    companyRegex.hasMatch(bodyLower)) {
+                final companyRegex = companyRegexes[app.id];
+                if (companyRegex != null && (companyRegex.hasMatch(subjectLower) || companyRegex.hasMatch(bodyLower))) {
                   matched = true;
                 }
               }
@@ -229,7 +226,7 @@ class ImapService {
                   ),
                 );
                 final msgId =
-                    msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
+                    msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
                 final existingEmail = await db.emailsDao.getEmailByMessageId(
                   msgId,
                 );
@@ -312,7 +309,7 @@ class ImapService {
             EmailsCompanion.insert(
               applicationId: appId,
               messageId:
-                  msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString(),
+                  msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}'),
               subject: subject.isNotEmpty ? subject : 'Kein Betreff',
               sender: recipientEmail.isNotEmpty
                   ? 'An: $recipientEmail'
@@ -337,11 +334,19 @@ class ImapService {
         criteria: 'BODY.PEEK[]',
       );
 
+      final companyRegexes = <int, RegExp>{};
+      for (final app in updatedApps) {
+        final appCompany = app.company.toLowerCase();
+        if (appCompany.isNotEmpty && appCompany.length > 2) {
+          companyRegexes[app.id] = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
+        }
+      }
+
       for (final msg in inboxResult.messages) {
-        final fromAddress = msg.from?.first.email.toLowerCase() ?? '';
+        final fromAddress = msg.from?.firstOrNull?.email.toLowerCase() ?? '';
         final subject = msg.decodeSubject()?.toLowerCase() ?? '';
         final body = msg.decodeTextPlainPart()?.toLowerCase() ?? '';
-        final msgId = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
+        final msgId = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
 
         final existing = await db.emailsDao.getEmailByMessageId(msgId);
         if (existing != null) continue;
@@ -359,11 +364,10 @@ class ImapService {
               matched = true;
             } else {
               // Word boundary check to prevent "it" matching "mit"
-              final companyRegex = RegExp(
-                r'\b' + RegExp.escape(appCompany) + r'\b',
-              );
-              if (companyRegex.hasMatch(subject) ||
-                  companyRegex.hasMatch(body)) {
+              final companyRegex = companyRegexes[app.id];
+              if (companyRegex != null &&
+                  (companyRegex.hasMatch(subject) ||
+                      companyRegex.hasMatch(body))) {
                 matched = true;
               }
             }
@@ -375,7 +379,7 @@ class ImapService {
                 applicationId: app.id,
                 messageId: msgId,
                 subject: msg.decodeSubject() ?? 'Kein Betreff',
-                sender: msg.from?.first.toString() ?? 'Unbekannt',
+                sender: msg.from?.firstOrNull?.toString() ?? 'Unbekannt',
                 bodySnippet: body.length > 200
                     ? '${body.substring(0, 200)}...'
                     : body,
@@ -415,7 +419,7 @@ class ImapService {
         Setting(key: 'last_imap_sync', value: DateTime.now().toIso8601String()),
       );
     } catch (e) {
-      print('IMAP Sync Error: $e');
+      log('IMAP Sync Error: $e', name: 'ImapService');
     } finally {
       await client.disconnect();
     }
@@ -473,7 +477,7 @@ class ImapService {
           final subject = msg.decodeSubject() ?? '';
           final body = msg.decodeTextPlainPart() ?? '';
           final date = msg.decodeDate() ?? DateTime.now();
-          final uid = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
+          final uid = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
           final recipientEmail = toAddresses.isNotEmpty
               ? toAddresses.first
               : '';
@@ -519,11 +523,11 @@ class ImapService {
       );
 
       for (final msg in inboxFetch.messages) {
-        final from = msg.from?.first.email.toLowerCase() ?? '';
+        final from = msg.from?.firstOrNull?.email.toLowerCase() ?? '';
         final subject = msg.decodeSubject() ?? '';
         final body = msg.decodeTextPlainPart() ?? '';
         final date = msg.decodeDate() ?? DateTime.now();
-        final uid = msg.decodeHeaderValue('Message-ID') ?? msg.uid.toString();
+        final uid = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
 
         final detectedStatus = _detectApplicationStatus(subject, body);
 

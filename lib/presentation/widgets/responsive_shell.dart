@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:window_manager/window_manager.dart';
+import 'dart:developer' show log;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,8 +16,9 @@ class ResponsiveShell extends ConsumerWidget {
   Widget _buildStreakBadge(AsyncValue<StreakData> streakAsync, bool expanded) {
     return streakAsync.when(
       data: (data) {
-        if (data.streakCount == 0 && data.currentWeekCount == 0)
-          return const SizedBox.shrink();
+        if (data.streakCount == 0 && data.currentWeekCount == 0) {
+          return const SizedBox.shrink(); 
+        }
         return Tooltip(
           message:
               'Ziel: ${data.weeklyGoal} Bewerbungen/Woche\nAktuell: ${data.currentWeekCount} Bewerbungen',
@@ -58,7 +60,10 @@ class ResponsiveShell extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+      error: (e, st) {
+        log('Error in streakProvider: $e', error: e, stackTrace: st);
+        return const SizedBox.shrink();
+      },
     );
   }
 
@@ -143,7 +148,9 @@ class ResponsiveShell extends ConsumerWidget {
     int currentIndex = navItems.indexWhere(
       (item) => location.startsWith(item.path),
     );
-    if (currentIndex == -1) currentIndex = 0; // Default
+    if (currentIndex == -1) {
+      currentIndex = 0; // Default
+    }
 
     return Material(
       color: Theme.of(context).colorScheme.surface,

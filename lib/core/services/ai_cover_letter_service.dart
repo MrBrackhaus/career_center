@@ -2,6 +2,37 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'package:flutter/foundation.dart';
+
+String processAiResponse(List<int> bodyBytes) {
+  final jsonResponse = jsonDecode(utf8.decode(bodyBytes));
+  String result = jsonResponse['response'] ?? '';
+
+  // Post-Processing um evtl. Markdown und Gesprächsfetzen zu entfernen
+  result = result.replaceAll(
+    RegExp(r'\*\*.*?\*\*'),
+    '',
+  ); // Entfernt fettgedruckte Hinweise wie **Anschreiben**
+  result = result.replaceAll(
+    RegExp(r'Hier ist.*?:', caseSensitive: false),
+    '',
+  );
+  result = result.replaceAll(
+    RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false),
+    '',
+  );
+  result = result.replaceAll(
+    RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false),
+    '',
+  );
+  result = result.replaceAll(
+    RegExp(r'Hier ist ein.*?:', caseSensitive: false),
+    '',
+  );
+
+  return result.trim();
+}
+
 class AiCoverLetterService {
   Future<String> generateCoverLetter({
     required String baseUrl,
@@ -46,35 +77,10 @@ Schreibe nun das Anschreiben basierend auf diesen Daten.
         'stream': false,
         'options': {'temperature': 0.3},
       }),
-    );
+    ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {
-      final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-      String result = jsonResponse['response'] ?? '';
-
-      // Post-Processing um evtl. Markdown und Gesprächsfetzen zu entfernen
-      result = result.replaceAll(
-        RegExp(r'\*\*.*?\*\*'),
-        '',
-      ); // Entfernt fettgedruckte Hinweise wie **Anschreiben**
-      result = result.replaceAll(
-        RegExp(r'Hier ist.*?:', caseSensitive: false),
-        '',
-      );
-      result = result.replaceAll(
-        RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false),
-        '',
-      );
-      result = result.replaceAll(
-        RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false),
-        '',
-      );
-      result = result.replaceAll(
-        RegExp(r'Hier ist ein.*?:', caseSensitive: false),
-        '',
-      );
-
-      return result.trim();
+      return await compute(processAiResponse, response.bodyBytes);
     } else {
       throw Exception(
         'Fehler beim Generieren: ${response.statusCode} ${response.body}',

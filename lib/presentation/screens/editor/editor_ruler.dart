@@ -63,8 +63,9 @@ class RulerPainter extends CustomPainter {
       double lineLength = 4;
       if (isCm) {
         lineLength = 12;
-      } else if (isHalfCm)
+      } else if (isHalfCm) {
         lineLength = 8;
+      }
 
       if (isHorizontal) {
         canvas.drawLine(

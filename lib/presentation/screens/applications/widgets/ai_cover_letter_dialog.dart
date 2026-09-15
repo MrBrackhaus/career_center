@@ -5,7 +5,8 @@ import 'dart:convert';
 
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
-import '../../../../data/database/app_database.dart';
+
+import '../../../../domain/entities/template_entity.dart';
 import '../../../providers/database_provider.dart';
 import '../../../providers/ai_cover_letter_provider.dart';
 
@@ -29,8 +30,8 @@ class AiCoverLetterDialog extends ConsumerStatefulWidget {
 }
 
 class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
-  Template? _selectedCv;
-  List<Template> _cvTemplates = [];
+  TemplateEntity? _selectedCv;
+  List<TemplateEntity> _cvTemplates = [];
   bool _isLoadingTemplates = true;
 
   @override
@@ -40,8 +41,8 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
   }
 
   Future<void> _loadTemplates() async {
-    final dao = ref.read(databaseProvider).templatesDao;
-    final templates = await dao.getAllTemplates();
+    final repo = ref.read(templatesRepositoryProvider);
+    final templates = await repo.getAllTemplates();
     final cvs = templates.where((t) => t.type == 'lebenslauf').toList();
     if (mounted) {
       setState(() {
@@ -67,7 +68,7 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
   Future<void> _generate() async {
     if (_selectedCv == null && _cvTemplates.isNotEmpty) return;
 
-    final dao = ref.read(databaseProvider).settingsDao;
+    final dao = ref.read(settingsRepositoryProvider);
 
     // Baue das Nutzerprofil zusammen
     final name = (await dao.getSettingByKey('userName'))?.value ?? '';
@@ -78,9 +79,9 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
 
     String userProfile =
         "Name: $name\nEmail: $email\nTelefon: $phone\nAdresse: $address\nSkills: $skills\n";
-    if (_selectedCv != null && _selectedCv!.content != null) {
+    if (_selectedCv != null) {
       userProfile +=
-          "\n=== LEBENSLAUF ===\n${_extractPlainTextFromDelta(_selectedCv!.content!)}";
+          "\n=== LEBENSLAUF ===\n${_extractPlainTextFromDelta(_selectedCv!.content)}";
     }
 
     final result = await ref
@@ -130,7 +131,7 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
                       style: TextStyle(color: Colors.orange),
                     )
                   else
-                    DropdownButtonFormField<Template>(
+                    DropdownButtonFormField<TemplateEntity>(
                       initialValue: _selectedCv,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),

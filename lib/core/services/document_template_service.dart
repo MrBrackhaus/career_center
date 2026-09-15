@@ -1,27 +1,27 @@
-import '../../data/database/app_database.dart';
-import '../../data/database/daos/settings_dao.dart';
+﻿import '../../domain/entities/application_entity.dart';
+import '../../data/repositories/settings_repository.dart';
 
 import 'package:intl/intl.dart';
 
 class DocumentTemplateService {
-  final SettingsDao _settingsDao;
+  final SettingsRepository _settingsRepository;
 
-  DocumentTemplateService(this._settingsDao);
+  DocumentTemplateService(this._settingsRepository);
 
   Future<String> generateHeader(
-    Application? application,
+    ApplicationEntity? application,
     String language,
   ) async {
     final name =
-        (await _settingsDao.getSettingByKey('userName'))?.value ??
+        (await _settingsRepository.getSettingByKey('userName'))?.value ??
         'Max Mustermann';
     final address =
-        (await _settingsDao.getSettingByKey('userAddress'))?.value ??
+        (await _settingsRepository.getSettingByKey('userAddress'))?.value ??
         'Musterstrasse 1';
     final zip =
-        (await _settingsDao.getSettingByKey('userZip'))?.value ?? '12345';
+        (await _settingsRepository.getSettingByKey('userZip'))?.value ?? '12345';
     final city =
-        (await _settingsDao.getSettingByKey('userCity'))?.value ??
+        (await _settingsRepository.getSettingByKey('userCity'))?.value ??
         'Musterstadt';
     final company = application?.company ?? 'Unternehmensname';
     final position = application?.position ?? 'Position';

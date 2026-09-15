@@ -11,6 +11,34 @@ class ChangelogScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            'Version 0.7.2 Alpha',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 14. September 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🚀 Neue Features & Verbesserungen', [
+            'Auto-Updater: Die App sucht nun automatisch über GitHub (MrBrackhaus/career_center) nach neuen Versionen. Updates können über ein neues Status-Banner bequem eingesehen und installiert werden.',
+            'Unterschriften-Funktion (Feature Comeback): Die vermisste Funktion ist zurück! Zeichne deine persönliche Unterschrift in den Einstellungen auf dem digitalen Zeichenbrett und stempel sie im Anschreiben-Editor als echtes Bild unter dein Dokument.',
+            'Profilbilder im Lebenslauf: Das im Editor ausgewählte Profilbild wird nun endlich beim Export in den PDF-Lebenslauf (Classic & Modern Design) gerendert (vorher war dies nur ein unfertiger Platzhalter).',
+            'Intelligente Fehlerberichte: Der Feedback-Dialog ("Bug melden") sendet nun bei jedem Bugreport vollautomatisch die exakte App- und Build-Version an Discord mit, um Support und Debugging zu erleichtern.',
+          ]),
+          _buildSection('🏗️ Architektur-Upgrade', [
+            'Clean Architecture: Die gesamte Code-Basis wurde nach den Prinzipien der "Clean Architecture" refaktorisiert (Trennung von UI, Domain- und Data-Layer).',
+            'Neue Repositories: Komplette Entkopplung der Datenbank. Einstellungen und E-Mails verwenden nun sichere Domain-Entities (SettingEntity, EmailEntity) statt direkter Datenbank-Modelle.',
+            'State-Management: Umstellung und Optimierung der Riverpod-Provider-Kette. Unnötige UI-Rebuilds wurden eliminiert.',
+            'Code-Gesundheit: Eine Code-KI hat in einem gewaltigen Audit über 100 Warnungen, Null-Safety- und Typ-Fehler (Drift-Mappers) in über 18 Dateien behoben. Der Code kompiliert nun fehlerfrei und stabil.',
+            'Entschlackung: Über 20 alte, ungenutzte Pakete und Abhängigkeiten wurden restlos entfernt. Die App startet nun schneller und ist schlanker.',
+          ]),
+          _buildSection('🛠️ Bugfixes', [
+            'App-Crash bei Datenbank-Migration: Ein schwerer Crash-Fehler durch fehlerhafte SQLite-Migration (doppelte Spalten, z.B. is_sent_by_me) beim App-Start wurde behoben.',
+            'Editor-UI Klammer-Glitches: Zahlreiche Layout-Fehler im Editor und Dashboard, die durch fehlerhafte Widget-Bäume entstanden waren, wurden repariert.',
+          ]),
+          const Divider(height: 48),
+          const Text(
             'Version 0.7.1 Alpha',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),

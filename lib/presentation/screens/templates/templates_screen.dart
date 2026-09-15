@@ -6,15 +6,19 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:file_selector/file_selector.dart';
-import 'package:drift/drift.dart' as drift;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/database/app_database.dart';
+
+import '../../../domain/entities/template_entity.dart';
 import '../../providers/database_provider.dart';
+
+import '../../providers/templates_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../editor/application_editor_screen.dart';
 import 'widgets/ki_workspace_chat.dart';
+import 'dart:developer' show log;
 
 class TemplatesScreen extends ConsumerStatefulWidget {
   const TemplatesScreen({super.key});
@@ -26,8 +30,6 @@ class TemplatesScreen extends ConsumerStatefulWidget {
 class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  List<Template> _templates = [];
-  bool _isLoading = true;
 
   final _promptPositionController = TextEditingController();
   final _promptCompanyController = TextEditingController();
@@ -53,18 +55,6 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
     _tabController.addListener(() {
       if (mounted) setState(() {});
     });
-    _loadTemplates();
-  }
-
-  Future<void> _loadTemplates() async {
-    final dao = ref.read(databaseProvider).templatesDao;
-    final templates = await dao.getAllTemplates();
-    if (mounted) {
-      setState(() {
-        _templates = templates;
-        _isLoading = false;
-      });
-    }
   }
 
   @override
@@ -118,29 +108,29 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
   }
 
   Widget _buildTemplatesList(String type) {
-    final filtered = _templates.where((t) => t.type == type).toList();
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (filtered.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text('Noch keine Dokumente', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _createNewTemplate(type),
-              icon: const Icon(Icons.add),
-              label: Text('Neues Dokument anlegen'),
+    final templatesAsync = ref.watch(templatesProvider(null));
+    
+    return templatesAsync.when(
+      data: (templates) {
+        final filtered = templates.where((t) => t.type == type).toList();
+        if (filtered.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                const Text('Noch keine Dokumente', style: TextStyle(fontSize: 18)),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _createNewTemplate(type),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Neues Dokument anlegen'),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -184,6 +174,10 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
         );
       },
     );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Fehler: $e')),
+    );
   }
 
   Widget _buildKiWorkspaceTab() {
@@ -222,10 +216,9 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
           final file = await openFile(acceptedTypeGroups: [typeGroup]);
           if (file == null) return;
 
-          if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(content: Text('Lese PDF aus...')));
-          }
+          if (!mounted) return;
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text('Lese PDF aus...')));
 
           final bytes = await file.readAsBytes();
           final doc = await PdfDocument.openData(bytes);
@@ -250,54 +243,42 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
           await File(savedPdfPath).create(recursive: true);
           await File(file.path).copy(savedPdfPath);
 
-          final newTemplate = TemplatesCompanion(
-            name: drift.Value(file.name),
-            type: const drift.Value('lebenslauf'),
-            content: drift.Value(resultText),
-            filePath: drift.Value(savedPdfPath),
-            createdAt: drift.Value(DateTime.now()),
+          await ref.read(templatesRepositoryProvider).addTemplate(file.name, 'lebenslauf', resultText, filePath: savedPdfPath);
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Lebenslauf-PDF erfolgreich als Original importiert!',
+              ),
+              backgroundColor: Colors.green,
+            ),
           );
-
-          final db = ref.read(databaseProvider);
-          await db.templatesDao.insertTemplate(newTemplate);
-
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Lebenslauf-PDF erfolgreich als Original importiert!',
-                ),
-                backgroundColor: Colors.green,
-              ),
-            );
-            _loadTemplates();
-          }
-        } catch (e) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Fehler beim Import: '),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+        } on Exception catch (e, st) {
+          log('An error occurred: $e', error: e, stackTrace: st);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Fehler beim Import: '),
+              backgroundColor: Colors.red,
+            ),
+          );
         }
         return;
       }
     }
 
-    if (context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) =>
-              ApplicationEditorScreen(template: null, initialType: type),
-        ),
-      ).then((_) => _loadTemplates());
-    }
+    if (!mounted) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ApplicationEditorScreen(template: null, initialType: type),
+      ),
+    ).then((_) {});
   }
 
-  void _editTemplate(Template template) {
+  void _editTemplate(TemplateEntity template) {
     if (template.filePath != null && template.filePath!.isNotEmpty) {
       if (Platform.isWindows) {
         Process.run('explorer', [template.filePath!]);
@@ -313,13 +294,12 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
       MaterialPageRoute(
         builder: (_) => ApplicationEditorScreen(template: template),
       ),
-    ).then((_) => _loadTemplates());
+    ).then((_) {});
   }
 
-  void _deleteTemplate(Template template) async {
-    final db = ref.read(databaseProvider);
-    await db.templatesDao.deleteTemplate(template);
-    _loadTemplates();
+  void _deleteTemplate(TemplateEntity template) async {
+    
+    await ref.read(templatesRepositoryProvider).deleteTemplate(template.id);
   }
 
   Widget _buildPromptGeneratorTab() {

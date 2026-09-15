@@ -271,6 +271,17 @@ class $ApplicationsTable extends Applications
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _cvContentMeta = const VerificationMeta(
+    'cvContent',
+  );
+  @override
+  late final GeneratedColumn<String> cvContent = GeneratedColumn<String>(
+    'cv_content',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _jobDescriptionTextMeta =
       const VerificationMeta('jobDescriptionText');
   @override
@@ -292,6 +303,7 @@ class $ApplicationsTable extends Applications
     true,
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
   );
   static const VerificationMeta _updatedAtMeta = const VerificationMeta(
     'updatedAt',
@@ -303,6 +315,7 @@ class $ApplicationsTable extends Applications
     true,
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -330,6 +343,7 @@ class $ApplicationsTable extends Applications
     companyUrl,
     customFields,
     coverLetterContent,
+    cvContent,
     jobDescriptionText,
     createdAt,
     updatedAt,
@@ -524,6 +538,12 @@ class $ApplicationsTable extends Applications
         ),
       );
     }
+    if (data.containsKey('cv_content')) {
+      context.handle(
+        _cvContentMeta,
+        cvContent.isAcceptableOrUnknown(data['cv_content']!, _cvContentMeta),
+      );
+    }
     if (data.containsKey('job_description_text')) {
       context.handle(
         _jobDescriptionTextMeta,
@@ -650,6 +670,10 @@ class $ApplicationsTable extends Applications
         DriftSqlType.string,
         data['${effectivePrefix}cover_letter_content'],
       ),
+      cvContent: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cv_content'],
+      ),
       jobDescriptionText: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}job_description_text'],
@@ -696,6 +720,7 @@ class Application extends DataClass implements Insertable<Application> {
   final String? companyUrl;
   final String? customFields;
   final String? coverLetterContent;
+  final String? cvContent;
   final String? jobDescriptionText;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -724,6 +749,7 @@ class Application extends DataClass implements Insertable<Application> {
     this.companyUrl,
     this.customFields,
     this.coverLetterContent,
+    this.cvContent,
     this.jobDescriptionText,
     this.createdAt,
     this.updatedAt,
@@ -792,6 +818,9 @@ class Application extends DataClass implements Insertable<Application> {
     }
     if (!nullToAbsent || coverLetterContent != null) {
       map['cover_letter_content'] = Variable<String>(coverLetterContent);
+    }
+    if (!nullToAbsent || cvContent != null) {
+      map['cv_content'] = Variable<String>(cvContent);
     }
     if (!nullToAbsent || jobDescriptionText != null) {
       map['job_description_text'] = Variable<String>(jobDescriptionText);
@@ -869,6 +898,9 @@ class Application extends DataClass implements Insertable<Application> {
       coverLetterContent: coverLetterContent == null && nullToAbsent
           ? const Value.absent()
           : Value(coverLetterContent),
+      cvContent: cvContent == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cvContent),
       jobDescriptionText: jobDescriptionText == null && nullToAbsent
           ? const Value.absent()
           : Value(jobDescriptionText),
@@ -913,6 +945,7 @@ class Application extends DataClass implements Insertable<Application> {
       coverLetterContent: serializer.fromJson<String?>(
         json['coverLetterContent'],
       ),
+      cvContent: serializer.fromJson<String?>(json['cvContent']),
       jobDescriptionText: serializer.fromJson<String?>(
         json['jobDescriptionText'],
       ),
@@ -948,6 +981,7 @@ class Application extends DataClass implements Insertable<Application> {
       'companyUrl': serializer.toJson<String?>(companyUrl),
       'customFields': serializer.toJson<String?>(customFields),
       'coverLetterContent': serializer.toJson<String?>(coverLetterContent),
+      'cvContent': serializer.toJson<String?>(cvContent),
       'jobDescriptionText': serializer.toJson<String?>(jobDescriptionText),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
@@ -979,6 +1013,7 @@ class Application extends DataClass implements Insertable<Application> {
     Value<String?> companyUrl = const Value.absent(),
     Value<String?> customFields = const Value.absent(),
     Value<String?> coverLetterContent = const Value.absent(),
+    Value<String?> cvContent = const Value.absent(),
     Value<String?> jobDescriptionText = const Value.absent(),
     Value<DateTime?> createdAt = const Value.absent(),
     Value<DateTime?> updatedAt = const Value.absent(),
@@ -1015,6 +1050,7 @@ class Application extends DataClass implements Insertable<Application> {
     coverLetterContent: coverLetterContent.present
         ? coverLetterContent.value
         : this.coverLetterContent,
+    cvContent: cvContent.present ? cvContent.value : this.cvContent,
     jobDescriptionText: jobDescriptionText.present
         ? jobDescriptionText.value
         : this.jobDescriptionText,
@@ -1075,6 +1111,7 @@ class Application extends DataClass implements Insertable<Application> {
       coverLetterContent: data.coverLetterContent.present
           ? data.coverLetterContent.value
           : this.coverLetterContent,
+      cvContent: data.cvContent.present ? data.cvContent.value : this.cvContent,
       jobDescriptionText: data.jobDescriptionText.present
           ? data.jobDescriptionText.value
           : this.jobDescriptionText,
@@ -1110,6 +1147,7 @@ class Application extends DataClass implements Insertable<Application> {
           ..write('companyUrl: $companyUrl, ')
           ..write('customFields: $customFields, ')
           ..write('coverLetterContent: $coverLetterContent, ')
+          ..write('cvContent: $cvContent, ')
           ..write('jobDescriptionText: $jobDescriptionText, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -1143,6 +1181,7 @@ class Application extends DataClass implements Insertable<Application> {
     companyUrl,
     customFields,
     coverLetterContent,
+    cvContent,
     jobDescriptionText,
     createdAt,
     updatedAt,
@@ -1175,6 +1214,7 @@ class Application extends DataClass implements Insertable<Application> {
           other.companyUrl == this.companyUrl &&
           other.customFields == this.customFields &&
           other.coverLetterContent == this.coverLetterContent &&
+          other.cvContent == this.cvContent &&
           other.jobDescriptionText == this.jobDescriptionText &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -1205,6 +1245,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
   final Value<String?> companyUrl;
   final Value<String?> customFields;
   final Value<String?> coverLetterContent;
+  final Value<String?> cvContent;
   final Value<String?> jobDescriptionText;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
@@ -1233,6 +1274,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     this.companyUrl = const Value.absent(),
     this.customFields = const Value.absent(),
     this.coverLetterContent = const Value.absent(),
+    this.cvContent = const Value.absent(),
     this.jobDescriptionText = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1262,6 +1304,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     this.companyUrl = const Value.absent(),
     this.customFields = const Value.absent(),
     this.coverLetterContent = const Value.absent(),
+    this.cvContent = const Value.absent(),
     this.jobDescriptionText = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -1292,6 +1335,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     Expression<String>? companyUrl,
     Expression<String>? customFields,
     Expression<String>? coverLetterContent,
+    Expression<String>? cvContent,
     Expression<String>? jobDescriptionText,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -1322,6 +1366,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
       if (customFields != null) 'custom_fields': customFields,
       if (coverLetterContent != null)
         'cover_letter_content': coverLetterContent,
+      if (cvContent != null) 'cv_content': cvContent,
       if (jobDescriptionText != null)
         'job_description_text': jobDescriptionText,
       if (createdAt != null) 'created_at': createdAt,
@@ -1354,6 +1399,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     Value<String?>? companyUrl,
     Value<String?>? customFields,
     Value<String?>? coverLetterContent,
+    Value<String?>? cvContent,
     Value<String?>? jobDescriptionText,
     Value<DateTime?>? createdAt,
     Value<DateTime?>? updatedAt,
@@ -1383,6 +1429,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
       companyUrl: companyUrl ?? this.companyUrl,
       customFields: customFields ?? this.customFields,
       coverLetterContent: coverLetterContent ?? this.coverLetterContent,
+      cvContent: cvContent ?? this.cvContent,
       jobDescriptionText: jobDescriptionText ?? this.jobDescriptionText,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -1464,6 +1511,9 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
     if (coverLetterContent.present) {
       map['cover_letter_content'] = Variable<String>(coverLetterContent.value);
     }
+    if (cvContent.present) {
+      map['cv_content'] = Variable<String>(cvContent.value);
+    }
     if (jobDescriptionText.present) {
       map['job_description_text'] = Variable<String>(jobDescriptionText.value);
     }
@@ -1503,6 +1553,7 @@ class ApplicationsCompanion extends UpdateCompanion<Application> {
           ..write('companyUrl: $companyUrl, ')
           ..write('customFields: $customFields, ')
           ..write('coverLetterContent: $coverLetterContent, ')
+          ..write('cvContent: $cvContent, ')
           ..write('jobDescriptionText: $jobDescriptionText, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -1569,6 +1620,7 @@ class $TemplatesTable extends Templates
     true,
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
   );
   static const VerificationMeta _applicationIdMeta = const VerificationMeta(
     'applicationId',
@@ -1581,7 +1633,7 @@ class $TemplatesTable extends Templates
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _filePathMeta = const VerificationMeta(
@@ -2202,7 +2254,7 @@ class $EmailsTable extends Emails with TableInfo<$EmailsTable, Email> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _messageIdMeta = const VerificationMeta(
@@ -2271,6 +2323,21 @@ class $EmailsTable extends Emails with TableInfo<$EmailsTable, Email> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isSentByMeMeta = const VerificationMeta(
+    'isSentByMe',
+  );
+  @override
+  late final GeneratedColumn<bool> isSentByMe = GeneratedColumn<bool>(
+    'is_sent_by_me',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_sent_by_me" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -2281,6 +2348,7 @@ class $EmailsTable extends Emails with TableInfo<$EmailsTable, Email> {
     bodySnippet,
     receivedAt,
     isRead,
+    isSentByMe,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2357,6 +2425,15 @@ class $EmailsTable extends Emails with TableInfo<$EmailsTable, Email> {
         isRead.isAcceptableOrUnknown(data['is_read']!, _isReadMeta),
       );
     }
+    if (data.containsKey('is_sent_by_me')) {
+      context.handle(
+        _isSentByMeMeta,
+        isSentByMe.isAcceptableOrUnknown(
+          data['is_sent_by_me']!,
+          _isSentByMeMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2398,6 +2475,10 @@ class $EmailsTable extends Emails with TableInfo<$EmailsTable, Email> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_read'],
       )!,
+      isSentByMe: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_sent_by_me'],
+      )!,
     );
   }
 
@@ -2416,6 +2497,7 @@ class Email extends DataClass implements Insertable<Email> {
   final String bodySnippet;
   final DateTime receivedAt;
   final bool isRead;
+  final bool isSentByMe;
   const Email({
     required this.id,
     required this.applicationId,
@@ -2425,6 +2507,7 @@ class Email extends DataClass implements Insertable<Email> {
     required this.bodySnippet,
     required this.receivedAt,
     required this.isRead,
+    required this.isSentByMe,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2437,6 +2520,7 @@ class Email extends DataClass implements Insertable<Email> {
     map['body_snippet'] = Variable<String>(bodySnippet);
     map['received_at'] = Variable<DateTime>(receivedAt);
     map['is_read'] = Variable<bool>(isRead);
+    map['is_sent_by_me'] = Variable<bool>(isSentByMe);
     return map;
   }
 
@@ -2450,6 +2534,7 @@ class Email extends DataClass implements Insertable<Email> {
       bodySnippet: Value(bodySnippet),
       receivedAt: Value(receivedAt),
       isRead: Value(isRead),
+      isSentByMe: Value(isSentByMe),
     );
   }
 
@@ -2467,6 +2552,7 @@ class Email extends DataClass implements Insertable<Email> {
       bodySnippet: serializer.fromJson<String>(json['bodySnippet']),
       receivedAt: serializer.fromJson<DateTime>(json['receivedAt']),
       isRead: serializer.fromJson<bool>(json['isRead']),
+      isSentByMe: serializer.fromJson<bool>(json['isSentByMe']),
     );
   }
   @override
@@ -2481,6 +2567,7 @@ class Email extends DataClass implements Insertable<Email> {
       'bodySnippet': serializer.toJson<String>(bodySnippet),
       'receivedAt': serializer.toJson<DateTime>(receivedAt),
       'isRead': serializer.toJson<bool>(isRead),
+      'isSentByMe': serializer.toJson<bool>(isSentByMe),
     };
   }
 
@@ -2493,6 +2580,7 @@ class Email extends DataClass implements Insertable<Email> {
     String? bodySnippet,
     DateTime? receivedAt,
     bool? isRead,
+    bool? isSentByMe,
   }) => Email(
     id: id ?? this.id,
     applicationId: applicationId ?? this.applicationId,
@@ -2502,6 +2590,7 @@ class Email extends DataClass implements Insertable<Email> {
     bodySnippet: bodySnippet ?? this.bodySnippet,
     receivedAt: receivedAt ?? this.receivedAt,
     isRead: isRead ?? this.isRead,
+    isSentByMe: isSentByMe ?? this.isSentByMe,
   );
   Email copyWithCompanion(EmailsCompanion data) {
     return Email(
@@ -2519,6 +2608,9 @@ class Email extends DataClass implements Insertable<Email> {
           ? data.receivedAt.value
           : this.receivedAt,
       isRead: data.isRead.present ? data.isRead.value : this.isRead,
+      isSentByMe: data.isSentByMe.present
+          ? data.isSentByMe.value
+          : this.isSentByMe,
     );
   }
 
@@ -2532,7 +2624,8 @@ class Email extends DataClass implements Insertable<Email> {
           ..write('sender: $sender, ')
           ..write('bodySnippet: $bodySnippet, ')
           ..write('receivedAt: $receivedAt, ')
-          ..write('isRead: $isRead')
+          ..write('isRead: $isRead, ')
+          ..write('isSentByMe: $isSentByMe')
           ..write(')'))
         .toString();
   }
@@ -2547,6 +2640,7 @@ class Email extends DataClass implements Insertable<Email> {
     bodySnippet,
     receivedAt,
     isRead,
+    isSentByMe,
   );
   @override
   bool operator ==(Object other) =>
@@ -2559,7 +2653,8 @@ class Email extends DataClass implements Insertable<Email> {
           other.sender == this.sender &&
           other.bodySnippet == this.bodySnippet &&
           other.receivedAt == this.receivedAt &&
-          other.isRead == this.isRead);
+          other.isRead == this.isRead &&
+          other.isSentByMe == this.isSentByMe);
 }
 
 class EmailsCompanion extends UpdateCompanion<Email> {
@@ -2571,6 +2666,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
   final Value<String> bodySnippet;
   final Value<DateTime> receivedAt;
   final Value<bool> isRead;
+  final Value<bool> isSentByMe;
   const EmailsCompanion({
     this.id = const Value.absent(),
     this.applicationId = const Value.absent(),
@@ -2580,6 +2676,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
     this.bodySnippet = const Value.absent(),
     this.receivedAt = const Value.absent(),
     this.isRead = const Value.absent(),
+    this.isSentByMe = const Value.absent(),
   });
   EmailsCompanion.insert({
     this.id = const Value.absent(),
@@ -2590,6 +2687,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
     required String bodySnippet,
     required DateTime receivedAt,
     this.isRead = const Value.absent(),
+    this.isSentByMe = const Value.absent(),
   }) : applicationId = Value(applicationId),
        messageId = Value(messageId),
        subject = Value(subject),
@@ -2605,6 +2703,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
     Expression<String>? bodySnippet,
     Expression<DateTime>? receivedAt,
     Expression<bool>? isRead,
+    Expression<bool>? isSentByMe,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2615,6 +2714,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
       if (bodySnippet != null) 'body_snippet': bodySnippet,
       if (receivedAt != null) 'received_at': receivedAt,
       if (isRead != null) 'is_read': isRead,
+      if (isSentByMe != null) 'is_sent_by_me': isSentByMe,
     });
   }
 
@@ -2627,6 +2727,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
     Value<String>? bodySnippet,
     Value<DateTime>? receivedAt,
     Value<bool>? isRead,
+    Value<bool>? isSentByMe,
   }) {
     return EmailsCompanion(
       id: id ?? this.id,
@@ -2637,6 +2738,7 @@ class EmailsCompanion extends UpdateCompanion<Email> {
       bodySnippet: bodySnippet ?? this.bodySnippet,
       receivedAt: receivedAt ?? this.receivedAt,
       isRead: isRead ?? this.isRead,
+      isSentByMe: isSentByMe ?? this.isSentByMe,
     );
   }
 
@@ -2667,6 +2769,9 @@ class EmailsCompanion extends UpdateCompanion<Email> {
     if (isRead.present) {
       map['is_read'] = Variable<bool>(isRead.value);
     }
+    if (isSentByMe.present) {
+      map['is_sent_by_me'] = Variable<bool>(isSentByMe.value);
+    }
     return map;
   }
 
@@ -2680,7 +2785,8 @@ class EmailsCompanion extends UpdateCompanion<Email> {
           ..write('sender: $sender, ')
           ..write('bodySnippet: $bodySnippet, ')
           ..write('receivedAt: $receivedAt, ')
-          ..write('isRead: $isRead')
+          ..write('isRead: $isRead, ')
+          ..write('isSentByMe: $isSentByMe')
           ..write(')'))
         .toString();
   }
@@ -2715,7 +2821,7 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _contentMeta = const VerificationMeta(
@@ -2739,6 +2845,7 @@ class $NotesTable extends Notes with TableInfo<$NotesTable, Note> {
     true,
     type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
   );
   @override
   List<GeneratedColumn> get $columns => [id, applicationId, content, createdAt];
@@ -3024,7 +3131,7 @@ class $DocumentsTable extends Documents
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _fileNameMeta = const VerificationMeta(
@@ -3434,7 +3541,7 @@ class $ContactsTable extends Contacts with TableInfo<$ContactsTable, Contact> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
@@ -3833,7 +3940,7 @@ class $CvWorkExperiencesTable extends CvWorkExperiences
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _companyMeta = const VerificationMeta(
@@ -4356,7 +4463,7 @@ class $CvEducationsTable extends CvEducations
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _institutionMeta = const VerificationMeta(
@@ -4831,7 +4938,7 @@ class $CvSkillsTable extends CvSkills with TableInfo<$CvSkillsTable, CvSkill> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
@@ -5136,7 +5243,7 @@ class $CvLanguagesTable extends CvLanguages
     type: DriftSqlType.int,
     requiredDuringInsert: false,
     defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'REFERENCES applications (id)',
+      'REFERENCES applications (id) ON DELETE CASCADE',
     ),
   );
   static const VerificationMeta _nameMeta = const VerificationMeta('name');
@@ -5455,6 +5562,72 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cvSkills,
     cvLanguages,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('templates', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('emails', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('notes', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('documents', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('contacts', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('cv_work_experiences', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('cv_educations', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('cv_skills', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('cv_languages', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$ApplicationsTableCreateCompanionBuilder =
@@ -5483,6 +5656,7 @@ typedef $$ApplicationsTableCreateCompanionBuilder =
       Value<String?> companyUrl,
       Value<String?> customFields,
       Value<String?> coverLetterContent,
+      Value<String?> cvContent,
       Value<String?> jobDescriptionText,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
@@ -5513,6 +5687,7 @@ typedef $$ApplicationsTableUpdateCompanionBuilder =
       Value<String?> companyUrl,
       Value<String?> customFields,
       Value<String?> coverLetterContent,
+      Value<String?> cvContent,
       Value<String?> jobDescriptionText,
       Value<DateTime?> createdAt,
       Value<DateTime?> updatedAt,
@@ -5818,6 +5993,11 @@ class $$ApplicationsTableFilterComposer
 
   ColumnFilters<String> get coverLetterContent => $composableBuilder(
     column: $table.coverLetterContent,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cvContent => $composableBuilder(
+    column: $table.cvContent,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6191,6 +6371,11 @@ class $$ApplicationsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get cvContent => $composableBuilder(
+    column: $table.cvContent,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get jobDescriptionText => $composableBuilder(
     column: $table.jobDescriptionText,
     builder: (column) => ColumnOrderings(column),
@@ -6315,6 +6500,9 @@ class $$ApplicationsTableAnnotationComposer
     column: $table.coverLetterContent,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get cvContent =>
+      $composableBuilder(column: $table.cvContent, builder: (column) => column);
 
   GeneratedColumn<String> get jobDescriptionText => $composableBuilder(
     column: $table.jobDescriptionText,
@@ -6616,6 +6804,7 @@ class $$ApplicationsTableTableManager
                 Value<String?> companyUrl = const Value.absent(),
                 Value<String?> customFields = const Value.absent(),
                 Value<String?> coverLetterContent = const Value.absent(),
+                Value<String?> cvContent = const Value.absent(),
                 Value<String?> jobDescriptionText = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -6644,6 +6833,7 @@ class $$ApplicationsTableTableManager
                 companyUrl: companyUrl,
                 customFields: customFields,
                 coverLetterContent: coverLetterContent,
+                cvContent: cvContent,
                 jobDescriptionText: jobDescriptionText,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -6674,6 +6864,7 @@ class $$ApplicationsTableTableManager
                 Value<String?> companyUrl = const Value.absent(),
                 Value<String?> customFields = const Value.absent(),
                 Value<String?> coverLetterContent = const Value.absent(),
+                Value<String?> cvContent = const Value.absent(),
                 Value<String?> jobDescriptionText = const Value.absent(),
                 Value<DateTime?> createdAt = const Value.absent(),
                 Value<DateTime?> updatedAt = const Value.absent(),
@@ -6702,6 +6893,7 @@ class $$ApplicationsTableTableManager
                 companyUrl: companyUrl,
                 customFields: customFields,
                 coverLetterContent: coverLetterContent,
+                cvContent: cvContent,
                 jobDescriptionText: jobDescriptionText,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -7452,6 +7644,7 @@ typedef $$EmailsTableCreateCompanionBuilder = EmailsCompanion Function({
   required String bodySnippet,
   required DateTime receivedAt,
   Value<bool> isRead,
+  Value<bool> isSentByMe,
 });
 typedef $$EmailsTableUpdateCompanionBuilder = EmailsCompanion Function({
   Value<int> id,
@@ -7462,6 +7655,7 @@ typedef $$EmailsTableUpdateCompanionBuilder = EmailsCompanion Function({
   Value<String> bodySnippet,
   Value<DateTime> receivedAt,
   Value<bool> isRead,
+  Value<bool> isSentByMe,
 });
 
 final class $$EmailsTableReferences
@@ -7527,6 +7721,11 @@ class $$EmailsTableFilterComposer
 
   ColumnFilters<bool> get isRead => $composableBuilder(
     column: $table.isRead,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSentByMe => $composableBuilder(
+    column: $table.isSentByMe,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7598,6 +7797,11 @@ class $$EmailsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isSentByMe => $composableBuilder(
+    column: $table.isSentByMe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$ApplicationsTableOrderingComposer get applicationId {
     final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -7655,6 +7859,11 @@ class $$EmailsTableAnnotationComposer
 
   GeneratedColumn<bool> get isRead =>
       $composableBuilder(column: $table.isRead, builder: (column) => column);
+
+  GeneratedColumn<bool> get isSentByMe => $composableBuilder(
+    column: $table.isSentByMe,
+    builder: (column) => column,
+  );
 
   $$ApplicationsTableAnnotationComposer get applicationId {
     final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
@@ -7716,6 +7925,7 @@ class $$EmailsTableTableManager
                 Value<String> bodySnippet = const Value.absent(),
                 Value<DateTime> receivedAt = const Value.absent(),
                 Value<bool> isRead = const Value.absent(),
+                Value<bool> isSentByMe = const Value.absent(),
               }) => EmailsCompanion(
                 id: id,
                 applicationId: applicationId,
@@ -7725,6 +7935,7 @@ class $$EmailsTableTableManager
                 bodySnippet: bodySnippet,
                 receivedAt: receivedAt,
                 isRead: isRead,
+                isSentByMe: isSentByMe,
               ),
           createCompanionCallback:
               ({
@@ -7736,6 +7947,7 @@ class $$EmailsTableTableManager
                 required String bodySnippet,
                 required DateTime receivedAt,
                 Value<bool> isRead = const Value.absent(),
+                Value<bool> isSentByMe = const Value.absent(),
               }) => EmailsCompanion.insert(
                 id: id,
                 applicationId: applicationId,
@@ -7745,6 +7957,7 @@ class $$EmailsTableTableManager
                 bodySnippet: bodySnippet,
                 receivedAt: receivedAt,
                 isRead: isRead,
+                isSentByMe: isSentByMe,
               ),
           withReferenceMapper: (p0) => p0
               .map(

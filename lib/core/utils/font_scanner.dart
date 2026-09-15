@@ -22,7 +22,7 @@ class FontScanner {
               .where((e) => e.isNotEmpty)
               .toList();
         }
-      } catch (e) {
+      } on Exception catch (_) {
         // Ignoriere Fehler und nutze Fallback
       }
     }

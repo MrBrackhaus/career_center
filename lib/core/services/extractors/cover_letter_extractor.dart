@@ -154,7 +154,7 @@ class CoverLetterExtractor {
     if (bestRecipientCityIndex != -1) {
       // â”€â”€ 5. Straße zusammenbauen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       final streetRegex = RegExp(
-        r'[a-zäöüß\.\-\s]+\d{1,4}[a-z]?',
+        r'[a-zäöüß\.\-\s]{1,200}\d{1,4}[a-z]?',
         caseSensitive: false,
       );
       int companyIdx = bestRecipientCityIndex - 1;
@@ -340,7 +340,7 @@ class CoverLetterExtractor {
 
     // 7.1 Versuche den vollen Namen aus der "z. Hd." oder "Herr/Frau" Zeile im Adressblock zu lesen
     final contactBlockRegex = RegExp(
-      r'^(?:z\.?\s*hd\.?\s*)?(?:frauen|herrn|frau|herr)\s+(?:dr\.\s+|prof\.\s+)?([a-zäöüß]+\s+[a-zäöüß]+(?:\s+[a-zäöüß]+)?)$',
+      r'^(?:z\.?\s*hd\.?\s*)?(?:frauen|herrn|frau|herr)\s+(?:dr\.\s+|prof\.\s+)?([a-zäöüß]{1,200}\s+[a-zäöüß]{1,200}(?:\s+[a-zäöüß]{1,200})?)$',
       caseSensitive: false,
     );
     for (int i = 0; i < nonEmptyLines.length && i < 20; i++) {
@@ -368,7 +368,7 @@ class CoverLetterExtractor {
     // 7.2 Fallback: Anrede "Sehr geehrte(r)..."
     if (foundContact == null) {
       final contactRegex = RegExp(
-        r'sehr\s+geehrte[r]?\s+(frau|herr)\s*(?:dr\.\s+|prof\.\s+)?([a-zäöüß]+\s+[a-zäöüß]+(?:\s+[a-zäöüß]+)*)',
+        r'sehr\s+geehrte[r]?\s+(frau|herr)\s*(?:dr\.\s+|prof\.\s+)?([a-zäöüß]{1,200}\s+[a-zäöüß]{1,200}(?:\s+[a-zäöüß]{1,200})*)',
         caseSensitive: false,
       );
       final contactMatch = contactRegex.firstMatch(text);
@@ -463,7 +463,7 @@ class CoverLetterExtractor {
 
     // Kontaktperson
     final contactRegex = RegExp(
-      r'(Frau|Herr)\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+(\s+[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+)?)',
+      r'(Frau|Herr)\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]{1,200}(\s+[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]{1,200})?)',
     );
     final contactMatch = contactRegex.firstMatch(text);
     if (contactMatch != null) {
@@ -476,7 +476,7 @@ class CoverLetterExtractor {
 
     // Adresse
     final addressRegex = RegExp(
-      r'([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\.\-\s]+\d{1,4}[a-zA-Z]?)[,\s\n\r]+(\d{5})\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\-]+)',
+      r'([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\.\-\s]{1,200}\d{1,4}[a-zA-Z]?)[,\s\n\r]+(\d{5})\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß\-]{1,200})',
     );
     final addressMatch = addressRegex.firstMatch(text);
     if (addressMatch != null) {

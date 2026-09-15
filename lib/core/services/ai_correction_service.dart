@@ -39,15 +39,15 @@ class AiCorrectionService {
           'prompt': prompt,
           'stream': false,
         }),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
         return data['response']?.toString().trim();
       } else {
         throw Exception('AI Server returned status ${response.statusCode}');
       }
-    } catch (e) {
+    } on Exception catch (e) {
       throw Exception('KI-Fehler: $e');
     }
   }

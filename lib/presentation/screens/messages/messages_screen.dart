@@ -1,9 +1,18 @@
+﻿import '../../../domain/entities/application_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../data/database/app_database.dart';
+import '../../../domain/entities/email_entity.dart';
 import '../../providers/database_provider.dart';
+
+final allApplicationsStreamProvider = StreamProvider.autoDispose<List<ApplicationEntity>>((ref) {
+  return ref.watch(applicationsRepositoryProvider).watchAllApplications();
+});
+
+final allEmailsStreamProvider = StreamProvider.autoDispose<List<EmailEntity>>((ref) {
+  return ref.watch(emailsRepositoryProvider).watchAllEmails();
+});
 
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
@@ -52,23 +61,13 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   }
 
   Widget _buildApplicationList() {
-    final db = ref.watch(databaseProvider);
-    return FutureBuilder<List<Application>>(
-      // Wir laden alle Bewerbungen, die Mails haben
-      future: db.applicationsDao.getAllApplications(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData)
-          return const Center(child: CircularProgressIndicator());
+    final appsAsync = ref.watch(allApplicationsStreamProvider);
+    final emailsAsync = ref.watch(allEmailsStreamProvider);
 
-        return FutureBuilder<List<Email>>(
-          future: db.emailsDao.getAllEmails(),
-          builder: (context, emailSnapshot) {
-            if (!emailSnapshot.hasData)
-              return const Center(child: CircularProgressIndicator());
-
-            final allApps = snapshot.data!;
-            final allEmails = emailSnapshot.data!;
-
+    return appsAsync.when(
+      data: (allApps) {
+        return emailsAsync.when(
+          data: (allEmails) {
             // Filtern: Nur Apps, die Mails haben
             final appsWithEmails = allApps.where((app) {
               return allEmails.any((e) => e.applicationId == app.id);
@@ -101,19 +100,23 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
               },
             );
           },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Fehler: $e')),
         );
       },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('Fehler: $e')),
     );
   }
 
   Widget _buildChatView(int appId) {
-    final db = ref.watch(databaseProvider);
-    return FutureBuilder<List<Email>>(
-      future: db.emailsDao.getEmailsForApplication(appId),
+    return StreamBuilder<List<EmailEntity>>(
+      stream: ref.read(emailsRepositoryProvider).watchEmailsForApplication(appId),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
-        final emails = snapshot.data!;
+        }
+        final emails = snapshot.data!.toList();
         emails.sort(
           (a, b) => a.receivedAt.compareTo(b.receivedAt),
         ); // Älteste zuerst
@@ -126,10 +129,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                 itemCount: emails.length,
                 itemBuilder: (context, index) {
                   final email = emails[index];
-                  // Sehr einfache Heuristik: Wenn 'sender' mit "An:" anfängt, ist es von uns gesendet.
-                  final isSentByUs =
-                      email.sender.startsWith('An:') ||
-                      email.sender.startsWith('Gesendet');
+                  final isSentByUs = email.isSentByMe;
 
                   return Align(
                     alignment: isSentByUs

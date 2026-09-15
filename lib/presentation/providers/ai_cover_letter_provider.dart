@@ -35,7 +35,7 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final dao = ref.read(databaseProvider).settingsDao;
+      final dao = ref.read(settingsRepositoryProvider);
       final aiUrlSetting = await dao.getSettingByKey('aiServerUrl');
       final aiModelSetting = await dao.getSettingByKey('aiModelName');
 
@@ -55,7 +55,7 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
 
       state = state.copyWith(isLoading: false);
       return result;
-    } catch (e) {
+    } on Exception catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       return null;
     }
@@ -63,6 +63,6 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
 }
 
 final aiCoverLetterProvider =
-    NotifierProvider<AiCoverLetterNotifier, AiCoverLetterState>(
+    NotifierProvider.autoDispose<AiCoverLetterNotifier, AiCoverLetterState>(
       AiCoverLetterNotifier.new,
     );

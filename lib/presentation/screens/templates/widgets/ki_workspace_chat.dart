@@ -19,6 +19,13 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
   final _scrollController = ScrollController();
   bool _isLoading = false;
 
+  @override
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -41,7 +48,7 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
     _scrollToBottom();
 
     try {
-      final dao = ref.read(databaseProvider).settingsDao;
+      final dao = ref.read(settingsRepositoryProvider);
       final aiUrlSetting = await dao.getSettingByKey('aiServerUrl');
       final aiModelSetting = await dao.getSettingByKey('aiModelName');
 

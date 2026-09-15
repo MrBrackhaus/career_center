@@ -6,6 +6,5 @@ import '../../core/services/document_template_service.dart';
 final documentTemplateServiceProvider = Provider<DocumentTemplateService>((
   ref,
 ) {
-  final db = ref.watch(databaseProvider);
-  return DocumentTemplateService(db.settingsDao);
+  return DocumentTemplateService(ref.read(settingsRepositoryProvider));
 });

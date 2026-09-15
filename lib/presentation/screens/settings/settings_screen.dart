@@ -1,4 +1,4 @@
-/*
+﻿/*
  * JobTracker
  * Copyright (C) 2026 
  *
@@ -18,6 +18,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../widgets/signature_dialog.dart' as signature_dialog;
 
 import '../changelog/changelog_screen.dart';
 
@@ -26,10 +27,18 @@ import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/auto_updater_provider.dart';
+import 'widgets/update_banner.dart';
+import '../../providers/auto_updater_provider.dart';
+import 'widgets/update_banner.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/database_provider.dart';
+
+
 import '../../providers/custom_columns_provider.dart';
 import '../../providers/imap_provider.dart';
 import '../../../core/router/app_router.dart';
@@ -77,6 +86,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _isLoading = true;
   bool _jobcenterMode = false;
   bool _aiCvAssistantEnabled = false;
+  String _appVersion = '';
 
   final _presets = {
     'IT / Software': 'Tech-Stack, Portfolio-Link, Remote-Anteil',
@@ -125,9 +135,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _aiModelController.text = aiModelSetting?.value ?? 'llama3.2';
     final imapEmailSetting = await dao.getSettingByKey('imapEmail');
     final aiCvSetting = await dao.getSettingByKey('aiCvAssistantEnabled');
+    final packageInfo = await PackageInfo.fromPlatform();
 
     if (mounted) {
       setState(() {
+        _appVersion = packageInfo.version;
         _nameController.text = nameSetting?.value ?? '';
         _emailController.text = emailSetting?.value ?? '';
         _phoneController.text = phoneSetting?.value ?? '';
@@ -353,7 +365,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     final themeState = ref.watch(themeProvider);
-    final themeNotifier = ref.read(themeProvider.notifier);
+
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.settingsTitle)),
@@ -363,6 +375,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
+              const UpdateBanner(),
               // Design & Personalisierung
               Card(
                 elevation: 0,
@@ -511,7 +524,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                           ],
                           onChanged: (mode) {
-                            if (mode != null) themeNotifier.setThemeMode(mode);
+                            if (mode != null) ref.read(themeProvider.notifier).setThemeMode(mode);
                           },
                         ),
                       ),
@@ -533,7 +546,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               ].map((color) {
                                 return InkWell(
                                   onTap: () =>
-                                      themeNotifier.setSeedColor(color),
+                                      ref.read(themeProvider.notifier).setSeedColor(color),
                                   child: Container(
                                     width: 32,
                                     height: 32,
@@ -573,7 +586,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               selected:
                                   themeState.preset == ThemePreset.standard,
                               onSelected: (_) =>
-                                  themeNotifier.setPreset(ThemePreset.standard),
+                                  ref.read(themeProvider.notifier).setPreset(ThemePreset.standard),
                             ),
                             FilterChip(
                               label: const Text('🖤 Obsidian'),
@@ -586,8 +599,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                                     : null,
                               ),
                               onSelected: (_) {
-                                themeNotifier.setPreset(ThemePreset.obsidian);
-                                themeNotifier.setThemeMode(ThemeMode.dark);
+                                ref.read(themeProvider.notifier).setPreset(ThemePreset.obsidian);
+                                ref.read(themeProvider.notifier).setThemeMode(ThemeMode.dark);
                               },
                             ),
                           ],
@@ -613,6 +626,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             ),
                           );
                           ref.invalidate(jobcenterModeProvider);
+                        },
+                      ),
+                      const Divider(),
+                      ListTile(
+                        leading: const Icon(Icons.draw),
+                        title: const Text('Unterschrift konfigurieren'),
+                        subtitle: const Text('Zeichne deine Unterschrift für Lebenslauf und Anschreiben'),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () async {
+                          await showDialog(
+                            context: context,
+                            builder: (context) => const signature_dialog.SignatureDialog(),
+                          );
                         },
                       ),
                     ],
@@ -1298,7 +1324,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                               .settingsDao;
                           await PdfGenerator.generateAndSharePdf(
                             applications,
-                            settingsDao,
+                            ref.read(settingsRepositoryProvider),
                           );
                         },
                       ),
@@ -1351,11 +1377,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const ListTile(
-                        leading: Icon(Icons.info_outline),
+                      ListTile(
+                        leading: const Icon(Icons.info_outline),
                         title: Text('Version'),
                         trailing: Text(
-                          '0.6.1 Alpha',
+                          _appVersion.isNotEmpty ? _appVersion : 'Lade...',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -1375,6 +1401,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           );
                         },
                       ),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final updateState = ref.watch(autoUpdaterProvider);
+                          final isChecking = updateState.status == UpdaterStatus.checking;
+                          return ListTile(
+                            leading: const Icon(Icons.system_update_alt),
+                            title: const Text('Nach Updates suchen'),
+                            trailing: isChecking 
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
+                                : const Icon(Icons.chevron_right),
+                            onTap: isChecking ? null : () async {
+                              await ref.read(autoUpdaterProvider.notifier).checkForUpdates(isManual: true);
+                              if (context.mounted) {
+                                final status = ref.read(autoUpdaterProvider).status;
+                                if (status == UpdaterStatus.upToDate) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Die App ist bereits auf dem neuesten Stand.')),
+                                  );
+                                } else if (status == UpdaterStatus.error) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Fehler bei der Update-Prüfung: ${ref.read(autoUpdaterProvider).errorMessage}')),
+                                  );
+                                } else if (status == UpdaterStatus.available) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Ein neues Update ist verfügbar! (Siehe Banner ganz oben)')),
+                                  );
+                                }
+                              }
+                            },
+                          );
+                        },
+                      ),
                       ListTile(
                         leading: const Icon(Icons.description_outlined),
                         title: const Text('Open-Source-Lizenzen'),
@@ -1383,7 +1441,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           showLicensePage(
                             context: context,
                             applicationName: 'Bewerbungszentrale',
-                            applicationVersion: '0.6.1 Alpha',
+                            applicationVersion: _appVersion.isNotEmpty ? _appVersion : 'Lade...',
                             applicationLegalese: '© 2026 Alle Rechte vorbehalten.',
                           );
                         },

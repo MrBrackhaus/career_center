@@ -1,34 +1,12 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
-
-import '../../data/database/app_database.dart';
+import '../../domain/entities/contact_entity.dart';
 import 'database_provider.dart';
 
-final contactsProvider = StreamProvider.family.autoDispose<List<Contact>, int>((
+final contactsProvider = StreamProvider.family.autoDispose<List<ContactEntity>, int>((
   ref,
   applicationId,
 ) {
-  return ref
-      .watch(databaseProvider)
-      .contactsDao
-      .watchContactsForApplication(applicationId);
+  return ref.watch(contactsRepositoryProvider).watchContactsForApplication(applicationId);
 });
 
 class ContactsNotifier extends Notifier<AsyncValue<void>> {
@@ -44,26 +22,18 @@ class ContactsNotifier extends Notifier<AsyncValue<void>> {
     String? phone,
     String? role,
   ) async {
-    final db = ref.read(databaseProvider);
-    await db.contactsDao.insertContact(
-      ContactsCompanion.insert(
-        applicationId: applicationId,
-        name: drift.Value(name),
-        email: drift.Value(email),
-        phone: drift.Value(phone),
-        role: drift.Value(role),
-      ),
-    );
+    final repo = ref.read(contactsRepositoryProvider);
+    await repo.addContact(applicationId, name, email, phone, role);
   }
 
-  Future<void> updateContact(Contact contact) async {
-    final db = ref.read(databaseProvider);
-    await db.contactsDao.updateContact(contact.toCompanion(true));
+  Future<void> updateContact(ContactEntity contact) async {
+    final repo = ref.read(contactsRepositoryProvider);
+    await repo.updateContact(contact);
   }
 
   Future<void> deleteContact(int id) async {
-    final db = ref.read(databaseProvider);
-    await db.contactsDao.deleteContact(id);
+    final repo = ref.read(contactsRepositoryProvider);
+    await repo.deleteContact(id);
   }
 }
 

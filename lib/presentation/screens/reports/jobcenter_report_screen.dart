@@ -41,8 +41,7 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
   }
 
   Future<void> _loadUserName() async {
-    final db = ref.read(databaseProvider);
-    final setting = await db.settingsDao.getSettingByKey('userName');
+    final setting = await ref.read(settingsRepositoryProvider).getSettingByKey('userName');
     if (setting != null && mounted) {
       setState(() {
         _userName = setting.value;
@@ -60,7 +59,6 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
     final applicationsAsync = ref.watch(applicationsProvider);
     final nowString = _formatDate(DateTime.now());
 
@@ -74,14 +72,14 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
               Expanded(
                 child: Text(
                   AppLocalizations.of(context)!.reportTitle,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
                 onPressed: () {
                   applicationsAsync.whenData((applications) {
-                    final settingsDao = ref.read(databaseProvider).settingsDao;
+                    final settingsDao = ref.read(settingsRepositoryProvider);
                     PdfGenerator.generateAndSharePdf(applications, settingsDao);
                   });
                 },
@@ -174,9 +172,9 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
                   ),
                 );
               },
-              loading: () => Center(child: CircularProgressIndicator()),
-              error: (error, stack) =>
-                  Center(child: Text('Fehler beim Laden der Daten')),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) =>
+                  const Center(child: Text('Fehler beim Laden der Daten')),
             ),
           ),
         ],

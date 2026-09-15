@@ -26,8 +26,7 @@ class CompanionNotifier extends Notifier<CompanionEvent?> {
     // Wire up profile fetcher so /api/profile can read settings from the DB
     _service.database = ref.read(databaseProvider);
     _service.settingsFetcher = (String key) async {
-      final db = ref.read(databaseProvider);
-      final setting = await db.settingsDao.getSettingByKey(key);
+      final setting = await ref.read(settingsRepositoryProvider).getSettingByKey(key);
       return setting?.value;
     };
     _service.start();

@@ -76,7 +76,7 @@ class EmailResponseExtractor {
     // ── Firma ────────────────────────────────────────────────────────────────
     FieldResult<String>? foundCompany;
     final companyRegex = RegExp(
-      r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([\w\s\-&.,ÄÖÜäöüß]+?(?:GmbH(?:\s*&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
+      r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([\w\s\-&.,ÄÖÜäöüß]{1,200}?(?:GmbH(?:\s*&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
     );
     final companyMatch = companyRegex.firstMatch(body);
     if (companyMatch != null) {
@@ -104,12 +104,14 @@ class EmailResponseExtractor {
     // ── Kontaktperson ────────────────────────────────────────────────────────
     FieldResult<String>? foundContact;
     final contactRegex = RegExp(
-      r'Sehr\s+geehrte[r]?\s+(Frau|Herr)\s+([A-ZÄÖÜ][a-zäöüß]+(?:\s+[A-ZÄÖÜ][a-zäöüß]+)*)',
+      r'Sehr\s+geehrte[r]?\s+(Frau|Herr)\s+(?:(Dr\.|Prof\.)\s+)?([A-ZÄÖÜ][a-zäöüß]{1,200}(?:\s+[A-ZÄÖÜ][a-zäöüß]{1,200})*)',
     );
     final contactMatch = contactRegex.firstMatch(body);
     if (contactMatch != null) {
+      final title = contactMatch.group(2) != null ? '${contactMatch.group(2)} ' : '';
+      final name = contactMatch.group(3);
       foundContact = FieldResult(
-        value: '${contactMatch.group(1)} ${contactMatch.group(2)}'.trim(),
+        value: '${contactMatch.group(1)} $title$name'.trim(),
         confidence: 0.9,
         source: 'salutation',
       );
@@ -144,12 +146,8 @@ class EmailResponseExtractor {
     final lowerBody = body.toLowerCase();
 
     // Spam / irrelevant ignorieren
-    if (lowerSubject.contains('bewerbungsübersicht') ||
-        lowerSubject.contains('eigenbemühungen') ||
-        lowerSubject.contains('nachweis') ||
-        lowerSubject.contains('antrag') ||
-        lowerSubject.contains('newsletter') ||
-        lowerSubject.contains('werbung')) {
+    final spamRegex = RegExp(r'\b(bewerbungsübersicht|eigenbemühungen|nachweis|antrag|newsletter|werbung|angebote)\b', caseSensitive: false);
+    if (spamRegex.hasMatch(subject)) {
       return null;
     }
 
@@ -166,13 +164,16 @@ class EmailResponseExtractor {
         cleanSubject.contains('zusage');
 
     if (isRep || subjectIsApplication) {
-      if (_isRejection(lowerBody) || lowerSubject.contains('absage'))
+      if (_isRejection(lowerBody) || lowerSubject.contains('absage')) {
         return 'absage';
-      if (_isInterview(lowerBody) || lowerSubject.contains('einladung'))
+      }
+      if (_isInterview(lowerBody) || lowerSubject.contains('einladung')) {
         return 'interview';
+      }
       if (_isConfirmation(lowerBody) ||
-          lowerSubject.contains('eingangsbestätigung'))
+          lowerSubject.contains('eingangsbestätigung')) {
         return 'bestaetigung';
+      }
     }
 
     // Falls gar nichts im Body erkannt wurde, es aber sicher eine gesendete Bewerbung ist (Sent Folder logic):
@@ -208,14 +209,27 @@ class EmailResponseExtractor {
   /// Ignoriert generische Provider (gmail, gmx, web, outlook, etc.).
   static String extractCompanyFromDomain(String recipientEmail) {
     if (!recipientEmail.contains('@')) return '';
-    final domain = recipientEmail.split('@').last;
-    final hostPart = domain.split('.').first.toLowerCase();
+    final domain = recipientEmail.split('@').last.toLowerCase();
+    final parts = domain.split('.');
+    
+    if (parts.length < 2) return '';
 
-    if (_genericDomains.contains(hostPart) || hostPart.contains('jobcenter')) {
+    // Robust TLD/SLD handling
+    const commonSLDs = {
+      'co', 'com', 'org', 'net', 'edu', 'gov', 'mil', 'ac', 'gob', 'gv', 'sch',
+      'or', 'k12', 'me', 'ab', 'bc', 'mb', 'nb', 'nl', 'ns', 'nt', 'nu', 'on', 'pe', 'qc', 'sk', 'yk'
+    };
+    
+    String companyPart = parts[parts.length - 2];
+    if (parts.length >= 3 && commonSLDs.contains(companyPart)) {
+      companyPart = parts[parts.length - 3];
+    }
+
+    if (_genericDomains.contains(companyPart) || companyPart.contains('jobcenter')) {
       return '';
     }
 
-    return hostPart
+    return companyPart
         .split('-')
         .where((w) => w.isNotEmpty)
         .map(
@@ -276,7 +290,10 @@ class EmailResponseExtractor {
                 lowerBody.contains('interview') ||
                 lowerBody.contains('kennenlernen'))) ||
         lowerBody.contains('möchten sie gerne kennenlernen') ||
-        lowerBody.contains('zu einem vorstellungsgespräch');
+        lowerBody.contains('zu einem vorstellungsgespräch') ||
+        lowerBody.contains('zu einem interview') ||
+        (lowerBody.contains('laden') && lowerBody.contains('interview')) ||
+        (lowerBody.contains('laden') && lowerBody.contains('gespräch'));
   }
 
   static bool _isConfirmation(String lowerBody) {

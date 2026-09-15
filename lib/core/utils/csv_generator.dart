@@ -19,11 +19,25 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 
-import '../../data/database/app_database.dart';
+import '../../domain/entities/application_entity.dart';
 
 class CsvGenerator {
+  /// Escapes a CSV cell value to prevent CSV injection attacks.
+  /// Prefixes cells starting with =, +, -, @ with an apostrophe to prevent
+  /// Excel from interpreting them as formulas.
+  static String _escapeCsvCell(String value) {
+    final escaped = value.replaceAll('"', '""');
+    if (escaped.startsWith('=') ||
+        escaped.startsWith('+') ||
+        escaped.startsWith('-') ||
+        escaped.startsWith('@')) {
+      return '"\'$escaped"';
+    }
+    return '"$escaped"';
+  }
+
   static Future<void> generateAndShareCsv(
-    List<Application> applications,
+    List<ApplicationEntity> applications,
   ) async {
     List<List<dynamic>> rows = [
       ['Datum', 'Firma', 'Position', 'Status', 'Absagegrund'],
@@ -41,8 +55,7 @@ class CsvGenerator {
 
     String csv = rows
         .map(
-          (r) =>
-              r.map((e) => '"${e.toString().replaceAll('"', '""')}"').join(','),
+          (r) => r.map((e) => _escapeCsvCell(e.toString())).join(';'),
         )
         .join('\n');
 
@@ -52,7 +65,8 @@ class CsvGenerator {
 
     if (saveLocation != null) {
       final file = File(saveLocation.path);
-      await file.writeAsString(csv);
+      // Write with UTF-8 BOM so Excel correctly displays Umlauts (ä, ö, ü)
+      await file.writeAsString('\uFEFF$csv');
     }
   }
 }

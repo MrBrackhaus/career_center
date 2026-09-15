@@ -1,6 +1,7 @@
 import '../../../../l10n/app_localizations.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:career_center/domain/enums/document_type.dart';
 
 import '../application_form_state_bundle.dart';
@@ -13,9 +14,9 @@ class BasicDataTab extends StatelessWidget {
     bool isRequired = false,
     int maxLines = 1,
     TextInputType? keyboardType,
+    int? maxLength,
   }) {
     final isActive = bundle.activeMarkerField == markerKey;
-    final colorScheme = ThemeData.light().colorScheme; // fallback
     return TextFormField(
       controller: controller,
       decoration: InputDecoration(
@@ -41,6 +42,7 @@ class BasicDataTab extends StatelessWidget {
       ),
       maxLines: maxLines,
       keyboardType: keyboardType,
+      maxLength: maxLength,
       validator: isRequired
           ? (val) => val == null || val.isEmpty ? 'Pflichtfeld' : null
           : null,
@@ -206,12 +208,12 @@ class BasicDataTab extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // === PFLICHTFELDER ===
             _buildField(
               AppLocalizations.of(context)!.promptCompany,
               bundle.companyController,
-              AppLocalizations.of(context)!.promptCompany,
+              'Unternehmen',
               isRequired: true,
+              maxLength: 100,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -235,6 +237,7 @@ class BasicDataTab extends StatelessWidget {
               bundle.positionController,
               'Position',
               isRequired: true,
+              maxLength: 100,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -372,6 +375,7 @@ class BasicDataTab extends StatelessWidget {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -383,6 +387,7 @@ class BasicDataTab extends StatelessWidget {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
                 ),
               ],

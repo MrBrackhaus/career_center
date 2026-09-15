@@ -285,7 +285,8 @@ class MonogramDesign extends DocumentDesign {
                   color: Colors.grey.shade200,
                   image:
                       cvData.profileImagePath != null &&
-                          cvData.profileImagePath!.isNotEmpty
+                          cvData.profileImagePath!.isNotEmpty &&
+                          File(cvData.profileImagePath!).existsSync()
                       ? DecorationImage(
                           image: FileImage(File(cvData.profileImagePath!)),
                           fit: BoxFit.cover,
@@ -294,7 +295,8 @@ class MonogramDesign extends DocumentDesign {
                 ),
                 child:
                     cvData.profileImagePath == null ||
-                        cvData.profileImagePath!.isEmpty
+                        cvData.profileImagePath!.isEmpty ||
+                        !File(cvData.profileImagePath!).existsSync()
                     ? const Center(
                         child: Icon(Icons.person, size: 50, color: Colors.grey),
                       )
@@ -367,9 +369,9 @@ class MonogramDesign extends DocumentDesign {
           ),
           const SizedBox(height: 24),
 
-          // BERUFLICHER WERDEGANG
+          // BERUFSERFAHRUNG
           if (cvData.experiences.isNotEmpty) ...[
-            _buildSectionHeader('BERUFLICHER WERDEGANG', primaryColor),
+            _buildSectionHeader('BERUFSERFAHRUNG', primaryColor),
             const SizedBox(height: 16),
             for (int i = 0; i < cvData.experiences.length; i++)
               _buildTimelineItem(
@@ -378,9 +380,7 @@ class MonogramDesign extends DocumentDesign {
                 cvData.experiences[i].subtitle,
                 cvData.experiences[i].description,
                 primaryColor,
-                isLast:
-                    i == cvData.experiences.length - 1 &&
-                    cvData.educations.isEmpty,
+                isLast: i == cvData.experiences.length - 1,
               ),
           ],
 

@@ -78,4 +78,24 @@ class ApplicationFormStateBundle {
     required this.onAiFeedbackCorrection,
     this.onDelete,
   });
+
+  void dispose() {
+    companyController.dispose();
+    positionController.dispose();
+    notesController.dispose();
+    rejectionReasonController.dispose();
+    commutCarController.dispose();
+    salaryWishController.dispose();
+    jobUrlController.dispose();
+    autoFillUrlController.dispose();
+    companyUrlController.dispose();
+    contactNameController.dispose();
+    contactEmailController.dispose();
+    contactPhoneController.dispose();
+    addressController.dispose();
+    jobDescriptionTextController.dispose();
+    for (var controller in customFieldControllers.values) {
+      controller.dispose();
+    }
+  }
 }

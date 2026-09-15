@@ -19,7 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/imap_service.dart';
 import 'database_provider.dart';
-import '../../data/database/app_database.dart';
+import '../../domain/entities/setting_entity.dart';
 
 final imapServiceProvider = Provider((ref) => ImapService());
 
@@ -33,10 +33,10 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
       final db = ref.read(databaseProvider);
       final imapService = ref.read(imapServiceProvider);
 
-      final serverSetting = await db.settingsDao.getSettingByKey('imapServer');
-      final portSetting = await db.settingsDao.getSettingByKey('imapPort');
-      final emailSetting = await db.settingsDao.getSettingByKey('imapEmail');
-      final passSetting = await db.settingsDao.getSettingByKey('imapPassword');
+      final serverSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapServer');
+      final portSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapPort');
+      final emailSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapEmail');
+      final passSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapPassword');
 
       if (serverSetting == null ||
           serverSetting.value.isEmpty ||
@@ -62,11 +62,11 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
         password,
       );
 
-      await db.settingsDao.insertOrUpdateSetting(
-        Setting(key: 'imapLastSync', value: DateTime.now().toIso8601String()),
+      await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+        SettingEntity(key: 'imapLastSync', value: DateTime.now().toIso8601String()),
       );
-      await db.settingsDao.insertOrUpdateSetting(
-        Setting(key: 'imapLastImportCount', value: imported.toString()),
+      await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+        SettingEntity(key: 'imapLastImportCount', value: imported.toString()),
       );
       ref.invalidate(imapLastSyncProvider);
 
@@ -80,8 +80,7 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
 }
 
 final imapLastSyncProvider = FutureProvider.autoDispose<DateTime?>((ref) async {
-  final db = ref.watch(databaseProvider);
-  final setting = await db.settingsDao.getSettingByKey('imapLastSync');
+  final setting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapLastSync');
   if (setting != null && setting.value.isNotEmpty) {
     return DateTime.tryParse(setting.value);
   }
@@ -96,6 +95,5 @@ final applicationEmailsProvider = FutureProvider.family.autoDispose((
   ref,
   int applicationId,
 ) async {
-  final db = ref.watch(databaseProvider);
-  return db.emailsDao.getEmailsForApplication(applicationId);
+  return ref.read(emailsRepositoryProvider).getEmailsForApplication(applicationId);
 });

@@ -35,6 +35,16 @@ class EmailsDao extends DatabaseAccessor<AppDatabase> with _$EmailsDaoMixin {
         .get();
   }
 
+  Stream<List<Email>> watchEmailsForApplication(int applicationId) {
+    return (select(emails)
+          ..where((e) => e.applicationId.equals(applicationId))
+          ..orderBy([
+            (e) =>
+                OrderingTerm(expression: e.receivedAt, mode: OrderingMode.desc),
+          ]))
+        .watch();
+  }
+
   Future<void> insertEmail(EmailsCompanion email) {
     return into(emails).insert(email, mode: InsertMode.insertOrIgnore);
   }
@@ -47,5 +57,9 @@ class EmailsDao extends DatabaseAccessor<AppDatabase> with _$EmailsDaoMixin {
 
   Future<List<Email>> getAllEmails() {
     return select(emails).get();
+  }
+
+  Stream<List<Email>> watchAllEmails() {
+    return select(emails).watch();
   }
 }

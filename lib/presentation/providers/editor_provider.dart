@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
-
 import 'dart:convert';
-
-import '../../data/database/app_database.dart';
 import 'database_provider.dart';
+import '../../domain/entities/template_entity.dart';
 
 class EditorState {
   final bool isSaving;
@@ -47,29 +44,28 @@ class TemplateEditorNotifier extends Notifier<EditorState> {
   }) async {
     state = state.copyWith(isSaving: true, errorMessage: null);
     try {
-      final db = ref.read(databaseProvider);
+      final repo = ref.read(templatesRepositoryProvider);
       final content = jsonEncode(deltaJson);
       final finalName = name.trim().isNotEmpty ? name.trim() : 'Neue Vorlage';
 
       if (existingId == null) {
-        final newTemplate = TemplatesCompanion(
-          name: drift.Value(finalName),
-          type: drift.Value(type),
-          content: drift.Value(content),
-          createdAt: drift.Value(DateTime.now()),
+        await repo.addTemplate(
+          finalName,
+          type,
+          content,
         );
-        await db.templatesDao.insertTemplate(newTemplate);
       } else {
-        final template = TemplatesCompanion(
-          id: drift.Value(existingId),
-          name: drift.Value(finalName),
-          type: drift.Value(type),
-          content: drift.Value(content),
+        final template = TemplateEntity(
+          id: existingId,
+          name: finalName,
+          type: type,
+          content: content,
+          createdAt: DateTime.now(), // Will not update created_at anyway, it's just to satisfy entity
         );
-        await db.templatesDao.updateTemplate(template);
+        await repo.updateTemplate(template);
       }
       state = state.copyWith(isSaving: false);
-    } catch (e) {
+    } on Exception catch (e) {
       state = state.copyWith(isSaving: false, errorMessage: e.toString());
     }
   }
@@ -80,6 +76,6 @@ class TemplateEditorNotifier extends Notifier<EditorState> {
 }
 
 final templateEditorProvider =
-    NotifierProvider<TemplateEditorNotifier, EditorState>(
+    NotifierProvider.autoDispose<TemplateEditorNotifier, EditorState>(
       TemplateEditorNotifier.new,
     );

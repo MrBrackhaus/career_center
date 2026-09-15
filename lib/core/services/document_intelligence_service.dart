@@ -17,8 +17,10 @@
  */
 import 'dart:convert';
 import 'dart:io';
+import 'dart:developer' show log;
 
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -30,6 +32,14 @@ import 'ml/pretrained_model.dart';
 import 'extractors/cover_letter_extractor.dart';
 import 'extractors/job_posting_extractor.dart';
 import 'extractors/email_response_extractor.dart';
+
+ExtractedFields _runEmailExtractor(Map<String, String> data) {
+  return EmailResponseExtractor.extract(
+    data['text']!,
+    subject: data['subject']!,
+    senderEmail: data['senderEmail']!,
+  );
+}
 
 /// Zentraler Service für die intelligente Dokumentenanalyse.
 ///
@@ -66,7 +76,7 @@ class DocumentIntelligenceService {
       } else {
         _classifier = PretrainedModel.create();
       }
-    } catch (e) {
+    } on Exception catch (_) {
       // Fallback auf vortrainiertes Modell bei Fehler
       _classifier = PretrainedModel.create();
     }
@@ -128,18 +138,21 @@ class DocumentIntelligenceService {
     final ExtractedFields fields;
     switch (detectedType) {
       case DocumentType.anschreiben:
-        fields = CoverLetterExtractor.extract(text);
+        fields = await compute(CoverLetterExtractor.extract, text);
         break;
       case DocumentType.stellenanzeige:
-        fields = JobPostingExtractor.extractFromHtml(text);
+        fields = await compute(JobPostingExtractor.extractFromHtml, text);
         break;
       case DocumentType.absage:
       case DocumentType.einladung:
       case DocumentType.bestaetigung:
-        fields = EmailResponseExtractor.extract(
-          text,
-          subject: metadata['subject'] ?? '',
-          senderEmail: metadata['senderEmail'] ?? '',
+        fields = await compute(
+          _runEmailExtractor, 
+          {
+            'text': text, 
+            'subject': metadata['subject'] ?? '', 
+            'senderEmail': metadata['senderEmail'] ?? ''
+          }
         );
         break;
       case DocumentType.lebenslauf:
@@ -251,7 +264,7 @@ class DocumentIntelligenceService {
           await file.delete();
         } else {
           final jsonStr = await file.readAsString();
-          final jsonData = json.decode(jsonStr) as Map<String, dynamic>;
+          final jsonData = await compute(jsonDecode, jsonStr) as Map<String, dynamic>;
           _initialized = true;
           return NaiveBayesClassifier.fromJson(jsonData);
         }
@@ -262,13 +275,13 @@ class DocumentIntelligenceService {
         final assetStr = await rootBundle.loadString(
           'assets/jobtracker_ml_model.json',
         );
-        final jsonData = json.decode(assetStr) as Map<String, dynamic>;
+        final jsonData = await compute(jsonDecode, assetStr) as Map<String, dynamic>;
         _initialized = true;
         return NaiveBayesClassifier.fromJson(jsonData);
       } catch (assetErr) {
         return null; // fallback to basic PretrainedModel if asset is missing
       }
-    } catch (e) {
+    } on Exception catch (_) {
       return null;
     }
   }
@@ -278,11 +291,11 @@ class DocumentIntelligenceService {
     try {
       final path = await _modelPath;
       final file = File(path);
-      final jsonStr = json.encode(_classifier!.toJson());
+      final jsonStr = await compute(jsonEncode, _classifier!.toJson());
       await file.writeAsString(jsonStr);
-    } catch (e) {
+    } on Exception catch (e) {
       // Stilles Fehlschlagen – Modell ist nur ein Nice-to-Have
-      print('Fehler beim Speichern des ML-Modells: $e');
+      log('Fehler beim Speichern des ML-Modells: $e', name: 'DocumentIntelligenceService');
     }
   }
 
@@ -297,7 +310,9 @@ class DocumentIntelligenceService {
       if (await file.exists()) {
         await file.delete();
       }
-    } catch (_) {}
+    } on Exception catch (e, st) {
+      log('Error during resetModel', error: e, stackTrace: st, name: 'DocumentIntelligenceService');
+    }
   }
 
   // ── Generische Extraktion für unbekannte Dokumenttypen ─────────────────────
@@ -327,12 +342,43 @@ class DocumentIntelligenceService {
     final phoneMatch = phoneRegex.firstMatch(text);
     if (phoneMatch != null) foundPhone = phoneMatch.group(0)?.trim();
 
-    // Kontaktperson suchen
+    // Kontaktperson suchen – erweiterte Erkennung
+    // 1. Klassisch: Frau/Herr + Name
     final contactRegex = RegExp(
-      r'(Frau|Herr)\s+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+(\s+[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+)?)',
+      r'(Frau|Herr)[ \t]+([A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+(?:[ \t]+[A-ZÄÖÜ][a-zA-ZäöüÄÖÜß-]+)?)',
     );
     final contactMatch = contactRegex.firstMatch(text);
     if (contactMatch != null) foundContact = contactMatch.group(0);
+
+    // 2. Informell: "Dein/Ihr Ansprechpartner: Name"
+    if (foundContact == null) {
+      final informalRegex = RegExp(
+        r'(?:Dein|Ihr|Ihre|Your|Unser)[ \t]+(?:Ansprechpartner(?:in)?|Kontakt|Contact|Ansprechperson)[: \t]+(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
+        caseSensitive: false,
+      );
+      final match = informalRegex.firstMatch(text);
+      if (match != null) foundContact = match.group(1);
+    }
+
+    // 3. Englisch: "Contact:", "Hiring Manager:", "Recruiter:"
+    if (foundContact == null) {
+      final englishRegex = RegExp(
+        r'(?:Contact|Hiring[ \t]+Manager|Point[ \t]+of[ \t]+Contact|Recruiter|HR[ \t]+Contact)[: \t]+(?:(?:Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
+        caseSensitive: false,
+      );
+      final match = englishRegex.firstMatch(text);
+      if (match != null) foundContact = match.group(1);
+    }
+
+    // 4. Tabular: "Ansprechpartner:   Max Mustermann"
+    if (foundContact == null) {
+      final tabRegex = RegExp(
+        r'(?:Ansprechpartner(?:in)?|Ansprechperson|Kontaktperson)[:\t\s]{2,}(?:(?:Frau|Herr)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
+        caseSensitive: false,
+      );
+      final match = tabRegex.firstMatch(text);
+      if (match != null) foundContact = match.group(1);
+    }
 
     // URL suchen
     final urlRegex = RegExp(

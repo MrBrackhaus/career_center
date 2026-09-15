@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../data/database/app_database.dart';
+import '../../../../domain/entities/application_entity.dart';
 
 class ApplicationCard extends StatefulWidget {
-  final Application application;
+  final ApplicationEntity application;
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onDelete;

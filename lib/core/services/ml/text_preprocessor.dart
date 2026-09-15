@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 class TextPreprocessor {
-  static const Set<String> _stopWords = {
+  static final Set<String> _stopWords = Set.of([
     'der',
     'die',
     'das',
@@ -90,7 +90,17 @@ class TextPreprocessor {
     'grüße',
     'grüßen',
     'etc',
-  };
+    // English stop words (common in IT jobs)
+    'the', 'and', 'to', 'of', 'a', 'for', 'is', 'on', 'that', 'by', 'this', 'with', 
+    'you', 'it', 'not', 'be', 'are', 'from', 'at', 'as', 'your', 'all', 'have', 'new', 
+    'more', 'an', 'was', 'we', 'will', 'can', 'us', 'about', 'if', 'my', 'has', 'but', 
+    'our', 'one', 'other', 'do', 'no', 'they', 'he', 'up', 'may', 'what', 'which', 
+    'their', 'out', 'use', 'any', 'there', 'see', 'only', 'so', 'his', 'when', 'who', 
+    'also', 'now', 'get', 'am', 'been', 'would', 'how', 'were', 'me', 'some', 'these', 
+    'its', 'like', 'than', 'just', 'over', 'two', 're', 'used', 'make', 'them', 'should', 
+    'her', 'such', 'please', 'after', 'then', 'where', 'each', 'she', 'very', 'many', 
+    'does', 'under'
+  ]);
 
   /// Tokenizes and preprocesses German text for classification.
   static List<String> tokenize(String text) {

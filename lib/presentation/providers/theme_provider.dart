@@ -1,4 +1,4 @@
-/*
+﻿/*
  * JobTracker
  * Copyright (C) 2026 
  *
@@ -18,8 +18,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/database/app_database.dart';
+import '../../domain/entities/setting_entity.dart';
 import 'database_provider.dart';
+import 'dart:developer' show log;
 
 enum ThemePreset { standard, obsidian }
 
@@ -126,10 +127,9 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 
   Future<void> _loadTheme() async {
-    final db = ref.read(databaseProvider);
-    final modeStr = await db.settingsDao.getSettingByKey('themeMode');
-    final colorStr = await db.settingsDao.getSettingByKey('themeColor');
-    final presetStr = await db.settingsDao.getSettingByKey('themePreset');
+    final modeStr = await ref.read(settingsRepositoryProvider).getSettingByKey('themeMode');
+    final colorStr = await ref.read(settingsRepositoryProvider).getSettingByKey('themeColor');
+    final presetStr = await ref.read(settingsRepositoryProvider).getSettingByKey('themePreset');
 
     ThemeMode mode = ThemeMode.system;
     if (modeStr != null) {
@@ -141,7 +141,9 @@ class ThemeNotifier extends Notifier<ThemeState> {
     if (colorStr != null && colorStr.value.isNotEmpty) {
       try {
         color = Color(int.parse(colorStr.value));
-      } catch (_) {}
+      } on Exception catch (e, st) {
+        log('An error occurred', error: e, stackTrace: st);
+      }
     }
 
     ThemePreset preset = ThemePreset.standard;
@@ -151,32 +153,29 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
-    final db = ref.read(databaseProvider);
     state = state.copyWith(themeMode: mode);
     String modeString = 'system';
     if (mode == ThemeMode.light) modeString = 'light';
     if (mode == ThemeMode.dark) modeString = 'dark';
-    await db.settingsDao.insertOrUpdateSetting(
-      Setting(key: 'themeMode', value: modeString),
+    await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+      SettingEntity(key: 'themeMode', value: modeString),
     );
   }
 
   Future<void> setSeedColor(Color color) async {
-    final db = ref.read(databaseProvider);
     state = state.copyWith(seedColor: color, preset: ThemePreset.standard);
-    await db.settingsDao.insertOrUpdateSetting(
-      Setting(key: 'themeColor', value: color.toARGB32().toString()),
+    await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+      SettingEntity(key: 'themeColor', value: color.toARGB32().toString()),
     );
-    await db.settingsDao.insertOrUpdateSetting(
-      Setting(key: 'themePreset', value: 'standard'),
+    await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+      SettingEntity(key: 'themePreset', value: 'standard'),
     );
   }
 
   Future<void> setPreset(ThemePreset preset) async {
-    final db = ref.read(databaseProvider);
     state = state.copyWith(preset: preset);
-    await db.settingsDao.insertOrUpdateSetting(
-      Setting(key: 'themePreset', value: preset.name),
+    await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+      SettingEntity(key: 'themePreset', value: preset.name),
     );
   }
 }

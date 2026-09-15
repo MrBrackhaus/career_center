@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+import 'dart:developer' show log;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'applications_provider.dart';
@@ -36,7 +37,11 @@ class ApplicationStats {
 }
 
 final statsProvider = Provider<ApplicationStats>((ref) {
-  final applications = ref.watch(applicationsProvider).value ?? [];
+  final appsAsync = ref.watch(applicationsProvider);
+  if (appsAsync.hasError) {
+    log('Error in statsProvider: ${appsAsync.error}', error: appsAsync.error, stackTrace: appsAsync.stackTrace);
+  }
+  final applications = appsAsync.value ?? [];
 
   int open = 0;
   int rejected = 0;

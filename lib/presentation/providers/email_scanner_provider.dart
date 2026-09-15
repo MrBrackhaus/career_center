@@ -66,10 +66,10 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
       final db = ref.read(databaseProvider);
       final imapService = ImapService();
 
-      final serverSetting = await db.settingsDao.getSettingByKey('imapServer');
-      final portSetting = await db.settingsDao.getSettingByKey('imapPort');
-      final emailSetting = await db.settingsDao.getSettingByKey('imapEmail');
-      final passSetting = await db.settingsDao.getSettingByKey('imapPassword');
+      final serverSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapServer');
+      final portSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapPort');
+      final emailSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapEmail');
+      final passSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapPassword');
 
       if (serverSetting == null ||
           emailSetting == null ||
@@ -97,7 +97,7 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
         emails: emails,
         selectedUids: autoSelected,
       );
-    } catch (e) {
+    } on Exception catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -161,7 +161,7 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
         lastImportCount: count,
       );
       return count;
-    } catch (e) {
+    } on Exception catch (e) {
       state = state.copyWith(isImporting: false, error: e.toString());
       return 0;
     }

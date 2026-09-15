@@ -25,7 +25,7 @@ class SmtpService {
     final client = SmtpClient('career_center', isLogEnabled: false);
 
     try {
-      await client.connectToServer(server, port, isSecure: port == 465);
+      await client.connectToServer(server, port, isSecure: port == 465).timeout(const Duration(seconds: 30));
       await client.ehlo();
       await client.authenticate(userEmail, password, AuthMechanism.plain);
 

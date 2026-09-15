@@ -151,7 +151,7 @@ class ExtractionResult {
   });
 
   /// Ob die Erkennung als zuverlässig eingestuft wird (> 60%).
-  bool get isReliable => typeConfidence > 0.6;
+  bool get isReliable => typeConfidence > 0.6 && fields.filledFieldCount > 3;
 
   /// Ob die Erkennung unsicher ist und Prüfung empfohlen wird (< 30%).
   bool get needsReview => typeConfidence < 0.3;

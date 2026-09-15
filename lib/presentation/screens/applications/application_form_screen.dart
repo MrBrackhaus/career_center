@@ -1,4 +1,4 @@
-import '../../../l10n/app_localizations.dart';
+﻿import '../../../l10n/app_localizations.dart';
 
 /*
  * JobTracker
@@ -19,13 +19,13 @@ import '../../../l10n/app_localizations.dart';
  */
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:go_router/go_router.dart';
-import 'package:drift/drift.dart' as drift;
 import 'package:html/parser.dart' as html_parser;
 import 'package:file_selector/file_selector.dart';
 
-import '../../../data/database/app_database.dart';
 import 'email_composer_dialog.dart';
+import '../../providers/application_form_notifier.dart';
 import '../../../core/services/document_intelligence_service.dart';
 import '../../../domain/enums/document_type.dart';
 import '../../../domain/models/extraction_result.dart';
@@ -44,8 +44,11 @@ import 'widgets/documents_widget.dart';
 import 'widgets/basic_data_tab.dart';
 import 'widgets/emails_contacts_tab.dart';
 import 'application_form_state_bundle.dart';
-import '../../providers/applications_provider.dart';
+
+import '../../../domain/models/application_form_dto.dart';
 import '../../providers/database_provider.dart';
+import '../../providers/applications_provider.dart';
+import 'dart:developer' show log;
 
 class ApplicationFormScreen extends ConsumerStatefulWidget {
   final int? applicationId;
@@ -90,7 +93,6 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final Map<String, TextEditingController> _customFieldControllers = {};
 
   String _status = 'offen';
-  String? _coverLetterContent;
   DateTime? _appliedDate;
   DateTime? _followUpDate;
   List<String> _activeCustomColumns = [];
@@ -146,7 +148,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   Future<void> _loadCustomColumns() async {
-    final dao = ref.read(databaseProvider).settingsDao;
+    final dao = ref.read(settingsRepositoryProvider);
     final colsSetting = await dao.getSettingByKey('customColumns');
     if (colsSetting != null && colsSetting.value.isNotEmpty) {
       final cols = colsSetting.value
@@ -189,6 +191,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         _applyExtractionResult(result);
       }
       setState(() => _isAutoFilling = false);
+      if (!mounted) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -197,8 +200,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           ),
         );
       }
-    } catch (e) {
+    } on Exception catch (e, st) {
+      log('An error occurred: $e', error: e, stackTrace: st);
       setState(() => _isAutoFilling = false);
+      if (!mounted) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -215,11 +220,14 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     final app = await ref
         .read(applicationsRepositoryProvider)
         .getApplicationById(widget.applicationId!);
+    if (app == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     setState(() {
       _companyController.text = app.company;
       _positionController.text = app.position;
       _status = app.status;
-      _coverLetterContent = app.coverLetterContent;
       _notesController.text = app.notes ?? '';
       _rejectionReasonController.text = app.rejectionReason ?? '';
       _appliedDate = app.appliedDate;
@@ -242,20 +250,21 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           for (final entry in decoded.entries) {
             _customFieldControllers[entry.key]?.text = entry.value.toString();
           }
-        } catch (_) {}
+        } catch (_) {
+          log('An error occurred');
+        }
       }
       _isLoading = false;
     });
   }
 
   Future<void> _autoFillFromUrl() async {
-    var url = _autoFillUrlController.text.trim();
+    var url = _autoFillUrlController.text.trim().replaceAll(RegExp(r'\s+'), '');
     if (url.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bitte erst eine URL eingeben.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte erst eine URL eingeben.')));
       return;
     }
+
     setState(() {
       _isAutoFilling = true;
       _loadedPdfPath = null;
@@ -264,107 +273,54 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     });
 
     try {
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'https://$url';
+      await ref.read(applicationFormNotifierProvider.notifier).extractFromUrl(url);
+      final state = ref.read(applicationFormNotifierProvider);
+      
+      if (state.loadedWebContent != null) {
+        setState(() => _loadedWebContent = state.loadedWebContent);
       }
-
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
-      final request = await client
-          .getUrl(Uri.parse(url))
-          .timeout(const Duration(seconds: 10));
-      request.headers.set(
-        'User-Agent',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      );
-      request.headers.set(
-        'Accept',
-        'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      );
-      request.headers.set('Accept-Language', 'de-DE,de;q=0.9,en-US;q=0.8');
-      final response = await request.close().timeout(
-        const Duration(seconds: 10),
-      );
-      final bytes = await response
-          .expand((chunk) => chunk)
-          .toList()
-          .timeout(const Duration(seconds: 10));
-      final body = utf8.decode(bytes, allowMalformed: true);
-      client.close();
-
-      // Check for common captchas (e.g. Cloudflare, reCAPTCHA, Jobcenter blocking)
-      if (body.contains('Cloudflare') && body.contains('captcha-bypass') ||
-          body.toLowerCase().contains('you have been blocked') ||
-          (url.contains('arbeitsagentur.de') &&
-              body.contains('SicherheitsprÃƒÂ¼fung'))) {
-        setState(() => _isAutoFilling = false);
+      
+      _jobUrlController.text = url;
+      
+      if (state.result != null) {
+        _applyExtractionResult(state.result!);
         if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Daten aus Webseite extrahiert'), backgroundColor: Colors.green),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        if (e.toString().contains('CaptchaDetectedException')) {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('Ã¢Å¡Â Ã¯Â¸Â Captcha / Blockierung erkannt'),
+              title: const Text('Captcha / Blockierung erkannt'),
               content: const Text(
-                'Die Webseite blockiert das automatische Auslesen (oft bei Jobcenter / Arbeitsagentur oder Stepstone).\n\n'
-                'Bitte ÃƒÂ¶ffne die Seite im Browser, lÃƒÂ¶se das Captcha, drÃƒÂ¼cke Strg+P (Drucken) und speichere die Seite als PDF.\n'
-                'Lade diese PDF dann hier hoch, um die Daten inkl. Kontaktdaten auszulesen.',
+                'Die Webseite blockiert das automatische Auslesen.\n'
+                'Bitte lade die Seite als PDF herunter und probiere den PDF-Upload.'
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('OK, verstanden'),
-                ),
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('OK, verstanden')),
               ],
             ),
           );
-        }
-        return;
-      }
-
-      // Save HTML for reader mode
-      setState(() => _loadedWebContent = body);
-
-      final service = DocumentIntelligenceService();
-      final result = await service.analyzeDocument(
-        body,
-        source: DocumentSource.url,
-      );
-
-      // Force job URL
-      _jobUrlController.text = url;
-
-      _applyExtractionResult(result);
-      setState(() => _isAutoFilling = false);
-
-      if (mounted) {
-        if (result.fields.position == null && result.fields.company == null) {
+        } else if (e.toString().contains('NoDataFoundException')) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'Ã¢Å¡Â Ã¯Â¸Â Keine Daten gefunden Ã¢â‚¬â€œ diese Seite nutzt evtl. clientseitiges Rendering. Lade die Seite als PDF herunter und probiere den PDF-Upload.',
-              ),
-              duration: Duration(seconds: 5),
+              content: Text('Keine Daten gefunden. Die Seite nutzt evtl. clientseitiges Rendering.'),
               backgroundColor: Colors.orange,
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ã¢Å“â€¦ Daten aus Webseite extrahiert'),
-              backgroundColor: Colors.green,
-            ),
+            SnackBar(content: Text('Fehler beim Laden der URL: $e'), backgroundColor: Colors.red),
           );
         }
       }
-    } catch (e) {
-      setState(() => _isAutoFilling = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ã¢Â Å’ Fehler beim Laden der URL: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    } finally {
+      if (mounted) setState(() => _isAutoFilling = false);
     }
   }
 
@@ -402,7 +358,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         }
         text = textBuf.toString().replaceAll('\u00A0', ' ');
         doc.dispose();
-      } catch (e) {
+      } on Exception catch (e, st) {
+        log('An error occurred: $e', error: e, stackTrace: st);
         throw Exception('Fehler bei der PDF-Textextraktion mit pdfrx: $e');
       }
 
@@ -413,8 +370,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       );
 
       _applyExtractionResult(result);
-    } catch (e) {
+    } on Exception catch (e, st) {
+      log('An error occurred: $e', error: e, stackTrace: st);
       setState(() => _isAutoFilling = false);
+      if (!mounted) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -427,57 +386,33 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   Future<void> _autoFillFromPdf() async {
+    final typeGroup = const XTypeGroup(label: 'PDF', extensions: ['pdf']);
+    final file = await openFile(acceptedTypeGroups: [typeGroup]);
+    if (file == null) return;
+
+    setState(() {
+      _isAutoFilling = true;
+      _loadedPdfPath = file.path;
+      _loadedWebContent = null;
+      _loadedWebUrl = null;
+      _activeMarkerField = null;
+    });
+
     try {
-      final typeGroup = const XTypeGroup(label: 'PDF', extensions: ['pdf']);
-      final file = await openFile(acceptedTypeGroups: [typeGroup]);
-
-      if (file == null) return;
-
       final bytes = await file.readAsBytes();
-
-      setState(() {
-        _isAutoFilling = true;
-        _loadedPdfPath = file.path;
-        _loadedWebContent = null;
-        _loadedWebUrl = null;
-        _activeMarkerField = null;
-      });
-
-      // Text extrahieren mit pdfrx (rein Dart/Flutter, MIT-Lizenz)
-      String text = '';
-      try {
-        final doc = await PdfDocument.openData(bytes);
-        final StringBuffer textBuf = StringBuffer();
-        for (var page in doc.pages) {
-          final pageText = await page.loadText();
-          if (pageText != null) {
-            textBuf.writeln(pageText.fullText);
-          }
-        }
-        text = textBuf.toString().replaceAll('\u00A0', ' ');
-        doc.dispose();
-      } catch (e) {
-        throw Exception('Fehler bei der PDF-Textextraktion mit pdfrx: $e');
+      await ref.read(applicationFormNotifierProvider.notifier).extractFromPdfBytes(bytes);
+      final result = ref.read(applicationFormNotifierProvider).result;
+      if (result != null) {
+        _applyExtractionResult(result);
       }
-
-      // Ã¢â€ â‚¬Ã¢â€ â‚¬ Neuer intelligenter Service Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
-      final service = DocumentIntelligenceService();
-      final result = await service.analyzeDocument(
-        text,
-        source: DocumentSource.pdf,
-      );
-
-      _applyExtractionResult(result);
     } catch (e) {
-      setState(() => _isAutoFilling = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ã¢ÂÅ’ Fehler beim PDF auslesen: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Fehler beim PDF auslesen: $e'), backgroundColor: Colors.red),
         );
       }
+    } finally {
+      if (mounted) setState(() => _isAutoFilling = false);
     }
   }
 
@@ -532,7 +467,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 .querySelectorAll('script, style, noscript')
                 .forEach((e) => e.remove());
             jd = doc.body?.text ?? doc.documentElement?.text ?? jd;
-          } catch (e) {
+          } on Exception catch (e, st) {
+            log('An error occurred: $e', error: e, stackTrace: st);
             debugPrint('HTML parsing error: $e');
           }
           // Fallback falls immer noch HTML-Reste vorhanden sind
@@ -654,8 +590,10 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       final app = await ref
           .read(applicationsRepositoryProvider)
           .getApplicationById(widget.applicationId!);
-      await ref.read(applicationNotifierProvider).deleteApplication(app);
-      if (mounted) context.pop();
+      if (app != null) {
+        await ref.read(applicationNotifierProvider).deleteApplication(app);
+      }
+      if (mounted) { context.pop(); }
     }
   }
 
@@ -689,10 +627,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 child: FilledButton.icon(
                   onPressed: () async {
                     final app = await ref
-                        .read(databaseProvider)
-                        .applicationsDao
+                        .read(applicationsRepositoryProvider)
                         .getApplicationById(widget.applicationId!);
-                    if (context.mounted) {
+                    if (context.mounted && app != null) {
                       showDialog(
                         context: context,
                         barrierDismissible: false,
@@ -810,8 +747,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       },
       onSave: _save,
       onAutoFillFromUrl: _autoFillFromUrl,
-      onCoverLetterGenerated: (deltaJson) =>
-          setState(() => _coverLetterContent = deltaJson),
+      onCoverLetterGenerated: (deltaJson) {},
       onAutoFillFromPdf: _autoFillFromPdf,
       onStatusChange: (val) => setState(() => _status = val),
       onAppliedDateChange: (val) => setState(() => _appliedDate = val),
@@ -997,48 +933,33 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       if (map.isNotEmpty) customFieldsJson = json.encode(map);
     }
 
-    final companion = ApplicationsCompanion(
-      company: drift.Value(_companyController.text.trim()),
-      position: drift.Value(_positionController.text.trim()),
-      status: drift.Value(_status),
-      notes: drift.Value(
-        _notesController.text.isEmpty ? null : _notesController.text,
-      ),
-      rejectionReason: drift.Value(
-        _status == 'absage' && _rejectionReasonController.text.isNotEmpty
-            ? _rejectionReasonController.text
-            : null,
-      ),
-      appliedDate: drift.Value(_appliedDate),
-      followupDate: drift.Value(_followUpDate),
-      commuteCar: drift.Value(int.tryParse(_commutCarController.text)),
-      salaryWish: drift.Value(int.tryParse(_salaryWishController.text)),
-      jobUrl: drift.Value(
-        _jobUrlController.text.isEmpty ? null : _jobUrlController.text,
-      ),
-      companyUrl: drift.Value(
-        _companyUrlController.text.isEmpty ? null : _companyUrlController.text,
-      ),
-      contactName: drift.Value(
-        _contactNameController.text.isEmpty
-            ? null
-            : _contactNameController.text,
-      ),
-      contactEmail: drift.Value(
-        _contactEmailController.text.isEmpty
-            ? null
-            : _contactEmailController.text,
-      ),
-      contactPhone: drift.Value(
-        _contactPhoneController.text.isEmpty
-            ? null
-            : _contactPhoneController.text,
-      ),
-      address: drift.Value(
-        _addressController.text.isEmpty ? null : _addressController.text,
-      ),
-      customFields: drift.Value(customFieldsJson),
-      jobDescriptionText: drift.Value(() {
+    final dto = ApplicationFormDto(
+
+      id: widget.applicationId,
+      company: _companyController.text.trim(),
+      position: _positionController.text.trim(),
+      status: _status,
+      notes: _notesController.text.isEmpty ? null : _notesController.text,
+      rejectionReason:
+          _status == 'absage' && _rejectionReasonController.text.isNotEmpty
+              ? _rejectionReasonController.text
+              : null,
+      appliedDate: _appliedDate,
+      followupDate: _followUpDate,
+      commuteCar: int.tryParse(_commutCarController.text),
+      salaryWish: int.tryParse(_salaryWishController.text),
+      jobUrl: _jobUrlController.text.isEmpty ? null : _jobUrlController.text,
+      companyUrl:
+          _companyUrlController.text.isEmpty ? null : _companyUrlController.text,
+      contactName:
+          _contactNameController.text.isEmpty ? null : _contactNameController.text,
+      contactEmail:
+          _contactEmailController.text.isEmpty ? null : _contactEmailController.text,
+      contactPhone:
+          _contactPhoneController.text.isEmpty ? null : _contactPhoneController.text,
+      address: _addressController.text.isEmpty ? null : _addressController.text,
+      customFields: customFieldsJson,
+      jobDescriptionText: (() {
         String jd = _jobDescriptionTextController.text;
         if (jd.isEmpty) return null;
         if (jd.contains('<html') ||
@@ -1050,19 +971,13 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                 .querySelectorAll('script, style, noscript')
                 .forEach((e) => e.remove());
             jd = doc.body?.text ?? doc.documentElement?.text ?? jd;
-          } catch (e) {
+          } on Exception catch (e, st) {
+            log('An error occurred: $e', error: e, stackTrace: st);
             debugPrint('HTML parsing error in save: $e');
           }
           if (jd.contains('<html') ||
               jd.contains('<!DOCTYPE') ||
               jd.contains('<body')) {
-            jd = jd.replaceAll(
-              RegExp(
-                r'<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>',
-                caseSensitive: false,
-              ),
-              '',
-            );
             jd = jd.replaceAll(
               RegExp(
                 r'<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>',
@@ -1075,8 +990,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           jd = jd.replaceAll(RegExp(r'\s+'), ' ').trim();
         }
         return jd.isEmpty ? null : jd;
-      }()),
-      coverLetterContent: drift.Value(_coverLetterContent),
+      })(),
     );
 
     int insertedId;
@@ -1084,11 +998,11 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       insertedId = widget.applicationId!;
       await ref
           .read(applicationNotifierProvider)
-          .updateApplication(companion.copyWith(id: drift.Value(insertedId)));
+          .updateApplication(dto);
     } else {
       insertedId = await ref
           .read(applicationNotifierProvider)
-          .addApplication(companion);
+          .addApplication(dto);
     }
 
     // Save pending screenshot if it exists
@@ -1108,21 +1022,11 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
         await file.writeAsBytes(bytes);
 
         // Add to database
-        await ref
-            .read(databaseProvider)
-            .documentsDao
-            .insertDocument(
-              DocumentsCompanion(
-                applicationId: drift.Value(insertedId),
-                fileName: drift.Value('Stellenanzeige_Screenshot.png'),
-                filePath: drift.Value(path),
-                fileType: drift.Value('png'),
-                uploadedAt: drift.Value(DateTime.now()),
-              ),
-            );
+        await ref.read(documentsRepositoryProvider).addDocument(insertedId, 'Stellenanzeige_Screenshot.png', path, 'png');
         _pendingScreenshotBase64 =
             null; // Clear it so it won't be saved again if edited
-      } catch (e) {
+      } on Exception catch (e, st) {
+        log('An error occurred: $e', error: e, stackTrace: st);
         debugPrint('Failed to save screenshot: $e');
       }
     }

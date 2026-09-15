@@ -1,77 +1,78 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 import 'dart:io';
-
 import '../database/app_database.dart';
+import '../../domain/entities/application_entity.dart';
+import '../../domain/models/application_form_dto.dart';
+import '../mappers/drift_mappers.dart';
+import 'package:drift/drift.dart' as drift;
+import 'dart:developer';
 
 class ApplicationsRepository {
   final AppDatabase _db;
 
   ApplicationsRepository(this._db);
 
-  Stream<List<Application>> watchAllApplications() {
-    return _db.applicationsDao.watchAllApplications();
+  Stream<List<ApplicationEntity>> watchAllApplications() {
+    return _db.applicationsDao.watchAllApplications().map(
+      (list) => list.map((a) => a.toEntity()).toList(),
+    );
   }
 
-  Future<List<Application>> getAllApplications() {
-    return _db.applicationsDao.getAllApplications();
+  Future<List<ApplicationEntity>> getAllApplications() async {
+    final list = await _db.applicationsDao.getAllApplications();
+    return list.map((a) => a.toEntity()).toList();
   }
 
-  Future<Application> getApplicationById(int id) {
-    return _db.applicationsDao.getApplicationById(id);
+  Future<ApplicationEntity?> getApplicationById(int id) async {
+    final a = await _db.applicationsDao.getApplicationById(id);
+    return a?.toEntity();
   }
 
-  Future<int> addApplication(ApplicationsCompanion app) async {
-    return await _db.applicationsDao.insertApplication(app);
+  Future<int> addApplication(ApplicationFormDto app) async {
+    return await _db.applicationsDao.insertApplication(app.toCompanion(isUpdate: false));
   }
 
-  Future<void> updateApplication(ApplicationsCompanion app) async {
-    await _db.applicationsDao.updateApplication(app);
+  Future<void> updateApplication(ApplicationFormDto app) async {
+    await _db.applicationsDao.updateApplication(app.toCompanion(isUpdate: true));
   }
 
-  Future<void> deleteApplication(Application app) async {
-    // 1. Delete associated physical files
-    try {
-      final docs = await (_db.select(
-        _db.documents,
-      )..where((d) => d.applicationId.equals(app.id))).get();
+  Future<void> updateCoverLetterContent(int id, String content) async {
+    await _db.applicationsDao.updateApplication(
+      ApplicationsCompanion(
+        id: drift.Value(id),
+        coverLetterContent: drift.Value(content),
+      ),
+    );
+  }
+
+  Future<void> updateJobDescription(int id, String text) async {
+    await _db.applicationsDao.updateApplication(
+      ApplicationsCompanion(
+        id: drift.Value(id),
+        jobDescriptionText: drift.Value(text),
+      ),
+    );
+  }
+
+  Future<void> deleteApplication(int id) async {
+    await _db.transaction(() async {
+      final docs = await (_db.select(_db.documents)
+        ..where((d) => d.applicationId.equals(id))).get();
+        
+      final app = await _db.applicationsDao.getApplicationById(id);
+      if (app == null) return;
+      await _db.applicationsDao.deleteApplication(app);
+
       for (final doc in docs) {
-        final file = File(doc.filePath);
+        final path = doc.filePath;
+        final file = File(path);
         if (await file.exists()) {
-          await file.delete();
+          try {
+            await file.delete();
+          } catch (e) {
+            log('Failed to delete file: $path', name: 'ApplicationsRepository');
+          }
         }
       }
-    } catch (e) {
-      // Ignore file deletion errors
-    }
-
-    // 2. Database transaction to delete all related rows
-    await _db.transaction(() async {
-      await (_db.delete(
-        _db.documents,
-      )..where((d) => d.applicationId.equals(app.id))).go();
-      await (_db.delete(
-        _db.notes,
-      )..where((n) => n.applicationId.equals(app.id))).go();
-      await (_db.delete(
-        _db.emails,
-      )..where((e) => e.applicationId.equals(app.id))).go();
-      await _db.applicationsDao.deleteApplication(app);
     });
   }
 }

@@ -81,11 +81,7 @@ class NaiveBayesClassifier {
           double pWordGivenClass =
               (wordCount + _alpha) / (totalWordsInClass + vocabSize * _alpha);
 
-          // TF-IDF Weighting: emphasize discriminative words
-          int df = _docFreq[token] ?? 1;
-          double idf = log(_totalDocuments / df) + 1.0;
-
-          logProb += log(pWordGivenClass) * idf;
+          logProb += log(pWordGivenClass);
         }
       }
 
@@ -133,13 +129,14 @@ class NaiveBayesClassifier {
   void trainBatch(Map<DocumentType, List<String>> samples) {
     samples.forEach((type, texts) {
       for (String text in texts) {
-        update(text, type);
+        update(text, type, isBatch: true);
       }
     });
+    pruneModel(minFreq: 2);
   }
 
   /// Online learning: update model with a single correction
-  void update(String text, DocumentType correctType) {
+  void update(String text, DocumentType correctType, {bool isBatch = false}) {
     String typeStr = correctType.name;
     _wordCounts.putIfAbsent(typeStr, () => {});
 
@@ -159,6 +156,26 @@ class NaiveBayesClassifier {
 
     _classCounts[typeStr] = (_classCounts[typeStr] ?? 0) + 1;
     _totalDocuments++;
+    
+    if (!isBatch && _vocabulary.length > 10000) {
+      pruneModel(minFreq: 2);
+    }
+  }
+
+  /// Prune vocabulary to save memory by removing rare tokens/bigrams
+  void pruneModel({int minFreq = 2}) {
+    final toRemove = _docFreq.entries
+        .where((e) => e.value < minFreq)
+        .map((e) => e.key)
+        .toList();
+
+    for (var token in toRemove) {
+      _docFreq.remove(token);
+      _vocabulary.remove(token);
+      for (var docType in DocumentType.values) {
+        _wordCounts[docType.name]?.remove(token);
+      }
+    }
   }
 
   /// Serialize model to JSON for persistence

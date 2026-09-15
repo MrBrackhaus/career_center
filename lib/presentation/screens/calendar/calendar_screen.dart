@@ -22,7 +22,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import '../../providers/applications_provider.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../data/database/app_database.dart';
+import '../../../domain/entities/application_entity.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -36,17 +36,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
     final applicationsAsync = ref.watch(applicationsProvider);
 
     return Scaffold(
       body: applicationsAsync.when(
-        loading: () => Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text('Fehler: $err')),
         data: (apps) {
-          final Map<DateTime, List<Application>> events = {};
+          final Map<DateTime, List<ApplicationEntity>> events = {};
 
-          void addEvent(DateTime? date, Application app) {
+          void addEvent(DateTime? date, ApplicationEntity app) {
             if (date == null) return;
             final key = DateTime(date.year, date.month, date.day);
             events.putIfAbsent(key, () => []).add(app);
@@ -57,12 +56,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             if (app.followupDate != null) addEvent(app.followupDate, app);
           }
 
-          List<Application> getEventsForDay(DateTime day) =>
+          List<ApplicationEntity> getEventsForDay(DateTime day) =>
               events[DateTime(day.year, day.month, day.day)] ?? [];
 
           final selectedEvents = _selectedDay != null
               ? getEventsForDay(_selectedDay!)
-              : <Application>[];
+              : <ApplicationEntity>[];
 
           return Column(
             children: [
@@ -94,7 +93,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              TableCalendar<Application>(
+              TableCalendar<ApplicationEntity>(
                 firstDay: DateTime(2024),
                 lastDay: DateTime(2027),
                 focusedDay: _focusedDay,
@@ -236,7 +235,6 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
     return Row(
       children: [
         Container(

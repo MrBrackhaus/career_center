@@ -1,4 +1,4 @@
-import '../../../../l10n/app_localizations.dart';
+﻿import '../../../../l10n/app_localizations.dart';
 
 /*
  * JobTracker
@@ -55,23 +55,20 @@ class DocumentsWidget extends ConsumerWidget {
         const SizedBox(height: 8),
         docsAsync.when(
           data: (docs) {
-            if (docs.isEmpty)
+            if (docs.isEmpty) {
               return const Text(
                 'Keine Dokumente abgelegt.',
                 style: TextStyle(color: Colors.grey),
               );
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: docs.length,
-              itemBuilder: (context, i) {
-                final d = docs[i];
+            }
+            return Column(
+              children: docs.map((d) {
                 return Card(
                   child: ListTile(
                     leading: const Icon(Icons.description, color: Colors.blue),
                     title: Text(d.fileName),
                     subtitle: Text(
-                      '${d.uploadedAt?.day}.${d.uploadedAt?.month}.${d.uploadedAt?.year}',
+                      '${d.uploadedAt.day}.${d.uploadedAt.month}.${d.uploadedAt.year}',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
@@ -83,7 +80,7 @@ class DocumentsWidget extends ConsumerWidget {
                     ),
                   ),
                 );
-              },
+              }).toList(),
             );
           },
           loading: () => const CircularProgressIndicator(),
@@ -99,7 +96,7 @@ class DocumentsWidget extends ConsumerWidget {
       extensions: ['pdf', 'doc', 'docx', 'txt'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
-    if (file == null) return;
+    if (file == null) { return; }
 
     final appDir = await getApplicationDocumentsDirectory();
     final docsDir = Directory(p.join(appDir.path, 'jobtracker_docs'));

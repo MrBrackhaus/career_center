@@ -18,8 +18,7 @@ class StreakData {
 }
 
 final weeklyGoalProvider = FutureProvider<int>((ref) async {
-  final db = ref.watch(databaseProvider);
-  final setting = await db.settingsDao.getSettingByKey('weeklyApplicationGoal');
+  final setting = await ref.read(settingsRepositoryProvider).getSettingByKey('weeklyApplicationGoal');
   return int.tryParse(setting?.value ?? '5') ?? 5;
 });
 

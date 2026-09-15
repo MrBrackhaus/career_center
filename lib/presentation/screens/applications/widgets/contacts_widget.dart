@@ -47,17 +47,14 @@ class ContactsWidget extends ConsumerWidget {
         const SizedBox(height: 8),
         contactsAsync.when(
           data: (contacts) {
-            if (contacts.isEmpty)
+            if (contacts.isEmpty) {
               return const Text(
                 'Keine Kontakte.',
                 style: TextStyle(color: Colors.grey),
               );
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: contacts.length,
-              itemBuilder: (context, i) {
-                final c = contacts[i];
+            }
+            return Column(
+              children: contacts.map((c) {
                 return Card(
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.person)),
@@ -76,7 +73,7 @@ class ContactsWidget extends ConsumerWidget {
                     ),
                   ),
                 );
-              },
+              }).toList(),
             );
           },
           loading: () => const CircularProgressIndicator(),
@@ -140,6 +137,11 @@ class ContactsWidget extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ).then((_) {
+      nameCtrl.dispose();
+      roleCtrl.dispose();
+      emailCtrl.dispose();
+      phoneCtrl.dispose();
+    });
   }
 }

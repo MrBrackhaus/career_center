@@ -1,4 +1,4 @@
-/*
+﻿/*
  * JobTracker
  * Copyright (C) 2026 
  *
@@ -229,7 +229,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
   @override
   Widget build(BuildContext context) {
     final scanState = ref.watch(emailScannerProvider);
-    final notifier = ref.read(emailScannerProvider.notifier);
+    
 
     final selectedCount = scanState.selectedUids.length;
     final sentCount = scanState.emails.where((e) => e.folder == 'sent').length;
@@ -270,7 +270,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                     IconButton(
                       icon: const Icon(Icons.refresh, color: Colors.grey),
                       tooltip: 'Neu laden',
-                      onPressed: notifier.loadEmails,
+                      onPressed: () => ref.read(emailScannerProvider.notifier).loadEmails(),
                     ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.grey),
@@ -364,7 +364,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                       ),
                       const SizedBox(width: 12),
                       TextButton(
-                        onPressed: notifier.selectAllDetected,
+                        onPressed: () => ref.read(emailScannerProvider.notifier).selectAllDetected(),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFF7C6AF7),
                           padding: EdgeInsets.zero,
@@ -375,7 +375,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                         ),
                       ),
                       TextButton(
-                        onPressed: notifier.deselectAll,
+                        onPressed: () => ref.read(emailScannerProvider.notifier).deselectAll(),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.grey,
                           padding: EdgeInsets.zero,
@@ -394,7 +394,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                       onPressed: (selectedCount == 0 || scanState.isImporting)
                           ? null
                           : () async {
-                              final count = await notifier.importSelected();
+                              final count = await ref.read(emailScannerProvider.notifier).importSelected();
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(

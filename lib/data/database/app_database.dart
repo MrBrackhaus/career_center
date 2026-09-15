@@ -60,10 +60,12 @@ class Applications extends Table {
       text().nullable()(); // JSON string for dynamic columns
   TextColumn get coverLetterContent =>
       text().nullable()(); // JSON string for Quill document
+  TextColumn get cvContent =>
+      text().nullable()(); // JSON string for CV Data
   TextColumn get jobDescriptionText =>
       text().nullable()(); // Plain text for ATS analysis
-  DateTimeColumn get createdAt => dateTime().nullable()();
-  DateTimeColumn get updatedAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable().clientDefault(() => DateTime.now())();
+  DateTimeColumn get updatedAt => dateTime().nullable().clientDefault(() => DateTime.now())();
 }
 
 class Templates extends Table {
@@ -71,9 +73,9 @@ class Templates extends Table {
   TextColumn get name => text()();
   TextColumn get type => text()(); // anschreiben | textbaustein | lebenslauf
   TextColumn get content => text().nullable()();
-  DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable().clientDefault(() => DateTime.now())();
   IntColumn get applicationId =>
-      integer().nullable().references(Applications, #id)();
+      integer().nullable().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get filePath =>
       text().nullable()(); // NEW: Für originale PDF-Dateien
 }
@@ -88,25 +90,26 @@ class Settings extends Table {
 
 class Emails extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get applicationId => integer().references(Applications, #id)();
+  IntColumn get applicationId => integer().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get messageId => text()(); // IMAP UID or Message-ID
   TextColumn get subject => text()();
   TextColumn get sender => text()();
   TextColumn get bodySnippet => text()();
   DateTimeColumn get receivedAt => dateTime()();
   BoolColumn get isRead => boolean().withDefault(const Constant(false))();
+  BoolColumn get isSentByMe => boolean().withDefault(const Constant(false))();
 }
 
 class Notes extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get applicationId => integer().references(Applications, #id)();
+  IntColumn get applicationId => integer().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get content => text()();
-  DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable().clientDefault(() => DateTime.now())();
 }
 
 class Documents extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get applicationId => integer().references(Applications, #id)();
+  IntColumn get applicationId => integer().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get fileName => text()();
   TextColumn get filePath => text()(); // absolute path in AppDocuments
   TextColumn get fileType => text()(); // pdf, docx, other
@@ -115,7 +118,7 @@ class Documents extends Table {
 
 class Contacts extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get applicationId => integer().references(Applications, #id)();
+  IntColumn get applicationId => integer().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get name => text().nullable()();
   TextColumn get email => text().nullable()();
   TextColumn get phone => text().nullable()();
@@ -129,6 +132,7 @@ class CvWorkExperiences extends Table {
   IntColumn get applicationId => integer().nullable().references(
     Applications,
     #id,
+    onDelete: KeyAction.cascade,
   )(); // null = Master-Pool
   TextColumn get company => text()();
   TextColumn get position => text()();
@@ -141,7 +145,7 @@ class CvWorkExperiences extends Table {
 class CvEducations extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get applicationId =>
-      integer().nullable().references(Applications, #id)();
+      integer().nullable().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get institution => text()();
   TextColumn get degree => text()();
   DateTimeColumn get startDate => dateTime().nullable()();
@@ -152,7 +156,7 @@ class CvEducations extends Table {
 class CvSkills extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get applicationId =>
-      integer().nullable().references(Applications, #id)();
+      integer().nullable().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get name => text()();
   IntColumn get level => integer().withDefault(const Constant(3))(); // 1-5
 }
@@ -160,7 +164,7 @@ class CvSkills extends Table {
 class CvLanguages extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get applicationId =>
-      integer().nullable().references(Applications, #id)();
+      integer().nullable().references(Applications, #id, onDelete: KeyAction.cascade)();
   TextColumn get name => text()();
   TextColumn get level => text()(); // e.g. "Muttersprache", "B2"
 }
@@ -192,6 +196,7 @@ class CvLanguages extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
+  AppDatabase.forTesting(QueryExecutor e) : super(e);
 
   @override
   EmailsDao get emailsDao => EmailsDao(this);
@@ -205,17 +210,21 @@ class AppDatabase extends _$AppDatabase {
   CvDao get cvDao => CvDao(this);
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration {
     return MigrationStrategy(
+      beforeOpen: (details) async {
+        // Enable SQLite foreign key constraints (disabled by default)
+        await customStatement('PRAGMA foreign_keys = ON');
+      },
       onCreate: (Migrator m) async {
         await m.createAll();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
-          await m.addColumn(applications, applications.customFields);
+          try { await m.addColumn(applications, applications.customFields); } catch (e) { print(e); }
         }
         if (from < 3) {
           await m.createTable(emails);
@@ -230,20 +239,26 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(contacts);
         }
         if (from < 7) {
-          await m.addColumn(applications, applications.coverLetterContent);
-          await m.addColumn(applications, applications.jobDescriptionText);
+          try { await m.addColumn(applications, applications.coverLetterContent); } catch (e) { print(e); }
+          try { await m.addColumn(applications, applications.jobDescriptionText); } catch (e) { print(e); }
         }
         if (from < 8) {
-          await m.addColumn(templates, templates.applicationId);
+          try { await m.addColumn(templates, templates.applicationId); } catch (e) { print(e); }
         }
         if (from < 9) {
-          await m.addColumn(templates, templates.filePath);
+          try { await m.addColumn(templates, templates.filePath); } catch (e) { print(e); }
         }
         if (from < 10) {
           await m.createTable(cvWorkExperiences);
           await m.createTable(cvEducations);
           await m.createTable(cvSkills);
           await m.createTable(cvLanguages);
+        }
+        if (from < 11) {
+          try { await m.addColumn(applications, applications.cvContent); } catch (e) { print(e); }
+        }
+        if (from < 12) {
+          try { await m.addColumn(emails, emails.isSentByMe); } catch (e) { print('isSentByMe already exists'); }
         }
       },
     );
@@ -254,6 +269,17 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'career_center.sqlite'));
-    return NativeDatabase.createInBackground(file);
+    try {
+      return NativeDatabase.createInBackground(file);
+    } on Exception catch (_) {
+      // If the database file is corrupted, back it up and create a fresh one
+      final backupFile = File('${file.path}.backup');
+      if (file.existsSync()) {
+        file.copySync(backupFile.path);
+        file.deleteSync();
+      }
+      // Try again — if it still fails, let the error propagate
+      return NativeDatabase.createInBackground(file);
+    }
   });
 }

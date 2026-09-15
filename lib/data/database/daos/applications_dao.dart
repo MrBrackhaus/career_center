@@ -31,8 +31,8 @@ class ApplicationsDao extends DatabaseAccessor<AppDatabase>
   Stream<List<Application>> watchAllApplications() =>
       select(applications).watch();
 
-  Future<Application> getApplicationById(int id) {
-    return (select(applications)..where((t) => t.id.equals(id))).getSingle();
+  Future<Application?> getApplicationById(int id) {
+    return (select(applications)..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<int> insertApplication(Insertable<Application> application) {
@@ -40,6 +40,11 @@ class ApplicationsDao extends DatabaseAccessor<AppDatabase>
   }
 
   Future<bool> updateApplication(Insertable<Application> application) {
+    if (application is Application) {
+      application = application.copyWith(updatedAt: Value(DateTime.now()));
+    } else if (application is ApplicationsCompanion) {
+      application = application.copyWith(updatedAt: Value(DateTime.now()));
+    }
     return update(applications).replace(application);
   }
 

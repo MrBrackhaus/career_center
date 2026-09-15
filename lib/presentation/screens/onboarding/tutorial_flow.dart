@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/database_provider.dart';
-import '../../../data/database/app_database.dart';
+import '../../../domain/entities/setting_entity.dart';
 
 class TutorialFlow extends StatefulWidget {
   const TutorialFlow({super.key});
@@ -64,10 +64,10 @@ class _TutorialFlowState extends State<TutorialFlow> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Container(
-        width: 650,
-        height: 550,
-        padding: const EdgeInsets.all(32),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 650, maxHeight: 550),
+        child: Container(
+          padding: const EdgeInsets.all(32),
         child: Column(
           children: [
             Expanded(
@@ -77,9 +77,10 @@ class _TutorialFlowState extends State<TutorialFlow> {
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
                   final page = _pages[index];
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                  return SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -111,7 +112,7 @@ class _TutorialFlowState extends State<TutorialFlow> {
                         textAlign: TextAlign.center,
                       ),
                     ],
-                  );
+                  ));
                 },
               ),
             ),
@@ -142,9 +143,8 @@ class _TutorialFlowState extends State<TutorialFlow> {
                     if (_currentPage == _pages.length - 1) {
                       return FilledButton.icon(
                         onPressed: () async {
-                          final db = ref.read(databaseProvider);
-                          await db.settingsDao.insertOrUpdateSetting(
-                            const Setting(
+                          await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
+                            const SettingEntity(
                               key: 'has_seen_tutorial',
                               value: 'true',
                             ),
@@ -171,18 +171,9 @@ class _TutorialFlowState extends State<TutorialFlow> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
-Future<void> showTutorialIfNeeded(BuildContext context, WidgetRef ref) async {
-  final db = ref.read(databaseProvider);
-  final setting = await db.settingsDao.getSettingByKey('has_seen_tutorial');
-  if (setting?.value != 'true' && context.mounted) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const TutorialFlow(),
-    );
-  }
-}
+Future<void> showTutorialIfNeeded(BuildContext context, WidgetRef ref) async {}

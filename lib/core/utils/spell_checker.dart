@@ -4,10 +4,11 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/foundation.dart';
 
 class SpellChecker {
-  static LinkedHashSet<String> _dictionary = LinkedHashSet<String>();
+  static HashSet<String> _dictionary = HashSet<String>();
+  static Map<int, List<String>> _dictByLength = {};
   static bool _isLoaded = false;
   static String _currentLanguage = 'de';
-  static final LinkedHashSet<String> _userDictionary = LinkedHashSet<String>();
+  static final HashSet<String> _userDictionary = HashSet<String>();
 
   /// Available languages with display names
   static const Map<String, String> availableLanguages = {
@@ -76,7 +77,8 @@ class SpellChecker {
 
       // Parse in isolate to avoid UI jank
       final result = await compute(_parseDictionary, primaryDict);
-      _dictionary = result;
+      _dictionary = result['dict'];
+      _dictByLength = result['byLength'];
 
       _isLoaded = true;
       debugPrint('Dictionary loaded ($language): ${_dictionary.length} words');
@@ -86,30 +88,19 @@ class SpellChecker {
     }
   }
 
-  /// Parse frequency-format dictionary (word freq\n)
-  static LinkedHashSet<String> _parseDictionary(String data) {
-    final dict = LinkedHashSet<String>();
+  static Map<String, dynamic> _parseDictionary(String data) {
+    final dict = HashSet<String>();
+    final byLength = <int, List<String>>{};
     final lines = data.split('\n');
     for (var line in lines) {
       final parts = line.trim().split(' ');
       if (parts.isNotEmpty && parts[0].isNotEmpty) {
-        dict.add(parts[0].toLowerCase());
+        final w = parts[0].toLowerCase();
+        dict.add(w);
+        byLength.putIfAbsent(w.length, () => []).add(w);
       }
     }
-    return dict;
-  }
-
-  /// Parse simple dictionary (one word per line)
-  static LinkedHashSet<String> _parseSimpleDictionary(String data) {
-    final dict = LinkedHashSet<String>();
-    final lines = data.split('\n');
-    for (var line in lines) {
-      final word = line.trim();
-      if (word.isNotEmpty) {
-        dict.add(word.toLowerCase());
-      }
-    }
-    return dict;
+    return {'dict': dict, 'byLength': byLength};
   }
 
   static void ignoreWord(String word) {
@@ -182,48 +173,20 @@ class SpellChecker {
   /// Returns a list of suggested corrections using a fast Levenshtein distance subset search.
   static Future<List<String>> getSuggestions(String originalWord) async {
     if (!_isLoaded || _dictionary.isEmpty) return [];
-
-    // Run on main thread, but it's very fast because we filter aggressively
-    final String word = originalWord.toLowerCase();
-    final dict = _dictionary;
-
-    final List<MapEntry<String, int>> matchEntries = [];
-
-    // Filter dictionary to words with similar length (+/- 2 characters)
-    // and same starting letter (for performance)
-    final startChar = word.isEmpty ? '' : word[0];
-
-    int index = 0;
-    for (final dictWord in dict) {
-      index++;
-      if (dictWord.isEmpty) continue;
-
-      final lenDiff = (dictWord.length - word.length).abs();
-      if (lenDiff > 2) continue;
-
-      if (dictWord[0] != startChar && lenDiff != 0) continue;
-
-      final dist = _levenshtein(dictWord, word);
-      if (dist <= 2) {
-        matchEntries.add(
-          MapEntry(dictWord, (dist * 1000000) + index),
-        ); // Encode dist and frequency rank together
+    final lower = originalWord.toLowerCase();
+    final targetLens = [lower.length - 2, lower.length - 1, lower.length, lower.length + 1, lower.length + 2];
+    final filteredDict = <String>[];
+    for (var len in targetLens) {
+      if (_dictByLength.containsKey(len)) {
+        filteredDict.addAll(_dictByLength[len]!);
       }
     }
 
-    // Sort: lowest distance first, then lowest index (most frequent)
-    matchEntries.sort((a, b) => a.value.compareTo(b.value));
-
-    // Return top 5
-    return matchEntries.take(5).map((entry) {
-      final w = entry.key;
-      // Capitalize if original word was capitalized
-      if (originalWord.isNotEmpty &&
-          originalWord[0] == originalWord[0].toUpperCase()) {
-        return w[0].toUpperCase() + w.substring(1);
-      }
-      return w;
-    }).toList();
+    return await compute(_calculateSuggestions, {
+      'word': lower,
+      'originalWord': originalWord,
+      'dict': filteredDict,
+    });
   }
 
   static int _levenshtein(String s, String t) {
@@ -286,4 +249,46 @@ class SpellChecker {
 
     return warnings;
   }
+}
+
+List<String> _calculateSuggestions(Map<String, dynamic> args) {
+  final String word = args['word'];
+  final String originalWord = args['originalWord'];
+  final List<String> dict = args['dict'];
+  
+  final List<MapEntry<String, int>> matchEntries = [];
+  final startChar = word.isEmpty ? '' : word[0];
+
+  int index = 0;
+  for (final dictWord in dict) {
+    index++;
+    if (dictWord.isEmpty) continue;
+
+    final lenDiff = (dictWord.length - word.length).abs();
+    if (lenDiff > 2) continue;
+
+    if (dictWord[0] != startChar && lenDiff != 0) continue;
+
+    final dist = SpellChecker._levenshtein(dictWord, word);
+    if (dist <= 2) {
+      // Frequency proxy: shorter words are not always better. 
+      // We prioritize exact length match, then frequency (if we had it).
+      // Let's use Levenshtein distance as primary, and length difference as secondary.
+      int lengthDiffScore = (dictWord.length - word.length).abs();
+      matchEntries.add(
+        MapEntry(dictWord, (dist * 1000000) + (lengthDiffScore * 1000) + index),
+      );
+    }
+  }
+
+  matchEntries.sort((a, b) => a.value.compareTo(b.value));
+
+  return matchEntries.take(5).map((entry) {
+    final w = entry.key;
+    if (originalWord.isNotEmpty &&
+        originalWord[0] == originalWord[0].toUpperCase()) {
+      return w[0].toUpperCase() + w.substring(1);
+    }
+    return w;
+  }).toList();
 }

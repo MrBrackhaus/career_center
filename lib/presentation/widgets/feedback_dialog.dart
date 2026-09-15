@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/secrets.dart';
 
@@ -17,6 +18,13 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
   final _descController = TextEditingController();
   String _feedbackType = 'Bug'; // 'Bug', 'Idee', 'Feedback'
   bool _isSending = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
 
   Future<void> _sendReport() async {
     final title = _titleController.text.trim();
@@ -62,13 +70,21 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
         prefix = "💬 Neues Feedback";
       }
 
+      String versionStr = "Unbekannt";
+      try {
+        final packageInfo = await PackageInfo.fromPlatform();
+        versionStr = "${packageInfo.version}+${packageInfo.buildNumber}";
+      } catch (e) {
+        // ignore
+      }
+
       final payload = jsonEncode({
         "embeds": [
           {
             "title": "$prefix: $title",
             "description": desc,
             "color": color,
-            "footer": {"text": "Gesendet aus der Bewerbungszentrale App"},
+            "footer": {"text": "App Version: $versionStr"},
             "timestamp": DateTime.now().toIso8601String(),
           },
         ],

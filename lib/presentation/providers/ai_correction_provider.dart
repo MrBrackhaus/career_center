@@ -35,9 +35,8 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
     final service = ref.read(aiCorrectionServiceProvider);
     state = state.copyWith(isCorrecting: true, clearError: true);
     try {
-      final db = ref.read(databaseProvider);
-      final urlSetting = await db.settingsDao.getSettingByKey('aiServerUrl');
-      final modelSetting = await db.settingsDao.getSettingByKey('aiModelName');
+      final urlSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiServerUrl');
+      final modelSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiModelName');
       final baseUrl =
           urlSetting?.value ?? 'http://localhost:11434/api/generate';
       final modelName = modelSetting?.value ?? 'llama3.2';
@@ -50,7 +49,7 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
       );
       state = state.copyWith(isCorrecting: false);
       return corrected;
-    } catch (e) {
+    } on Exception catch (e) {
       state = state.copyWith(isCorrecting: false, error: e.toString());
       return null;
     }
@@ -58,6 +57,6 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
 }
 
 final aiCorrectionProvider =
-    NotifierProvider<AiCorrectionNotifier, AiCorrectionState>(
+    NotifierProvider.autoDispose<AiCorrectionNotifier, AiCorrectionState>(
       AiCorrectionNotifier.new,
     );

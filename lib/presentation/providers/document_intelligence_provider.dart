@@ -65,7 +65,7 @@ class DocumentIntelligenceNotifier extends Notifier<DocumentAnalysisState> {
           .analyzeDocument(text, source: source, metadata: metadata);
       state = state.copyWith(lastResult: result, isAnalyzing: false);
       return result;
-    } catch (e) {
+    } on Exception catch (e) {
       state = state.copyWith(
         isAnalyzing: false,
         errorMessage: 'Fehler bei der Analyse: $e',
@@ -83,7 +83,7 @@ class DocumentIntelligenceNotifier extends Notifier<DocumentAnalysisState> {
       await ref
           .read(documentIntelligenceServiceProvider)
           .learnFromCorrection(lastResult.rawText, correctType);
-    } catch (e) {
+    } on Exception catch (_) {
       // Stilles Fehlschlagen – Learning ist optional
     }
   }
@@ -102,6 +102,6 @@ final documentIntelligenceServiceProvider =
 
 /// Provider für den DocumentIntelligenceNotifier.
 final documentIntelligenceProvider =
-    NotifierProvider<DocumentIntelligenceNotifier, DocumentAnalysisState>(
+    NotifierProvider.autoDispose<DocumentIntelligenceNotifier, DocumentAnalysisState>(
       DocumentIntelligenceNotifier.new,
     );

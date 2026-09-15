@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart' as shared_prefs;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../domain/entities/application_entity.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
-import 'package:drift/drift.dart' as drift;
+
 
 import 'dart:convert';
 import 'dart:async';
 
-import '../../../data/database/app_database.dart';
+import '../../../../domain/entities/template_entity.dart';
+import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
+import '../../providers/editor_provider.dart';
 import '../../../core/utils/keyword_extractor.dart';
 import '../../../core/utils/spell_checker.dart';
 import '../../../core/utils/font_scanner.dart';
@@ -21,7 +25,7 @@ import '../../../core/themes/designs/monogram_design.dart';
 
 class ApplicationEditorScreen extends ConsumerStatefulWidget {
   final int? applicationId;
-  final Template? template;
+  final TemplateEntity? template;
   final String? initialType;
 
   const ApplicationEditorScreen({
@@ -43,7 +47,7 @@ class _ApplicationEditorScreenState
   bool _hasChanges = false;
   bool _isSaving = false;
   Timer? _autoSaveTimer;
-  Application? _application;
+  ApplicationEntity? _application;
   final FocusNode _editorFocusNode = FocusNode();
   final _nameController = TextEditingController();
 
@@ -140,11 +144,12 @@ class _ApplicationEditorScreenState
 
     String subjectPrefix = 'Bewerbung als ';
     if (lang == 'en') {
-      subjectPrefix = 'Application for ';
-    } else if (lang == 'fr')
+      subjectPrefix = 'ApplicationEntity for ';
+    } else if (lang == 'fr') {
       subjectPrefix = 'Candidature pour le poste de ';
-    else if (lang == 'es')
+    } else if (lang == 'es') {
       subjectPrefix = 'Candidatura para el puesto de ';
+    }
 
     final subjectStart = headerText.indexOf(subjectPrefix);
     final subjectEnd = headerText.indexOf('\n', subjectStart);
@@ -157,11 +162,24 @@ class _ApplicationEditorScreenState
     }
   }
 
-  void _insertFooter() {
+  Future<void> _insertFooter() async {
     final len = _controller.document.length;
-    final footer =
-        "\n\nMit freundlichen Gruessen\n\n\nMax Mustermann\n\nAnlagen";
-    _controller.document.insert(len - 1, footer);
+    _controller.document.insert(len - 1, "\n\nMit freundlichen Grüßen\n\n");
+    
+    // Load signature
+    final prefs = await shared_prefs.SharedPreferences.getInstance();
+    final signatureBase64 = prefs.getString('user_signature');
+    if (signatureBase64 != null) {
+      _controller.document.insert(_controller.document.length - 1, "\n");
+      _controller.document.insert(_controller.document.length - 1, quill.BlockEmbed.image("data:image/png;base64,$signatureBase64"));
+      _controller.document.insert(_controller.document.length - 1, "\n\n");
+    } else {
+      _controller.document.insert(_controller.document.length - 1, "\n\n");
+    }
+
+    // Name
+    final name = 'Max Mustermann';
+    _controller.document.insert(_controller.document.length - 1, "$name\n\nAnlagen");
   }
 
   // CV State
@@ -231,18 +249,18 @@ class _ApplicationEditorScreenState
   }
 
   Future<void> _loadApplication() async {
-    final db = ref.read(databaseProvider);
-    final langSetting = await db.settingsDao.getSettingByKey(
+    
+    final langSetting = await ref.read(settingsRepositoryProvider).getSettingByKey(
       'spellCheckLanguage',
     );
     SpellChecker.loadDictionary(language: langSetting?.value ?? 'de');
 
-    final nameSetting = await db.settingsDao.getSettingByKey('userName');
-    final emailSetting = await db.settingsDao.getSettingByKey('userEmail');
-    final phoneSetting = await db.settingsDao.getSettingByKey('userPhone');
-    final addressSetting = await db.settingsDao.getSettingByKey('userAddress');
-    final zipSetting = await db.settingsDao.getSettingByKey('userZip');
-    final citySetting = await db.settingsDao.getSettingByKey('userCity');
+    final nameSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userName');
+    final emailSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userEmail');
+    final phoneSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userPhone');
+    final addressSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userAddress');
+    final zipSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userZip');
+    final citySetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userCity');
 
     if (mounted) {
       setState(() {
@@ -289,30 +307,32 @@ class _ApplicationEditorScreenState
     quill.Document document = quill.Document();
 
     if (widget.template != null) {
-      if (widget.template?.content?.isNotEmpty == true) {
+      if (widget.template!.content.isNotEmpty) {
         try {
-          final decoded = jsonDecode(widget.template!.content!);
+          final decoded = jsonDecode(widget.template!.content);
           document = quill.Document.fromJson(decoded);
         } catch (e) {
-          document = quill.Document()..insert(0, widget.template!.content!);
+          document = quill.Document()..insert(0, widget.template!.content);
         }
       }
     } else if (widget.applicationId != null) {
-      final app = await db.applicationsDao.getApplicationById(
+      final app = await ref.read(applicationsRepositoryProvider).getApplicationById(
         widget.applicationId!,
       );
 
-      _application = app;
-      _headerCompanyNameCtrl.text = app.company;
-      _headerContactNameCtrl.text = app.contactName ?? 'Personalabteilung';
-      _headerCompanyAddressCtrl.text =
-          app.address ?? 'Musterstraße 1, 12345 Stadt';
-      if (app.coverLetterContent?.isNotEmpty == true) {
-        try {
-          final decoded = jsonDecode(app.coverLetterContent!);
-          document = quill.Document.fromJson(decoded);
-        } catch (e) {
-          document = quill.Document()..insert(0, app.coverLetterContent!);
+      if (app != null) {
+        _application = app;
+        _headerCompanyNameCtrl.text = app.company;
+        _headerContactNameCtrl.text = app.contactName ?? 'Personalabteilung';
+        _headerCompanyAddressCtrl.text =
+            app.address ?? 'Musterstraße 1, 12345 Stadt';
+        if (app.coverLetterContent?.isNotEmpty == true) {
+          try {
+            final decoded = jsonDecode(app.coverLetterContent!);
+            document = quill.Document.fromJson(decoded);
+          } catch (e) {
+            document = quill.Document()..insert(0, app.coverLetterContent!);
+          }
         }
       }
     }
@@ -396,38 +416,26 @@ class _ApplicationEditorScreenState
   Future<void> _save() async {
     setState(() => _isSaving = true);
     final content = jsonEncode(_controller.document.toDelta().toJson());
-    final db = ref.read(databaseProvider);
 
     if (widget.applicationId != null) {
-      final companion = ApplicationsCompanion(
-        id: drift.Value(widget.applicationId!),
-        coverLetterContent: drift.Value(content),
+      await ref.read(applicationNotifierProvider).updateCoverLetterContent(
+        widget.applicationId!,
+        content,
       );
-      await db.applicationsDao.updateApplication(companion);
     } else {
-      // Save as template
+      // Save as TemplateEntity
       final name = _nameController.text.trim().isEmpty
           ? 'Neues Dokument'
           : _nameController.text.trim();
       final type = widget.template?.type ?? widget.initialType ?? 'anschreiben';
 
-      if (widget.template != null) {
-        final companion = TemplatesCompanion(
-          id: drift.Value(widget.template!.id),
-          name: drift.Value(name),
-          type: drift.Value(type),
-          content: drift.Value(content),
-        );
-        await db.templatesDao.updateTemplate(companion);
-      } else {
-        final companion = TemplatesCompanion(
-          name: drift.Value(name),
-          type: drift.Value(type),
-          content: drift.Value(content),
-          createdAt: drift.Value(DateTime.now()),
-        );
-        await db.templatesDao.insertTemplate(companion);
-        // Da wir kein Template-Objekt haben, navigieren wir am besten zurÃ¼ck oder zeigen "Gespeichert" an
+      await ref.read(templateEditorProvider.notifier).saveTemplate(
+        existingId: widget.template?.id,
+        name: name,
+        type: type,
+        deltaJson: _controller.document.toDelta().toJson(),
+      );
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Als Vorlage gespeichert.')),
         );
@@ -466,11 +474,14 @@ class _ApplicationEditorScreenState
                   ? Text('Anschreiben: ${_application?.company}')
                   : TextField(
                       controller: _nameController,
-                      decoration: const InputDecoration(
+                      maxLength: 100,
+                      decoration: InputDecoration(
                         border: InputBorder.none,
                         hintText: 'Dokumentname (z.B. Lebenslauf)',
+                        counterText: '',
+                        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
-                      style: const TextStyle(color: Colors.white, fontSize: 20),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20),
                     ),
             ),
             SegmentedButton<bool>(
@@ -613,8 +624,10 @@ class _ApplicationEditorScreenState
         return SingleChildScrollView(
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Center(
-            child: Container(
-              width: 794, // A4 width at 96 DPI
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Container(
+                width: 794, // A4 width at 96 DPI
               constraints: const BoxConstraints(
                 minHeight: 1123, // A4 height at 96 DPI
               ),
@@ -652,6 +665,7 @@ class _ApplicationEditorScreenState
                   profileImagePath: _cvProfileImagePath,
                   experiences: _cvExperiences,
                   educations: _cvEducations,
+                ),
                 ),
               ),
             ),
@@ -723,13 +737,14 @@ class _ApplicationEditorScreenState
                           _cvIntroCtrl,
                           maxLines: 3,
                         ),
-                        _buildSidebarTextField('E-Mail', _cvEmailCtrl),
-                        _buildSidebarTextField('Telefon', _cvPhoneCtrl),
+                        _buildSidebarTextField('E-Mail', _cvEmailCtrl, keyboardType: TextInputType.emailAddress),
+                        _buildSidebarTextField('Telefon', _cvPhoneCtrl, keyboardType: TextInputType.phone),
                         _buildSidebarTextField('Anschrift', _cvAddressCtrl),
                         _buildSidebarTextField('Geburtsort', _cvBirthplaceCtrl),
                         _buildSidebarTextField(
                           'Geburtsdatum',
                           _cvBirthdateCtrl,
+                          keyboardType: TextInputType.datetime,
                         ),
                         _buildSidebarTextField(
                           'Familienstand',
@@ -857,12 +872,14 @@ class _ApplicationEditorScreenState
     String label,
     TextEditingController controller, {
     int maxLines = 1,
+    TextInputType? keyboardType,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        keyboardType: keyboardType,
         onChanged: (value) => setState(() {}),
         style: const TextStyle(fontSize: 12),
         decoration: InputDecoration(
@@ -1031,12 +1048,15 @@ class _ApplicationEditorScreenState
 
   Widget _buildColorDot(Color color) {
     final isSelected = _currentAccentColor == color;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _currentAccentColor = color;
-        });
-      },
+    return Semantics(
+      button: true,
+      label: 'Farbe auswählen: 0x${color.toARGB32().toRadixString(16)}',
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _currentAccentColor = color;
+          });
+        },
       child: Container(
         width: 32,
         height: 32,
@@ -1051,7 +1071,7 @@ class _ApplicationEditorScreenState
           ),
         ),
       ),
-    );
+    ));
   }
 
   void _applyDesign(String designId) {
@@ -1149,9 +1169,9 @@ class _ApplicationEditorScreenState
   }
 
   Widget _buildBausteineTab() {
-    final db = ref.read(databaseProvider);
-    return StreamBuilder<List<Template>>(
-      stream: db.templatesDao.watchTemplatesByType('textbaustein'),
+    
+    return StreamBuilder<List<TemplateEntity>>(
+      stream: ref.read(templatesRepositoryProvider).watchTemplatesByType('textbaustein'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -1175,44 +1195,17 @@ class _ApplicationEditorScreenState
                     label: Text('Beispiele laden'),
                     onPressed: () async {
                       final samples = [
-                        TemplatesCompanion.insert(
-                          name: 'Einleitung Klassisch',
-                          type: 'textbaustein',
-                          content: drift.Value(
-                            '[{"insert":"Sehr geehrte Damen und Herren,\\n\\nhiermit bewerbe ich mich mit großem Interesse auf die ausgeschriebene Position.\\n"}]',
-                          ),
-                        ),
-                        TemplatesCompanion.insert(
-                          name: 'Einleitung Dynamisch',
-                          type: 'textbaustein',
-                          content: drift.Value(
-                            '[{"insert":"Sehr geehrte Damen und Herren,\\n\\nIhre Unternehmenswerte haben mich sofort begeistert, weshalb ich mich freue, mich Ihnen als engagierter Kandidat vorzustellen.\\n"}]',
-                          ),
-                        ),
-                        TemplatesCompanion.insert(
-                          name: 'Gehaltsvorstellung',
-                          type: 'textbaustein',
-                          content: drift.Value(
-                            '[{"insert":"Meine Gehaltsvorstellungen liegen bei einem Bruttojahresgehalt von 55.000 Euro. Ein Einstieg ist ab dem 01.12. möglich.\\n"}]',
-                          ),
-                        ),
-                        TemplatesCompanion.insert(
-                          name: 'Teamfähigkeit',
-                          type: 'textbaustein',
-                          content: drift.Value(
-                            '[{"insert":"In meinen bisherigen Projekten konnte ich stets durch eine starke Teamfähigkeit und lösungsorientierte Arbeitsweise überzeugen.\\n"}]',
-                          ),
-                        ),
-                        TemplatesCompanion.insert(
-                          name: 'Call to Action',
-                          type: 'textbaustein',
-                          content: drift.Value(
-                            '[{"insert":"Ich freue mich sehr auf die Gelegenheit, Sie in einem persönlichen Gespräch von meiner Eignung zu überzeugen.\\n\\nMit freundlichen Grüßen\\n"}]',
-                          ),
-                        ),
+                        {'name': 'Standard-Einleitung', 'type': 'textbaustein', 'content': '[{"insert":"Sehr geehrte Damen und Herren,\\n\\nmit großem Interesse habe ich Ihre Stellenanzeige gelesen und bewerbe mich hiermit um die ausgeschriebene Position.\\n"}]'},
+                        {'name': 'Einleitung Dynamisch', 'type': 'textbaustein', 'content': '[{"insert":"Sehr geehrte Damen und Herren,\\n\\nIhre Unternehmenswerte haben mich sofort begeistert, weshalb ich mich freue, mich Ihnen als engagierter Kandidat vorzustellen.\\n"}]'},
+                        {'name': 'Gehaltsvorstellung', 'type': 'textbaustein', 'content': '[{"insert":"Meine Gehaltsvorstellungen liegen bei einem Bruttojahresgehalt von 55.000 Euro. Ein Einstieg ist ab dem 01.12. möglich.\\n"}]'},
+                        {'name': 'Teamfähigkeit', 'type': 'textbaustein', 'content': '[{"insert":"In meinen bisherigen Projekten konnte ich stets durch eine starke Teamfähigkeit und lösungsorientierte Arbeitsweise überzeugen.\\n"}]'},
+                        {'name': 'Call to Action', 'type': 'textbaustein', 'content': '[{"insert":"Ich freue mich sehr auf die Gelegenheit, Sie in einem persönlichen Gespräch von meiner Eignung zu überzeugen.\\n\\nMit freundlichen Grüßen\\n"}]'},
                       ];
                       for (final t in samples) {
-                        await db.templatesDao.insertTemplate(t);
+                        await ref.read(templatesRepositoryProvider).addTemplate( t['name']!,
+                          t['type']!,
+                          t['content']!,
+                        );
                       }
                     },
                   ),
@@ -1233,12 +1226,12 @@ class _ApplicationEditorScreenState
     );
   }
 
-  Widget _buildDraggableBlock(Template template) {
+  Widget _buildDraggableBlock(TemplateEntity template) {
     // Generate a short preview of the text
     String preview = '...';
     try {
-      if (template.content != null && template.content!.isNotEmpty) {
-        final List<dynamic> ops = jsonDecode(template.content!);
+      if (template.content.isNotEmpty) {
+        final List<dynamic> ops = jsonDecode(template.content);
         final doc = quill.Document.fromJson(ops);
         preview = doc.toPlainText().replaceAll('\n', ' ').trim();
       }
@@ -1255,9 +1248,9 @@ class _ApplicationEditorScreenState
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () {
-          if (template.content != null) {
+          if (template.content.isNotEmpty) {
             try {
-              final ops = jsonDecode(template.content!);
+              final ops = jsonDecode(template.content);
               final docToInsert = quill.Document.fromJson(ops);
               final length = docToInsert.length;
               final currentSelection = _controller.selection;
@@ -1600,10 +1593,10 @@ class _ApplicationEditorScreenState
               ),
               const SizedBox(width: 16),
               FilledButton.icon(
-                onPressed: ref.watch(aiCorrectionProvider).isCorrecting
+                onPressed: ref.watch(aiCorrectionProvider.select((s) => s.isCorrecting))
                     ? null
                     : _runAiCorrection,
-                icon: ref.watch(aiCorrectionProvider).isCorrecting
+                icon: ref.watch(aiCorrectionProvider.select((s) => s.isCorrecting))
                     ? const SizedBox(
                         width: 16,
                         height: 16,
@@ -1630,9 +1623,11 @@ class _ApplicationEditorScreenState
               return SingleChildScrollView(
                 padding: EdgeInsets.symmetric(vertical: 40),
                 child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Vertical Ruler
                       Padding(
@@ -1748,7 +1743,8 @@ class _ApplicationEditorScreenState
                           ),
                         ],
                       ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -1994,14 +1990,12 @@ class _ApplicationEditorScreenState
           FilledButton(
             onPressed: () async {
               if (ctrl.text.trim().isNotEmpty) {
-                final db = ref.read(databaseProvider);
-                await db.applicationsDao.updateApplication(
-                  ApplicationsCompanion(
-                    id: drift.Value(widget.applicationId!),
-                    jobDescriptionText: drift.Value(ctrl.text.trim()),
-                  ),
+                await ref.read(applicationNotifierProvider).updateJobDescription(
+                  widget.applicationId!,
+                  ctrl.text.trim(),
                 );
-                final updatedApp = await db.applicationsDao.getApplicationById(
+                final repo = ref.read(applicationsRepositoryProvider);
+                final updatedApp = await repo.getApplicationById(
                   widget.applicationId!,
                 );
                 setState(() {
@@ -2009,7 +2003,8 @@ class _ApplicationEditorScreenState
                 });
                 _runAtsAnalysis();
               }
-              if (context.mounted) Navigator.pop(ctx);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
             },
             child: Text('Speichern & Analysieren'),
           ),

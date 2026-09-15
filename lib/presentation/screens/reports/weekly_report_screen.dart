@@ -51,10 +51,11 @@ class WeeklyReportScreen extends ConsumerWidget {
               'Jede Reise beginnt mit dem ersten Schritt! 🚀';
           if (thisWeekApps.length >= 5) {
             motivationTitle = 'FANTASTISCHE ARBEIT DIESE WOCHE! 🎉';
-          } else if (thisWeekApps.length >= 3)
+          } else if (thisWeekApps.length >= 3) {
             motivationTitle = 'Starke Leistung diese Woche! 🌟';
-          else if (thisWeekApps.isNotEmpty)
+          } else if (thisWeekApps.isNotEmpty) {
             motivationTitle = 'Guter Start! Weiter so! 💪';
+          }
 
           final goalProgress = (thisWeekApps.length / 5).clamp(0.0, 1.0);
 
@@ -84,35 +85,53 @@ class WeeklyReportScreen extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isSmall = constraints.maxWidth < 600;
+                    final cards = [
+                      _buildStatCard(
                         context,
                         'NEUE BEWERBUNGEN',
                         thisWeekApps.length.toString(),
                         Icons.note_add,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatCard(
+                      _buildStatCard(
                         context,
                         'AKTIVE BEWERBUNGEN',
                         activeApps.toString(),
                         Icons.pending_actions,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatCard(
+                      _buildStatCard(
                         context,
                         'ABSAGEN',
                         thisWeekRejections.toString(),
                         Icons.cancel_outlined,
                       ),
-                    ),
-                  ],
+                    ];
+                    
+                    if (isSmall) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          cards[0],
+                          const SizedBox(height: 16),
+                          cards[1],
+                          const SizedBox(height: 16),
+                          cards[2],
+                        ],
+                      );
+                    }
+                    
+                    return Row(
+                      children: [
+                        Expanded(child: cards[0]),
+                        const SizedBox(width: 16),
+                        Expanded(child: cards[1]),
+                        const SizedBox(width: 16),
+                        Expanded(child: cards[2]),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
                 Card(
@@ -204,7 +223,7 @@ class WeeklyReportScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Fehler: $err')),
+        error: (err, _) => Center(child: Text('Fehler: $err')),
       ),
     );
   }

@@ -1,30 +1,57 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database/app_database.dart';
 import '../../data/repositories/applications_repository.dart';
+import '../../data/repositories/contacts_repository.dart';
+import '../../data/repositories/documents_repository.dart';
+import '../../data/repositories/notes_repository.dart';
+import '../../data/repositories/templates_repository.dart';
+import '../../data/repositories/editor_repository.dart';
+import '../../data/repositories/settings_repository.dart';
+import '../../data/repositories/emails_repository.dart';
 
 final databaseProvider = Provider<AppDatabase>((ref) {
-  return AppDatabase();
+  final db = AppDatabase();
+  ref.onDispose(() => db.close());
+  return db;
 });
 
 final applicationsRepositoryProvider = Provider<ApplicationsRepository>((ref) {
   final db = ref.watch(databaseProvider);
   return ApplicationsRepository(db);
+});
+
+final contactsRepositoryProvider = Provider<ContactsRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return ContactsRepository(db);
+});
+
+final documentsRepositoryProvider = Provider<DocumentsRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return DocumentsRepository(db);
+});
+
+final notesRepositoryProvider = Provider<NotesRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return NotesRepository(db);
+});
+
+final templatesRepositoryProvider = Provider<TemplatesRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return TemplatesRepository(db);
+});
+
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return SettingsRepository(db);
+});
+
+final emailsRepositoryProvider = Provider<EmailsRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return EmailsRepository(db);
+});
+
+final editorRepositoryProvider = Provider<EditorRepository>((ref) {
+  final db = ref.watch(databaseProvider);
+  return EditorRepository(db);
 });

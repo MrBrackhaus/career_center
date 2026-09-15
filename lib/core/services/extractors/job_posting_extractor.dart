@@ -140,6 +140,71 @@ class JobPostingExtractor {
     }
   }
 
+  /// Findet externe Bewerbungs-Links im HTML (z.B. Personio, Workday, Greenhouse).
+  ///
+  /// Wird verwendet, wenn die initiale Extraktion unvollständig ist (z.B. keine
+  /// Kontaktdaten gefunden), um Daten von der verlinkten externen Seite nachzuladen.
+  static List<String> findExternalApplicationLinks(String htmlString) {
+    final links = <String>[];
+    try {
+      final document = html_parser.parse(htmlString);
+      final anchors = document.querySelectorAll('a[href]');
+
+      // Bekannte Bewerbungsportale
+      final knownPortals = [
+        'personio.de', 'personio.com',
+        'workday.com',
+        'smartrecruiters.com',
+        'greenhouse.io',
+        'jobs.lever.co', 'lever.co',
+        'recruitee.com',
+        'softgarden.io', 'softgarden.de',
+        'joinvision.com',
+        'coveto.de',
+        'stellenanzeigen.de',
+        'indeed.com',
+        'stepstone.de',
+        'xing.com/jobs',
+        'linkedin.com/jobs',
+      ];
+
+      // Bewerbungs-Keywords in Link-Text oder Title
+      final applyKeywords = RegExp(
+        r'(jetzt\s+bewerben|online\s+bewerben|zur\s+bewerbung|bewerbung\s+einreichen|apply\s+now|apply\s+here|bewerben\s+sie\s+sich|direkt\s+bewerben|hier\s+bewerben)',
+        caseSensitive: false,
+      );
+
+      for (final anchor in anchors) {
+        final href = anchor.attributes['href']?.trim() ?? '';
+        if (href.isEmpty || href.startsWith('#') || href.startsWith('javascript:')) continue;
+
+        final linkText = anchor.text.trim().toLowerCase();
+        final title = (anchor.attributes['title'] ?? '').toLowerCase();
+
+        // Prüfe ob der Link-Text oder Title ein Bewerbungs-Keyword enthält
+        final hasApplyKeyword = applyKeywords.hasMatch(linkText) || applyKeywords.hasMatch(title);
+
+        // Prüfe ob die URL zu einem bekannten Portal gehört
+        final isKnownPortal = knownPortals.any((portal) => href.contains(portal));
+
+        if (hasApplyKeyword || isKnownPortal) {
+          // Normalisiere die URL
+          String normalizedUrl = href;
+          if (!normalizedUrl.startsWith('http')) {
+            // Relative URLs überspringen – wir brauchen absolute externe Links
+            continue;
+          }
+          if (!links.contains(normalizedUrl)) {
+            links.add(normalizedUrl);
+          }
+        }
+      }
+    } catch (_) {
+      // Bei Parse-Fehlern einfach leere Liste zurückgeben
+    }
+    return links;
+  }
+
   /// Extrahiert Daten aus einer Stellenanzeige.
   static ExtractedFields extract(String text) {
     final lines = text.split('\n').map((l) => l.trim()).toList();
@@ -232,10 +297,10 @@ class JobPostingExtractor {
       }
     }
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Kontaktperson Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // Ã¢â€ â‚¬Ã¢â€ â‚¬ Kontaktperson Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬Ã¢â€ â‚¬
     FieldResult<String>? foundContact;
 
-    // Suche nach HR-Begriffen oder Ansprechpartner in der NÃ¤he von Namen
+    // Suche nach HR-Begriffen oder Ansprechpartner in der Nähe von Namen
     final hrRoles = [
       'hr manager',
       'recruiter',
@@ -244,7 +309,7 @@ class JobPostingExtractor {
       'ansprechpartner',
       'kontakt',
       'z.hd.',
-      'zu hÃ¤nden',
+      'zu händen',
     ];
     for (int i = 0; i < nonEmptyLines.length; i++) {
       final line = nonEmptyLines[i];
@@ -253,15 +318,19 @@ class JobPostingExtractor {
       bool hasHrRole = hrRoles.any((r) => lower.contains(r));
 
       if (hasHrRole) {
-        // Regex fÃ¼r Namen: optional Titel, optional Herr/Frau, dann 2+ groÃŸgeschriebene WÃ¶rter
+        // Regex für Namen: optional Titel, optional Herr/Frau, dann 2+ großgeschriebene Wörter (keine Zeilenumbrüche)
+        // Muss jetzt die ganze Zeile sein (oder fast die ganze), um False Positives in Sätzen zu vermeiden
         final nameRegex = RegExp(
-          r'(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)\s+)?(?:(?:Dr\.|Prof\.)\s+)?([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+(?:\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+)?)',
+          r'^[ \t]*(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200}(?:[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})?)[ \t]*$',
         );
 
-        // PrÃ¼fe aktuelle Zeile
         final match = nameRegex.firstMatch(line);
-        if (match != null && !lower.startsWith('kontakt')) {
-          // Vermeide, dass das Wort "Kontakt" selbst matcht, wenn es kein Name ist.
+        final matchStr = match?.group(0)?.toLowerCase() ?? '';
+        
+        // Vermeide dass die Rolle selbst als Name erkannt wird (z.B. "HR Manager")
+        bool isJustRole = hrRoles.any((r) => matchStr.contains(r));
+
+        if (match != null && !lower.startsWith('kontakt') && !isJustRole) {
           foundContact = FieldResult(
             value: match.group(0)!,
             confidence: 0.9,
@@ -270,7 +339,7 @@ class JobPostingExtractor {
           break;
         }
 
-        // PrÃ¼fe nÃ¤chste 1-2 Zeilen
+        // Prüfe nächste 1-2 Zeilen
         if (i + 1 < nonEmptyLines.length) {
           final nextMatch = nameRegex.firstMatch(nonEmptyLines[i + 1]);
           if (nextMatch != null) {
@@ -285,10 +354,59 @@ class JobPostingExtractor {
       }
     }
 
+    // Erweitert: "Dein/Ihr/Your Ansprechpartner/Kontakt/Contact: Name"
+    if (foundContact == null) {
+      final informalContactRegex = RegExp(
+        r'(?:Dein|Ihr|Ihre|Your|Unser)[ \t]+(?:Ansprechpartner(?:in)?|Kontakt|Contact|Ansprechperson)[: \t]+(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200}(?:[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})?)',
+        caseSensitive: false,
+      );
+      final match = informalContactRegex.firstMatch(text);
+      if (match != null) {
+        foundContact = FieldResult(
+          value: match.group(1)!.trim(),
+          confidence: 0.85,
+          source: 'contact_informal_pattern',
+        );
+      }
+    }
+
+    // Erweitert: Englische Muster – "Contact:", "Hiring Manager:", "Point of Contact:", "Recruiter:"
+    if (foundContact == null) {
+      final englishContactRegex = RegExp(
+        r'(?:Contact|Hiring[ \t]+Manager|Point[ \t]+of[ \t]+Contact|Recruiter|HR[ \t]+Contact)[: \t]+(?:(?:Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200}(?:[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})?)',
+        caseSensitive: false,
+      );
+      final match = englishContactRegex.firstMatch(text);
+      if (match != null) {
+        foundContact = FieldResult(
+          value: match.group(1)!.trim(),
+          confidence: 0.8,
+          source: 'contact_english_pattern',
+        );
+      }
+    }
+
+    // Erweitert: Tab-getrenntes Format (häufig in PDFs / Tabellen)
+    // z.B. "Ansprechpartner\t\tMax Mustermann" oder "Ansprechpartner:   Max Mustermann"
+    if (foundContact == null) {
+      final tabContactRegex = RegExp(
+        r'(?:Ansprechpartner(?:in)?|Ansprechperson|Kontaktperson)[:\t\s]{2,}(?:(?:Frau|Herr)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
+        caseSensitive: false,
+      );
+      final match = tabContactRegex.firstMatch(text);
+      if (match != null) {
+        foundContact = FieldResult(
+          value: match.group(1)!.trim(),
+          confidence: 0.8,
+          source: 'contact_tabular_pattern',
+        );
+      }
+    }
+
     // Fallback: Suche einfach nach Frau/Herr Dr. Max Mustermann im gesamten Text
     if (foundContact == null) {
       final contactRegexFallback = RegExp(
-        r'(Frau|Herr)\s+(?:Dr\.\s+|Prof\.\s+)?([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+\s+[A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ]+)',
+        r'(Frau|Herr)[ \t]+(?:Dr\.[ \t]+|Prof\.[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
       );
       final match = contactRegexFallback.firstMatch(text);
       if (match != null) {
@@ -329,9 +447,9 @@ class JobPostingExtractor {
     // â”€â”€ Standort / Adresse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     FieldResult<String>? foundAddress;
 
-    // Volle Adresse mit StraÃŸe und PLZ/Ort finden
+    // Volle Adresse mit Straße und PLZ/Ort finden
     final fullAddressRegex = RegExp(
-      r'([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ\s.-]+(?:str\.|straÃŸe|weg|platz|allee|ring)\s+\d+[a-zA-Z]?)[,\s]+(\d{5})\s+([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ-]+)',
+      r'([A-ZÄÖÜ][a-zA-Zäöüß\s.-]{1,200}(?:str\.|straße|weg|platz|allee|ring)\s+\d+[a-zA-Z]?)[,\s]+(\d{5})\s+([A-ZÄÖÜ][a-zA-Zäöüß-]{1,200})',
     );
     final fullMatch = fullAddressRegex.firstMatch(text);
 
@@ -349,7 +467,7 @@ class JobPostingExtractor {
     } else {
       // Fallback: Nur PLZ und Stadt
       final plzCityRegex = RegExp(
-        r'\b(\d{5})\s+([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ-]+)\b',
+        r'\b(\d{5})\s+([A-ZÃ„Ã–Ãœ][a-zA-ZÃ¤Ã¶Ã¼ÃŸ-]{1,200})\b',
       );
       final plzMatch = plzCityRegex.firstMatch(text);
       if (plzMatch != null) {

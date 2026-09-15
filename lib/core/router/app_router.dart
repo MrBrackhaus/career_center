@@ -89,14 +89,16 @@ final appRouter = GoRouter(
             GoRoute(
               path: 'edit/:id',
               builder: (context, state) {
-                final id = int.parse(state.pathParameters['id']!);
+                final id = int.tryParse(state.pathParameters['id'] ?? '');
+                if (id == null) return const Scaffold(body: Center(child: Text('Ungültige ID')));
                 return ApplicationFormScreen(applicationId: id);
               },
             ),
             GoRoute(
               path: ':id/editor',
               builder: (context, state) {
-                final id = int.parse(state.pathParameters['id']!);
+                final id = int.tryParse(state.pathParameters['id'] ?? '');
+                if (id == null) return const Scaffold(body: Center(child: Text('Ungültige ID')));
                 return ApplicationEditorScreen(applicationId: id);
               },
             ),
@@ -189,33 +191,11 @@ class ScaffoldWithTopBar extends ConsumerWidget {
       }
     });
 
-    final location = GoRouterState.of(context).uri.path;
-    final jobcenterMode = ref.watch(jobcenterModeProvider).value ?? false;
+    
+    
 
     return ResponsiveShell(child: child);
   }
 
-  Widget _buildNavButton(
-    BuildContext context,
-    String title,
-    String route,
-    bool isSelected,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-      child: TextButton(
-        style: TextButton.styleFrom(
-          backgroundColor: isSelected
-              ? Theme.of(context).colorScheme.primaryContainer
-              : Colors.transparent,
-          foregroundColor: isSelected
-              ? Theme.of(context).colorScheme.onPrimaryContainer
-              : Theme.of(context).colorScheme.onSurface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
-        onPressed: () => context.go(route),
-        child: Text(title),
-      ),
-    );
-  }
+  
 }

@@ -54,6 +54,8 @@ lib/core/secrets.dart
 scripts/
 scratch/
 .agents/
+node_modules/
+mcp-server/node_modules/
 
 # Large Data & Releases
 *.zip

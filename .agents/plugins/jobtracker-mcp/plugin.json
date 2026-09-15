@@ -1,5 +1,0 @@
-﻿{
-  "name": "jobtracker-mcp",
-  "description": "Provides MCP integration for the local JobTracker database.",
-  "version": "1.0.0"
-}

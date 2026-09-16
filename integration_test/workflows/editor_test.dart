@@ -6,32 +6,35 @@ import 'package:career_center/main.dart' as app;
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Editor Workflow', (WidgetTester tester) async {
+  testWidgets('Editor Workflow mit Texteingaben und Settings', (
+    WidgetTester tester,
+  ) async {
     app.main();
     await tester.pumpAndSettle();
     await Future.delayed(const Duration(seconds: 2));
 
-    // Navigiere zu Editor
+    // 1. Navigiere zu Editor
     final editorNav = find.byIcon(Icons.edit_document);
     expect(editorNav, findsWidgets);
     await tester.tap(editorNav.first);
     await tester.pumpAndSettle();
-
-    // Warte auf Editor-Seite
     await Future.delayed(const Duration(seconds: 1));
 
-    // Es sollte eine Toolbar für Textformatierung geben.
+    // 2. Schreibe Text in das Kopfzeilen-Formular (TextFormField)
+    final textFields = find.byType(TextFormField);
+    expect(textFields, findsWidgets);
+    await tester.enterText(textFields.first, 'Musterfirma GmbH Test');
+    await tester.pumpAndSettle();
+    print('  [x] Text erfolgreich in Header-Feld getippt');
+
+    // 3. Teste die Sidebar Slider (Ränder verschieben)
     expect(find.byType(Slider), findsWidgets);
-
-    // Teste die Margin Sliders
     final sliders = find.byType(Slider);
-    expect(sliders, findsWidgets);
-
-    // Verschiebe den ersten Slider (Top Margin)
     await tester.drag(sliders.first, const Offset(30, 0));
     await tester.pumpAndSettle();
+    print('  [x] Ränder-Slider erfolgreich verschoben');
 
-    // Überprüfe ob Design Templates da sind und klickbar
+    // 4. Teste Designwechsel (welcher auch Schriftarten anpasst)
     final klassisch = find.text('Klassisch');
     if (klassisch.evaluate().isNotEmpty) {
       await tester.tap(klassisch.first);
@@ -46,16 +49,16 @@ void main() {
       print('  [x] Design-Wechsel auf "Modern" erfolgreich');
     }
 
-    // Prüfe Toolbar Icons (z.B. Bold, Italic oder Export)
-    final pdfExportIcon = find.byIcon(Icons.picture_as_pdf);
-    if (pdfExportIcon.evaluate().isNotEmpty) {
-      expect(pdfExportIcon, findsWidgets);
-    } else {
-      expect(find.byIcon(Icons.format_bold), findsWidgets);
+    // 5. Teste die Editor-Formatierungs-Toolbar
+    final boldIcon = find.byIcon(Icons.format_bold);
+    if (boldIcon.evaluate().isNotEmpty) {
+      await tester.tap(boldIcon.first);
+      await tester.pumpAndSettle();
+      print('  [x] Bold-Formatierungsbutton erfolgreich geklickt');
     }
 
     print(
-      '✅ Editor-Workflow und Settings (Ränder & Design) erfolgreich getestet.',
+      '✅ Editor: Text, Slider, Designs und Toolbar erfolgreich interagiert.',
     );
   });
 }

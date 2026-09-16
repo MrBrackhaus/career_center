@@ -33,5 +33,22 @@ void main() {
       
       expect(result, 'Sehr geehrter Herr Schmidt,\nhiermit bewerbe ich mich.');
     });
+
+    test('Fängt ungültiges JSON (z.B. Proxy HTML Fehler) ab ohne abzustürzen', () {
+      final bytes = utf8.encode('<html><body>502 Bad Gateway</body></html>');
+      final result = processAiResponse(bytes);
+      
+      expect(result, 'Fehler: Die KI hat eine ungültige Antwort gesendet.');
+    });
+
+    test('Verarbeitet JSON ohne response Feld', () {
+      final jsonStr = jsonEncode({
+        'error': 'API limit exceeded'
+      });
+      final bytes = utf8.encode(jsonStr);
+      final result = processAiResponse(bytes);
+      
+      expect(result, '');
+    });
   });
 }

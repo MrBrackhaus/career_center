@@ -5,32 +5,22 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
 
 String processAiResponse(List<int> bodyBytes) {
-  final jsonResponse = jsonDecode(utf8.decode(bodyBytes));
-  String result = jsonResponse['response'] ?? '';
+  try {
+    final decodedString = utf8.decode(bodyBytes);
+    final jsonResponse = jsonDecode(decodedString);
+    String result = jsonResponse['response'] ?? '';
 
-  // Post-Processing um evtl. Markdown und Gesprächsfetzen zu entfernen
-  result = result.replaceAll(
-    RegExp(r'\*\*.*?\*\*'),
-    '',
-  ); // Entfernt fettgedruckte Hinweise wie **Anschreiben**
-  result = result.replaceAll(
-    RegExp(r'Hier ist.*?:', caseSensitive: false),
-    '',
-  );
-  result = result.replaceAll(
-    RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false),
-    '',
-  );
-  result = result.replaceAll(
-    RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false),
-    '',
-  );
-  result = result.replaceAll(
-    RegExp(r'Hier ist ein.*?:', caseSensitive: false),
-    '',
-  );
+    // Post-Processing um evtl. Markdown und Gesprächsfetzen zu entfernen
+    result = result.replaceAll(RegExp(r'\*\*.*?\*\*'), ''); 
+    result = result.replaceAll(RegExp(r'Hier ist.*?:', caseSensitive: false), '');
+    result = result.replaceAll(RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false), '');
+    result = result.replaceAll(RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false), '');
+    result = result.replaceAll(RegExp(r'Hier ist ein.*?:', caseSensitive: false), '');
 
-  return result.trim();
+    return result.trim();
+  } catch (e) {
+    return 'Fehler: Die KI hat eine ungültige Antwort gesendet.';
+  }
 }
 
 class AiCoverLetterService {

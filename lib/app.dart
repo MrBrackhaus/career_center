@@ -54,7 +54,7 @@ class JobTrackerApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
         FlutterQuillLocalizations.delegate,
       ],
-      supportedLocales: const [Locale('de', 'DE'), Locale('en', 'US')],
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

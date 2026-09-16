@@ -64,7 +64,7 @@ Die Nutzung dieser Software erfolgt auf eigene Gefahr ("as-is"). Der menschliche
 ---
 
 ## Urheberrecht & Lizenz
-**Copyright (c) 2026 MrBrackhaus. All rights reserved.**
+**Copyright (c) 2026 Michael Kurz. All rights reserved.**
 
 Dieser Quellcode und die Software werden ausschließlich zu Demonstrationszwecken (z.B. als Portfolio) veröffentlicht. 
 Jegliche Vervielfältigung, Modifikation, Verbreitung oder kommerzielle Nutzung ist ohne ausdrückliche schriftliche Erlaubnis strengstens untersagt.

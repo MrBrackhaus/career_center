@@ -3,7 +3,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/MrBrackhaus/career_center?color=success&label=Download%20Latest)](https://github.com/MrBrackhaus/career_center/releases/latest)
 [![Nightly Build](https://img.shields.io/badge/Download-Nightly-orange)](https://github.com/MrBrackhaus/career_center/releases/tag/nightly)
 
-Die Bewerbungszentrale ist eine smarte, datenschutzfreundliche Open-Source-Desktop-App (Flutter) für Windows, die Arbeitssuchenden dabei hilft, ihre Bewerbungen zu organisieren, Nachweise für das Jobcenter zu verwalten und ihre Chancen auf dem Arbeitsmarkt zu verbessern.
+Die Bewerbungszentrale ist eine smarte, datenschutzfreundliche Desktop-App (Flutter) für Windows, die Arbeitssuchenden dabei hilft, ihre Bewerbungen zu organisieren, Nachweise für das Jobcenter zu verwalten und ihre Chancen auf dem Arbeitsmarkt zu verbessern.
 
 Alle persönlichen Daten werden ausschließlich lokal auf dem Gerät (via SQLite) gespeichert, um maximale Privatsphäre und Datensouveränität zu gewährleisten.
 
@@ -53,10 +53,18 @@ Da die Erweiterung noch in der Alpha-Phase ist, wird sie manuell installiert:
 
 **KI-assistierte Entwicklung & Haftungsausschluss**
 
-Dieses Open-Source-Projekt wird experimentell entwickelt. Zur Beschleunigung der Entwicklung und als Pair-Programming-Partner werden generative KI-Modelle (wie Google Gemini) eingesetzt. Die KI unterstützt insbesondere bei:
+Dieses Projekt wird experimentell entwickelt. Zur Beschleunigung der Entwicklung und als Pair-Programming-Partner werden generative KI-Modelle (wie Google Gemini) eingesetzt. Die KI unterstützt insbesondere bei:
 - Generierung von Code und Logik
 - UI-Komponenten und Layouts
 - Problemlösung und Bugfixing
 
 **WICHTIG (Haftungsausschluss):** 
-Die Nutzung dieser Software erfolgt auf eigene Gefahr ("as-is"). Der menschliche Maintainer sichtet den generierten Code zwar, übernimmt aber **keinerlei Haftung oder Garantie** für die Fehlerfreiheit, Sicherheit, Datenintegrität oder Funktionstüchtigkeit der App. Wie bei den meisten Open-Source-Lizenzen üblich, sind sämtliche Gewährleistungsansprüche ausgeschlossen. Bitte prüfe den Code selbst und mache regelmäßig Backups deiner lokalen Datenbank!
+Die Nutzung dieser Software erfolgt auf eigene Gefahr ("as-is"). Der menschliche Maintainer sichtet den generierten Code zwar, übernimmt aber **keinerlei Haftung oder Garantie** für die Fehlerfreiheit, Sicherheit, Datenintegrität oder Funktionstüchtigkeit der App. Sämtliche Gewährleistungsansprüche sind ausgeschlossen. Bitte prüfe den Code selbst und mache regelmäßig Backups deiner lokalen Datenbank!
+
+---
+
+## Urheberrecht & Lizenz
+**Copyright (c) 2026 MrBrackhaus. All rights reserved.**
+
+Dieser Quellcode und die Software werden ausschließlich zu Demonstrationszwecken (z.B. als Portfolio) veröffentlicht. 
+Jegliche Vervielfältigung, Modifikation, Verbreitung oder kommerzielle Nutzung ist ohne ausdrückliche schriftliche Erlaubnis strengstens untersagt.

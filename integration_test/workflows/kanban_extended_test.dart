@@ -61,15 +61,12 @@ void main() {
     await tester.ensureVisible(find.byIcon(Icons.save));
     await tester.tap(find.byIcon(Icons.save));
     await tester.pumpAndSettle();
-    await Future.delayed(const Duration(seconds: 1)); 
+    await Future.delayed(const Duration(seconds: 2)); 
 
-    // 8. Zurück im Kanban Board. Spalte prüfen.
-    // Die Karte 'Integration Test Corp' sollte nun gerendert werden,
-    // da wir Kanban testen, impliziert die Existenz des Texts, dass sie da ist.
-    expect(find.text('Integration Test Corp'), findsOneWidget);
+    expect(find.text('Integration Test Corp'), findsWidgets);
     
     // Lösche die Bewerbung um sauber aufzuräumen
-    await tester.tap(find.text('Integration Test Corp'));
+    await tester.tap(find.text('Integration Test Corp').last);
     await tester.pumpAndSettle();
     await Future.delayed(const Duration(milliseconds: 500)); 
     

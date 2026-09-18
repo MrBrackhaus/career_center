@@ -1,4 +1,4 @@
-name: Windows Release
+﻿name: Windows Release
 
 on:
   push:
@@ -38,6 +38,9 @@ jobs:
       - name: Build Windows App
         run: flutter build windows
 
+      - name: Build Installer
+        run: iscc windows/installer.iss
+
       - name: Compress Release
         run: |
           Copy-Item -Path browser_extension -Destination build\windows\x64\runner\Release\browser_extension -Recurse
@@ -47,7 +50,8 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           name: "Release ${{ github.ref_name }}"
-          body: "Die neueste Version der Bewerbungszentrale. (Änderungen siehe Changelog in der App)"
-          artifacts: "CareerCenter-Release-Windows.zip"
+          body: "Die neueste Version der Bewerbungszentrale. (Aenderungen siehe Changelog in der App)"
+          artifacts: "CareerCenter-Release-Windows.zip,CareerCenter-Setup.exe"
           makeLatest: true
           token: ${{ secrets.GITHUB_TOKEN }}
+

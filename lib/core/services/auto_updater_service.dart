@@ -43,13 +43,23 @@ class AutoUpdaterService {
           final localVersion = Version.parse(localVersionString);
 
           if (remoteVersion > localVersion) {
-            // Finde das .exe Asset
+            // Finde das .zip Asset (da Windows Releases als .zip gepackt werden)
             final assets = data['assets'] as List;
             String? downloadUrl;
             for (var asset in assets) {
-              if (asset['name'].toString().toLowerCase().endsWith('.exe')) {
+              if (asset['name'].toString().toLowerCase().endsWith('.zip')) {
                 downloadUrl = asset['browser_download_url'];
                 break;
+              }
+            }
+
+            // Fallback auf .exe falls in Zukunft doch InnoSetup genutzt wird
+            if (downloadUrl == null) {
+              for (var asset in assets) {
+                if (asset['name'].toString().toLowerCase().endsWith('.exe')) {
+                  downloadUrl = asset['browser_download_url'];
+                  break;
+                }
               }
             }
 
@@ -74,7 +84,11 @@ class AutoUpdaterService {
   Future<File?> downloadUpdate(String url, Function(double) onProgress) async {
     try {
       final tempDir = await getTemporaryDirectory();
-      final savePath = p.join(tempDir.path, 'CareerCenter_Update.exe');
+      
+      // Determine filename from URL
+      final isZip = url.toLowerCase().endsWith('.zip');
+      final fileName = isZip ? 'CareerCenter_Update.zip' : 'CareerCenter_Update.exe';
+      final savePath = p.join(tempDir.path, fileName);
 
       await _dio.download(
         url,
@@ -93,19 +107,51 @@ class AutoUpdaterService {
     }
   }
 
-  Future<void> installAndRestart(File installerFile) async {
+  Future<void> installAndRestart(File downloadedFile) async {
     try {
-      // Startet die .exe im Hintergrund und schließt die App
-      await Process.start(
-        installerFile.path,
-        ['/SILENT'], // Falls Inno Setup oder NSIS genutzt wird
-        mode: ProcessStartMode.detached,
-      );
-      
-      // Die Flutter App wird sofort beendet
-      exit(0);
+      if (downloadedFile.path.toLowerCase().endsWith('.exe')) {
+        // Klassischer Installer
+        await Process.start(
+          downloadedFile.path,
+          ['/SILENT'],
+          mode: ProcessStartMode.detached,
+        );
+        exit(0);
+      } else if (downloadedFile.path.toLowerCase().endsWith('.zip')) {
+        // Portable ZIP Update
+        final appExecutable = Platform.resolvedExecutable;
+        final appDir = File(appExecutable).parent.path;
+        
+        final tempDir = downloadedFile.parent;
+        final batFile = File(p.join(tempDir.path, 'update_career_center.bat'));
+        
+        final script = '''
+@echo off
+echo Warte auf Beendigung der App...
+timeout /t 3 /nobreak > NUL
+
+echo Entpacke Update...
+powershell -Command "Expand-Archive -Path '${downloadedFile.path}' -DestinationPath '$appDir' -Force"
+
+echo Starte App neu...
+start "" "$appExecutable"
+
+del "%~f0"
+''';
+        await batFile.writeAsString(script);
+
+        // Führe BAT-Skript losgelöst aus
+        await Process.start(
+          'cmd',
+          ['/c', batFile.path],
+          mode: ProcessStartMode.detached,
+        );
+        
+        // Flutter App beenden
+        exit(0);
+      }
     } catch (e) {
-      log('Fehler beim Starten des Installers: $e');
+      log('Fehler beim Installieren: $e');
     }
   }
 }

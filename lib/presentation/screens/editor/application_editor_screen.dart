@@ -22,6 +22,24 @@ import '../../providers/ai_correction_provider.dart';
 import '../../providers/document_template_provider.dart';
 import '../../../core/themes/designs/document_design.dart';
 import '../../../core/themes/designs/monogram_design.dart';
+import 'widgets/cv_work_experience_dialog.dart';
+import 'widgets/cv_education_dialog.dart';
+import 'widgets/cv_skill_dialog.dart';
+import 'widgets/cv_language_dialog.dart';
+import 'widgets/cv_custom_item_dialog.dart';
+import '../../providers/cv_provider.dart';
+import '../../../core/themes/designs/modern_sidebar_design.dart';
+import '../../../../data/database/app_database.dart';
+
+import 'widgets/cv_work_experience_dialog.dart';
+import 'widgets/cv_education_dialog.dart';
+import 'widgets/cv_skill_dialog.dart';
+import 'widgets/cv_language_dialog.dart';
+import 'widgets/cv_custom_item_dialog.dart';
+import '../../providers/cv_provider.dart';
+import '../../../core/themes/designs/modern_sidebar_design.dart';
+
+import '../../../core/themes/designs/classic_design.dart';
 
 class ApplicationEditorScreen extends ConsumerStatefulWidget {
   final int? applicationId;
@@ -107,6 +125,7 @@ class _ApplicationEditorScreenState
   double _currentFontSize = 14;
   double _currentLineHeight = 1.5;
   Color _currentAccentColor = Colors.blue[900]!;
+  Color _currentTextColor = Colors.black87;
 
   List<String> _missingKeywords = [];
   List<String> _foundKeywords = [];
@@ -212,32 +231,8 @@ class _ApplicationEditorScreenState
   final _cvBirthdateCtrl = TextEditingController(text: '06.12.1984');
   final _cvMaritalStatusCtrl = TextEditingController(text: 'Ledig');
 
-  final List<CvTimelineItem> _cvExperiences = [
-    const CvTimelineItem(
-      dateRange: '06/2026 - bis jetzt',
-      title: 'Arbeitssuchend',
-      description: 'Volle Verfügbarkeit...',
-    ),
-    const CvTimelineItem(
-      dateRange: '08/2023 - 05/2026',
-      title: 'Häusliche Pflege',
-      description: 'Übernahme der Pflege...',
-    ),
-    const CvTimelineItem(
-      dateRange: '07/2023 - 09/2023',
-      title: 'Weiterbildung Azure',
-      subtitle: 'WBS Training',
-      description: 'Microsoft Azure Administrator',
-    ),
-  ];
-  final List<CvTimelineItem> _cvEducations = [
-    const CvTimelineItem(
-      dateRange: '06/2019 - 06/2021',
-      title: 'Umschulung Fachinformatiker',
-      subtitle: 'COMCAVE.COLLEGE',
-      description: 'inkl. MCSA, SAP, LPIC 1',
-    ),
-  ];
+
+
 
   @override
   void initState() {
@@ -415,37 +410,41 @@ class _ApplicationEditorScreenState
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
-    final content = jsonEncode(_controller.document.toDelta().toJson());
+    try {
+      final content = jsonEncode(_controller.document.toDelta().toJson());
 
-    if (widget.applicationId != null) {
-      await ref.read(applicationNotifierProvider).updateCoverLetterContent(
-        widget.applicationId!,
-        content,
-      );
-    } else {
-      // Save as TemplateEntity
-      final name = _nameController.text.trim().isEmpty
-          ? 'Neues Dokument'
-          : _nameController.text.trim();
-      final type = widget.template?.type ?? widget.initialType ?? 'anschreiben';
-
-      await ref.read(templateEditorProvider.notifier).saveTemplate(
-        existingId: widget.template?.id,
-        name: name,
-        type: type,
-        deltaJson: _controller.document.toDelta().toJson(),
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Als Vorlage gespeichert.')),
+      if (widget.applicationId != null) {
+        await ref.read(applicationNotifierProvider).updateCoverLetterContent(
+          widget.applicationId!,
+          content,
         );
+      } else {
+        // Save as TemplateEntity
+        final name = _nameController.text.trim().isEmpty
+            ? 'Neues Dokument'
+            : _nameController.text.trim();
+        final type = widget.template?.type ?? widget.initialType ?? 'anschreiben';
+
+        await ref.read(templateEditorProvider.notifier).saveTemplate(
+          existingId: widget.template?.id,
+          name: name,
+          type: type,
+          deltaJson: _controller.document.toDelta().toJson(),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Als Vorlage gespeichert.')),
+          );
+        }
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _hasChanges = false;
+          _isSaving = false;
+        });
       }
     }
-
-    setState(() {
-      _hasChanges = false;
-      _isSaving = false;
-    });
   }
 
   @override
@@ -607,17 +606,31 @@ class _ApplicationEditorScreenState
     );
   }
 
-  Widget _buildCvArea(ColorScheme colorScheme) {
-    // Dynamisches Design laden
-    DocumentDesign design;
+
+  String _formatDateRange(DateTime? start, DateTime? end) {
+    if (start == null) return '';
+    final startStr = '${start.month.toString().padLeft(2, '0')}/${start.year}';
+    if (end == null) return '$startStr - Heute';
+    final endStr = '${end.month.toString().padLeft(2, '0')}/${end.year}';
+    return '$startStr - $endStr';
+  }
+
+  DocumentDesign _getDesign() {
     switch (_currentDesignId) {
+      case 'klassisch':
+      case 'kompakt':
+        return const ClassicDesign();
+      case 'modern':
+        return const ModernSidebarDesign();
       case 'monogram':
-        design = const MonogramDesign();
-        break;
-      // TODO: Add Klassisch, Modern, Kompakt when implemented
       default:
-        design = const MonogramDesign(); // Fallback für MVP
+        return const MonogramDesign();
     }
+  }
+
+  Widget _buildCvArea(ColorScheme colorScheme) {
+    DocumentDesign design = _getDesign();
+    final cvAsync = ref.watch(cvProvider(widget.applicationId));
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -626,47 +639,59 @@ class _ApplicationEditorScreenState
           child: Center(
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Container(
-                width: 794, // A4 width at 96 DPI
-              constraints: const BoxConstraints(
-                minHeight: 1123, // A4 height at 96 DPI
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(2),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 15,
-                    spreadRadius: 2,
-                    offset: const Offset(0, 4),
+              child: cvAsync.when(
+                data: (cvState) => Container(
+                  width: 794,
+                  constraints: const BoxConstraints(minHeight: 1123),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(2),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 15,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: design.buildCurriculumVitae(
-                context,
-                _currentAccentColor,
-                CvData(
-                  initials: _cvNameCtrl.text
-                      .split(' ')
-                      .where((e) => e.isNotEmpty)
-                      .map((e) => e[0].toUpperCase())
-                      .take(2)
-                      .join(''),
-                  name: _cvNameCtrl.text,
-                  title: _cvTitleCtrl.text,
-                  introText: _cvIntroCtrl.text,
-                  email: _cvEmailCtrl.text,
-                  phone: _cvPhoneCtrl.text,
-                  address: _cvAddressCtrl.text,
-                  birthplace: _cvBirthplaceCtrl.text,
-                  birthdate: _cvBirthdateCtrl.text,
-                  maritalStatus: _cvMaritalStatusCtrl.text,
-                  profileImagePath: _cvProfileImagePath,
-                  experiences: _cvExperiences,
-                  educations: _cvEducations,
+                  child: design.buildCurriculumVitae(
+                    context,
+                    _currentAccentColor,
+                    CvData(
+                      initials: _cvNameCtrl.text.split(' ').where((e) => e.isNotEmpty).map((e) => e[0].toUpperCase()).take(2).join(''),
+                      name: _cvNameCtrl.text,
+                      title: _cvTitleCtrl.text,
+                      textColor: _currentTextColor,
+                      introText: _cvIntroCtrl.text,
+                      email: _cvEmailCtrl.text,
+                      phone: _cvPhoneCtrl.text,
+                      address: _cvAddressCtrl.text,
+                      birthplace: _cvBirthplaceCtrl.text,
+                      birthdate: _cvBirthdateCtrl.text,
+                      maritalStatus: _cvMaritalStatusCtrl.text,
+                      profileImagePath: _cvProfileImagePath,
+                      experiences: cvState.experiences.map((e) => CvTimelineItem(
+                        dateRange: _formatDateRange(e.startDate, e.endDate),
+                        title: e.position,
+                        subtitle: e.company,
+                        description: e.description ?? '',
+                      )).toList(),
+                      educations: cvState.educations.map((e) => CvTimelineItem(
+                        dateRange: _formatDateRange(e.startDate, e.endDate),
+                        title: e.degree,
+                        subtitle: e.institution,
+                        description: e.description ?? '',
+                      )).toList(),
+                      skills: cvState.skills,
+                      languages: cvState.languages,
+                      customItems: cvState.customItems,
+                      pageMargins: EdgeInsets.only(left: _marginLeft, top: _marginTop, right: _marginRight, bottom: _marginBottom),
+                    ),
+                  ),
                 ),
-                ),
+                loading: () => const SizedBox(width: 794, height: 1123, child: Center(child: CircularProgressIndicator())),
+                error: (e, s) => SizedBox(width: 794, height: 1123, child: Center(child: Text('Fehler: $e'))),
               ),
             ),
           ),
@@ -676,6 +701,8 @@ class _ApplicationEditorScreenState
   }
 
   Widget _buildCvLeftSidebar(ColorScheme colorScheme) {
+    final cvAsync = ref.watch(cvProvider(widget.applicationId));
+    
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -687,7 +714,7 @@ class _ApplicationEditorScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Container(
-              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+              color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
               child: const TabBar(
                 tabs: [
                   Tab(icon: Icon(Icons.list_alt), text: 'Daten'),
@@ -698,166 +725,168 @@ class _ApplicationEditorScreenState
             Expanded(
               child: TabBarView(
                 children: [
-                  // Tab 1: Daten (Baukasten)
-                  ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _buildCvFormGroup('Persönliche Daten', Icons.person, [
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 0,
+                  cvAsync.when(
+                    data: (cvState) => ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _buildCvFormGroup('Persönliche Daten', Icons.person, [
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                            title: const Text('Bewerbungsfoto', style: TextStyle(fontSize: 12)),
+                            subtitle: Text(_cvProfileImagePath != null ? 'Foto ausgewählt' : 'Kein Foto', style: const TextStyle(fontSize: 10)),
+                            trailing: TextButton(onPressed: _pickProfileImage, child: const Text('Auswählen', style: TextStyle(fontSize: 12))),
                           ),
-                          title: const Text(
-                            'Bewerbungsfoto',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          subtitle: Text(
-                            _cvProfileImagePath != null
-                                ? 'Foto ausgewählt'
-                                : 'Kein Foto',
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                          trailing: TextButton(
-                            onPressed: _pickProfileImage,
-                            child: const Text(
-                              'Auswählen',
-                              style: TextStyle(fontSize: 12),
+                          const Divider(height: 1),
+                          _buildSidebarTextField('Name', _cvNameCtrl),
+                          _buildSidebarTextField('Berufsbezeichnung', _cvTitleCtrl),
+                          _buildSidebarTextField('Intro-Text', _cvIntroCtrl, maxLines: 3),
+                          _buildSidebarTextField('E-Mail', _cvEmailCtrl, keyboardType: TextInputType.emailAddress),
+                          _buildSidebarTextField('Telefon', _cvPhoneCtrl, keyboardType: TextInputType.phone),
+                          _buildSidebarTextField('Anschrift', _cvAddressCtrl),
+                          _buildSidebarTextField('Geburtsort', _cvBirthplaceCtrl),
+                          _buildSidebarTextField('Geburtsdatum', _cvBirthdateCtrl, keyboardType: TextInputType.datetime),
+                          _buildSidebarTextField('Familienstand', _cvMaritalStatusCtrl),
+                        ]),
+                        _buildCvFormGroup('Berufserfahrung', Icons.work, [
+                          ...cvState.experiences.map((exp) => ListTile(
+                            title: Text(exp.position, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            subtitle: Text('${_formatDateRange(exp.startDate, exp.endDate)} | ${exp.company}', style: const TextStyle(fontSize: 10)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit, size: 16), onPressed: () async { 
+                                  final result = await showDialog(context: context, builder: (_) => CvWorkExperienceDialog(initialData: {'company': exp.company, 'position': exp.position, 'startDate': exp.startDate, 'endDate': exp.endDate, 'isCurrent': exp.isCurrent, 'description': exp.description}));
+                                  if (result != null) {
+                                    ref.read(cvNotifierProvider).updateWorkExperience(widget.applicationId, CvWorkExperience(id: exp.id, applicationId: exp.applicationId, company: result['company'], position: result['position'], startDate: result['startDate'], endDate: result['endDate'], isCurrent: result['isCurrent'], description: result['description']));
+                                  }
+                                }),
+                                IconButton(icon: const Icon(Icons.delete, size: 16, color: Colors.red), onPressed: () { ref.read(cvNotifierProvider).deleteWorkExperience(widget.applicationId, exp.id); }),
+                              ],
                             ),
+                          )),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FilledButton.icon(onPressed: () async { 
+                              final result = await showDialog(context: context, builder: (_) => const CvWorkExperienceDialog());
+                              if (result != null) {
+                                ref.read(cvNotifierProvider).addWorkExperience(widget.applicationId, result['company'], result['position'], result['startDate'], result['endDate'], result['isCurrent'], result['description']);
+                              }
+                            }, icon: const Icon(Icons.add), label: const Text('Neue Station hinzufügen')),
                           ),
-                        ),
-                        const Divider(height: 1),
-                        _buildSidebarTextField('Name', _cvNameCtrl),
-                        _buildSidebarTextField(
-                          'Berufsbezeichnung',
-                          _cvTitleCtrl,
-                        ),
-                        _buildSidebarTextField(
-                          'Intro-Text',
-                          _cvIntroCtrl,
-                          maxLines: 3,
-                        ),
-                        _buildSidebarTextField('E-Mail', _cvEmailCtrl, keyboardType: TextInputType.emailAddress),
-                        _buildSidebarTextField('Telefon', _cvPhoneCtrl, keyboardType: TextInputType.phone),
-                        _buildSidebarTextField('Anschrift', _cvAddressCtrl),
-                        _buildSidebarTextField('Geburtsort', _cvBirthplaceCtrl),
-                        _buildSidebarTextField(
-                          'Geburtsdatum',
-                          _cvBirthdateCtrl,
-                          keyboardType: TextInputType.datetime,
-                        ),
-                        _buildSidebarTextField(
-                          'Familienstand',
-                          _cvMaritalStatusCtrl,
-                        ),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () {},
-                          child: const Text('Speichern'),
-                        ),
-                        const SizedBox(height: 8),
-                      ]),
-                      _buildCvFormGroup('Berufserfahrung', Icons.work, [
-                        ListTile(
-                          title: const Text(
-                            'Arbeitssuchend',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                        ]),
+                        _buildCvFormGroup('Ausbildung', Icons.school, [
+                          ...cvState.educations.map((edu) => ListTile(
+                            title: Text(edu.degree, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            subtitle: Text('${_formatDateRange(edu.startDate, edu.endDate)} | ${edu.institution}', style: const TextStyle(fontSize: 10)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit, size: 16), onPressed: () async { 
+                                  final result = await showDialog(context: context, builder: (_) => CvEducationDialog(initialData: {'institution': edu.institution, 'degree': edu.degree, 'startDate': edu.startDate, 'endDate': edu.endDate, 'description': edu.description}));
+                                  if (result != null) {
+                                    ref.read(cvNotifierProvider).updateEducation(widget.applicationId, CvEducation(id: edu.id, applicationId: edu.applicationId, institution: result['institution'], degree: result['degree'], startDate: result['startDate'], endDate: result['endDate'], description: result['description']));
+                                  }
+                                }),
+                                IconButton(icon: const Icon(Icons.delete, size: 16, color: Colors.red), onPressed: () { ref.read(cvNotifierProvider).deleteEducation(widget.applicationId, edu.id); }),
+                              ],
                             ),
+                          )),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FilledButton.icon(onPressed: () async { 
+                              final result = await showDialog(context: context, builder: (_) => const CvEducationDialog());
+                              if (result != null) {
+                                ref.read(cvNotifierProvider).addEducation(widget.applicationId, result['institution'], result['degree'], result['startDate'], result['endDate'], result['description']);
+                              }
+                            }, icon: const Icon(Icons.add), label: const Text('Ausbildung hinzufügen')),
                           ),
-                          subtitle: const Text(
-                            '06/2026 - bis jetzt',
-                            style: TextStyle(fontSize: 10),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, size: 16),
-                                onPressed: () {},
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  size: 16,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () {},
-                              ),
-                            ],
-                          ),
-                        ),
-                        ListTile(
-                          title: const Text(
-                            'Häusliche Pflege...',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                        ]),
+                        _buildCvFormGroup('Fähigkeiten', Icons.star, [
+                          ...cvState.skills.map((skill) => ListTile(
+                            title: Text(skill.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            subtitle: Text('Level: ${skill.level}/5', style: const TextStyle(fontSize: 10)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit, size: 16), onPressed: () async { 
+                                  final result = await showDialog(context: context, builder: (_) => CvSkillDialog(initialData: {'name': skill.name, 'level': skill.level}));
+                                  if (result != null) {
+                                    ref.read(cvNotifierProvider).updateSkill(widget.applicationId, CvSkill(id: skill.id, applicationId: skill.applicationId, name: result['name'], level: result['level']));
+                                  }
+                                }),
+                                IconButton(icon: const Icon(Icons.delete, size: 16, color: Colors.red), onPressed: () { ref.read(cvNotifierProvider).deleteSkill(widget.applicationId, skill.id); }),
+                              ],
                             ),
+                          )),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FilledButton.icon(onPressed: () async { 
+                              final result = await showDialog(context: context, builder: (_) => const CvSkillDialog());
+                              if (result != null) {
+                                ref.read(cvNotifierProvider).addSkill(widget.applicationId, result['name'], result['level']);
+                              }
+                            }, icon: const Icon(Icons.add), label: const Text('Skill hinzufügen')),
                           ),
-                          subtitle: const Text(
-                            '08/2023 - 05/2026',
-                            style: TextStyle(fontSize: 10),
+                        ]),
+                        _buildCvFormGroup('Sprachen', Icons.language, [
+                          ...cvState.languages.map((lang) => ListTile(
+                            title: Text(lang.name, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            subtitle: Text(lang.level, style: const TextStyle(fontSize: 10)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit, size: 16), onPressed: () async { 
+                                  final result = await showDialog(context: context, builder: (_) => CvLanguageDialog(initialData: {'name': lang.name, 'level': lang.level}));
+                                  if (result != null) {
+                                    ref.read(cvNotifierProvider).updateLanguage(widget.applicationId, CvLanguage(id: lang.id, applicationId: lang.applicationId, name: result['name'], level: result['level']));
+                                  }
+                                }),
+                                IconButton(icon: const Icon(Icons.delete, size: 16, color: Colors.red), onPressed: () { ref.read(cvNotifierProvider).deleteLanguage(widget.applicationId, lang.id); }),
+                              ],
+                            ),
+                          )),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FilledButton.icon(onPressed: () async { 
+                              final result = await showDialog(context: context, builder: (_) => const CvLanguageDialog());
+                              if (result != null) {
+                                ref.read(cvNotifierProvider).addLanguage(widget.applicationId, result['name'], result['level']);
+                              }
+                            }, icon: const Icon(Icons.add), label: const Text('Sprache hinzufügen')),
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.edit, size: 16),
-                                onPressed: () {},
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  size: 16,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () {},
-                              ),
-                            ],
+                        ]),
+                        _buildCvFormGroup('Eigener Abschnitt', Icons.category, [
+                          ...cvState.customItems.map((item) => ListTile(
+                            title: Text(item.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            subtitle: Text('${item.sectionName}${item.subtitle != null && item.subtitle!.isNotEmpty ? " | " + item.subtitle! : ""}', style: const TextStyle(fontSize: 10)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(icon: const Icon(Icons.edit, size: 16), onPressed: () async { 
+                                  final result = await showDialog(context: context, builder: (_) => CvCustomItemDialog(initialData: {'sectionName': item.sectionName, 'title': item.title, 'subtitle': item.subtitle, 'dateRange': item.dateRange, 'description': item.description}));
+                                  if (result != null) {
+                                    ref.read(cvNotifierProvider).updateCustomItem(widget.applicationId, item.id, result['sectionName'], result['title'], result['subtitle'], result['dateRange'], result['description'], item.sortOrder);
+                                  }
+                                }),
+                                IconButton(icon: const Icon(Icons.delete, size: 16, color: Colors.red), onPressed: () { ref.read(cvNotifierProvider).deleteCustomItem(widget.applicationId, item.id); }),
+                              ],
+                            ),
+                          )),
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: FilledButton.icon(onPressed: () async { 
+                              final result = await showDialog(context: context, builder: (_) => const CvCustomItemDialog());
+                              if (result != null) {
+                                ref.read(cvNotifierProvider).addCustomItem(widget.applicationId, result['sectionName'], result['title'], result['subtitle'], result['dateRange'], result['description'], 0);
+                              }
+                            }, icon: const Icon(Icons.add), label: const Text('Abschnitt hinzufügen')),
                           ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Dialog zum Hinzufügen öffnet sich hier...',
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.add),
-                            label: const Text('Neue Station hinzufügen'),
-                          ),
-                        ),
-                      ]),
-                      _buildCvFormGroup('Ausbildung', Icons.school, [
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: FilledButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.add),
-                            label: const Text('Ausbildung hinzufügen'),
-                          ),
-                        ),
-                      ]),
-                      _buildCvFormGroup('Fähigkeiten', Icons.star, [
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: FilledButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.add),
-                            label: const Text('Skill hinzufügen'),
-                          ),
-                        ),
-                      ]),
-                    ],
+                        ]),
+                      ],
+                    ),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (e, s) => Center(child: Text('Fehler: $e')),
                   ),
-                  // Tab 2: Design
                   _buildDesignTab(),
                 ],
               ),
@@ -998,25 +1027,27 @@ class _ApplicationEditorScreenState
           37.8,
           151.2,
         ),
-        Divider(height: 32),
-        Text(
-          'DIN 5008 Elemente',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        SizedBox(height: 8),
-        FilledButton.icon(
-          onPressed: () => _insertHeader(),
-          icon: Icon(Icons.contact_mail),
-          label: Text('Briefkopf einfuegen'),
-          style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
-        ),
-        SizedBox(height: 8),
-        FilledButton.icon(
-          onPressed: _insertFooter,
-          icon: Icon(Icons.draw),
-          label: Text('Unterschrift & Fusszeile einfuegen'),
-          style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
-        ),
+        if (!_isCvMode) ...[
+          Divider(height: 32),
+          Text(
+            'DIN 5008 Elemente',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: () => _insertHeader(),
+            icon: Icon(Icons.contact_mail),
+            label: Text('Briefkopf einfuegen'),
+            style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
+          ),
+          SizedBox(height: 8),
+          FilledButton.icon(
+            onPressed: _insertFooter,
+            icon: Icon(Icons.draw),
+            label: Text('Unterschrift & Fusszeile einfuegen'),
+            style: FilledButton.styleFrom(alignment: Alignment.centerLeft),
+          ),
+        ],
         Divider(height: 32),
         Text(
           'Farbe (Akzent)',
@@ -1334,179 +1365,23 @@ class _ApplicationEditorScreenState
   }
 
   Widget _buildProfessionalHeader() {
-    if (_currentDesignId != 'monogram') return const SizedBox.shrink();
-
-    final name = _userName.trim().isNotEmpty
-        ? _userName.trim()
-        : 'Max Mustermann';
-    final initials = name
-        .split(' ')
-        .where((e) => e.isNotEmpty)
-        .map((e) => e[0].toUpperCase())
-        .take(2)
-        .join('');
-
-    return Padding(
-      padding: const EdgeInsets.only(left: 94, right: 75, top: 50, bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: _currentAccentColor, width: 3),
-                    bottom: BorderSide(color: _currentAccentColor, width: 3),
-                  ),
-                ),
-                padding: const EdgeInsets.only(
-                  left: 12,
-                  bottom: 4,
-                  right: 12,
-                  top: 4,
-                ),
-                child: Text(
-                  initials,
-                  style: const TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF374151),
-                    letterSpacing: -2,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildEditableText(
-                      _headerUserNameCtrl,
-                      32,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF1F2937),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildEditableText(
-                      _headerUserProfessionCtrl,
-                      14,
-                      color: const Color(0xFF4B5563),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'PERSÖNLICHE DATEN',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: _currentAccentColor,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Container(height: 1, color: _currentAccentColor),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'E-MAIL',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildEditableText(
-                      _headerUserEmailCtrl,
-                      12,
-                      color: const Color(0xFF4B5563),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'ANSCHRIFT',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildEditableText(
-                      _headerUserAddressCtrl,
-                      12,
-                      color: const Color(0xFF4B5563),
-                      maxLines: null,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'TELEFON',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    _buildEditableText(
-                      _headerUserPhoneCtrl,
-                      12,
-                      color: const Color(0xFF4B5563),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 40),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildEditableText(_headerCompanyNameCtrl, 12),
-                    _buildEditableText(_headerContactNameCtrl, 12),
-                    _buildEditableText(
-                      _headerCompanyAddressCtrl,
-                      12,
-                      maxLines: null,
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 150,
-                child: _buildEditableText(
-                  _headerDateCtrl,
-                  12,
-                  textAlign: TextAlign.right,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    DocumentDesign design = _getDesign();
+    
+    return design.buildCoverLetterHeader(
+      context, 
+      CoverLetterDesignContext(
+        accentColor: _currentAccentColor,
+        textColor: _currentTextColor,
+        companyNameCtrl: _headerCompanyNameCtrl,
+        contactNameCtrl: _headerContactNameCtrl,
+        companyAddressCtrl: _headerCompanyAddressCtrl,
+        dateCtrl: _headerDateCtrl,
+        userNameCtrl: _headerUserNameCtrl,
+        userProfessionCtrl: _headerUserProfessionCtrl,
+        userEmailCtrl: _headerUserEmailCtrl,
+        userPhoneCtrl: _headerUserPhoneCtrl,
+        userAddressCtrl: _headerUserAddressCtrl,
+      )
     );
   }
 
@@ -1670,21 +1545,13 @@ class _ApplicationEditorScreenState
                             padding: EdgeInsets.zero,
                             child: Stack(
                               children: [
-                                Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    _buildProfessionalHeader(),
-                                    Padding(
-                                      padding: EdgeInsets.only(
-                                        left: 94, // 25mm
-                                        right: 75, // 20mm
-                                        top: _currentDesignId != 'monogram'
-                                            ? 170
-                                            : 40,
-                                        bottom: 75, // 20mm
-                                      ),
-                                      child: DefaultTextStyle(
+                                Padding(
+                                    padding: EdgeInsets.only(left: _marginLeft, right: _marginRight, top: _marginTop, bottom: _marginBottom),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        _buildProfessionalHeader(),
+                                        DefaultTextStyle(
                                         style: TextStyle(
                                           fontFamily: _currentFontFamily,
                                           fontSize: _currentFontSize,
@@ -1726,11 +1593,11 @@ class _ApplicationEditorScreenState
                                           ),
                                         ),
                                       ),
+                                        const SizedBox(
+                                          height: 60,
+                                        ), // Space so text doesn't hit the footer
+                                      ],
                                     ),
-                                    const SizedBox(
-                                      height: 60,
-                                    ), // Space so text doesn't hit the footer
-                                  ],
                                 ),
                                 Positioned(
                                   bottom: 0,

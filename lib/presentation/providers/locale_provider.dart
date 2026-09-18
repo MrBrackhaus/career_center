@@ -21,8 +21,8 @@ class LocaleNotifier extends Notifier<Locale?> {
     if (lang != null && lang.value.isNotEmpty) {
       state = Locale(lang.value);
     } else {
-      // Default behavior (system locale)
-      state = null;
+      // Default behavior (force German as default since this is a German app)
+      state = const Locale('de');
     }
   }
 

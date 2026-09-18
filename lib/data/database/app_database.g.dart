@@ -5520,6 +5520,528 @@ class CvLanguagesCompanion extends UpdateCompanion<CvLanguage> {
   }
 }
 
+class $CvCustomItemsTable extends CvCustomItems
+    with TableInfo<$CvCustomItemsTable, CvCustomItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CvCustomItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _applicationIdMeta = const VerificationMeta(
+    'applicationId',
+  );
+  @override
+  late final GeneratedColumn<int> applicationId = GeneratedColumn<int>(
+    'application_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES applications (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _sectionNameMeta = const VerificationMeta(
+    'sectionName',
+  );
+  @override
+  late final GeneratedColumn<String> sectionName = GeneratedColumn<String>(
+    'section_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subtitleMeta = const VerificationMeta(
+    'subtitle',
+  );
+  @override
+  late final GeneratedColumn<String> subtitle = GeneratedColumn<String>(
+    'subtitle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dateRangeMeta = const VerificationMeta(
+    'dateRange',
+  );
+  @override
+  late final GeneratedColumn<String> dateRange = GeneratedColumn<String>(
+    'date_range',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    applicationId,
+    sectionName,
+    title,
+    subtitle,
+    dateRange,
+    description,
+    sortOrder,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cv_custom_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CvCustomItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('application_id')) {
+      context.handle(
+        _applicationIdMeta,
+        applicationId.isAcceptableOrUnknown(
+          data['application_id']!,
+          _applicationIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('section_name')) {
+      context.handle(
+        _sectionNameMeta,
+        sectionName.isAcceptableOrUnknown(
+          data['section_name']!,
+          _sectionNameMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionNameMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('subtitle')) {
+      context.handle(
+        _subtitleMeta,
+        subtitle.isAcceptableOrUnknown(data['subtitle']!, _subtitleMeta),
+      );
+    }
+    if (data.containsKey('date_range')) {
+      context.handle(
+        _dateRangeMeta,
+        dateRange.isAcceptableOrUnknown(data['date_range']!, _dateRangeMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CvCustomItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CvCustomItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      applicationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}application_id'],
+      ),
+      sectionName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}section_name'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      subtitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subtitle'],
+      ),
+      dateRange: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}date_range'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+    );
+  }
+
+  @override
+  $CvCustomItemsTable createAlias(String alias) {
+    return $CvCustomItemsTable(attachedDatabase, alias);
+  }
+}
+
+class CvCustomItem extends DataClass implements Insertable<CvCustomItem> {
+  final int id;
+  final int? applicationId;
+  final String sectionName;
+  final String title;
+  final String? subtitle;
+  final String? dateRange;
+  final String? description;
+  final int sortOrder;
+  const CvCustomItem({
+    required this.id,
+    this.applicationId,
+    required this.sectionName,
+    required this.title,
+    this.subtitle,
+    this.dateRange,
+    this.description,
+    required this.sortOrder,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    if (!nullToAbsent || applicationId != null) {
+      map['application_id'] = Variable<int>(applicationId);
+    }
+    map['section_name'] = Variable<String>(sectionName);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || subtitle != null) {
+      map['subtitle'] = Variable<String>(subtitle);
+    }
+    if (!nullToAbsent || dateRange != null) {
+      map['date_range'] = Variable<String>(dateRange);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['sort_order'] = Variable<int>(sortOrder);
+    return map;
+  }
+
+  CvCustomItemsCompanion toCompanion(bool nullToAbsent) {
+    return CvCustomItemsCompanion(
+      id: Value(id),
+      applicationId: applicationId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(applicationId),
+      sectionName: Value(sectionName),
+      title: Value(title),
+      subtitle: subtitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subtitle),
+      dateRange: dateRange == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dateRange),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      sortOrder: Value(sortOrder),
+    );
+  }
+
+  factory CvCustomItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CvCustomItem(
+      id: serializer.fromJson<int>(json['id']),
+      applicationId: serializer.fromJson<int?>(json['applicationId']),
+      sectionName: serializer.fromJson<String>(json['sectionName']),
+      title: serializer.fromJson<String>(json['title']),
+      subtitle: serializer.fromJson<String?>(json['subtitle']),
+      dateRange: serializer.fromJson<String?>(json['dateRange']),
+      description: serializer.fromJson<String?>(json['description']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'applicationId': serializer.toJson<int?>(applicationId),
+      'sectionName': serializer.toJson<String>(sectionName),
+      'title': serializer.toJson<String>(title),
+      'subtitle': serializer.toJson<String?>(subtitle),
+      'dateRange': serializer.toJson<String?>(dateRange),
+      'description': serializer.toJson<String?>(description),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+    };
+  }
+
+  CvCustomItem copyWith({
+    int? id,
+    Value<int?> applicationId = const Value.absent(),
+    String? sectionName,
+    String? title,
+    Value<String?> subtitle = const Value.absent(),
+    Value<String?> dateRange = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+    int? sortOrder,
+  }) => CvCustomItem(
+    id: id ?? this.id,
+    applicationId: applicationId.present
+        ? applicationId.value
+        : this.applicationId,
+    sectionName: sectionName ?? this.sectionName,
+    title: title ?? this.title,
+    subtitle: subtitle.present ? subtitle.value : this.subtitle,
+    dateRange: dateRange.present ? dateRange.value : this.dateRange,
+    description: description.present ? description.value : this.description,
+    sortOrder: sortOrder ?? this.sortOrder,
+  );
+  CvCustomItem copyWithCompanion(CvCustomItemsCompanion data) {
+    return CvCustomItem(
+      id: data.id.present ? data.id.value : this.id,
+      applicationId: data.applicationId.present
+          ? data.applicationId.value
+          : this.applicationId,
+      sectionName: data.sectionName.present
+          ? data.sectionName.value
+          : this.sectionName,
+      title: data.title.present ? data.title.value : this.title,
+      subtitle: data.subtitle.present ? data.subtitle.value : this.subtitle,
+      dateRange: data.dateRange.present ? data.dateRange.value : this.dateRange,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvCustomItem(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('sectionName: $sectionName, ')
+          ..write('title: $title, ')
+          ..write('subtitle: $subtitle, ')
+          ..write('dateRange: $dateRange, ')
+          ..write('description: $description, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    applicationId,
+    sectionName,
+    title,
+    subtitle,
+    dateRange,
+    description,
+    sortOrder,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CvCustomItem &&
+          other.id == this.id &&
+          other.applicationId == this.applicationId &&
+          other.sectionName == this.sectionName &&
+          other.title == this.title &&
+          other.subtitle == this.subtitle &&
+          other.dateRange == this.dateRange &&
+          other.description == this.description &&
+          other.sortOrder == this.sortOrder);
+}
+
+class CvCustomItemsCompanion extends UpdateCompanion<CvCustomItem> {
+  final Value<int> id;
+  final Value<int?> applicationId;
+  final Value<String> sectionName;
+  final Value<String> title;
+  final Value<String?> subtitle;
+  final Value<String?> dateRange;
+  final Value<String?> description;
+  final Value<int> sortOrder;
+  const CvCustomItemsCompanion({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    this.sectionName = const Value.absent(),
+    this.title = const Value.absent(),
+    this.subtitle = const Value.absent(),
+    this.dateRange = const Value.absent(),
+    this.description = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  });
+  CvCustomItemsCompanion.insert({
+    this.id = const Value.absent(),
+    this.applicationId = const Value.absent(),
+    required String sectionName,
+    required String title,
+    this.subtitle = const Value.absent(),
+    this.dateRange = const Value.absent(),
+    this.description = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+  }) : sectionName = Value(sectionName),
+       title = Value(title);
+  static Insertable<CvCustomItem> custom({
+    Expression<int>? id,
+    Expression<int>? applicationId,
+    Expression<String>? sectionName,
+    Expression<String>? title,
+    Expression<String>? subtitle,
+    Expression<String>? dateRange,
+    Expression<String>? description,
+    Expression<int>? sortOrder,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (applicationId != null) 'application_id': applicationId,
+      if (sectionName != null) 'section_name': sectionName,
+      if (title != null) 'title': title,
+      if (subtitle != null) 'subtitle': subtitle,
+      if (dateRange != null) 'date_range': dateRange,
+      if (description != null) 'description': description,
+      if (sortOrder != null) 'sort_order': sortOrder,
+    });
+  }
+
+  CvCustomItemsCompanion copyWith({
+    Value<int>? id,
+    Value<int?>? applicationId,
+    Value<String>? sectionName,
+    Value<String>? title,
+    Value<String?>? subtitle,
+    Value<String?>? dateRange,
+    Value<String?>? description,
+    Value<int>? sortOrder,
+  }) {
+    return CvCustomItemsCompanion(
+      id: id ?? this.id,
+      applicationId: applicationId ?? this.applicationId,
+      sectionName: sectionName ?? this.sectionName,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      dateRange: dateRange ?? this.dateRange,
+      description: description ?? this.description,
+      sortOrder: sortOrder ?? this.sortOrder,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (applicationId.present) {
+      map['application_id'] = Variable<int>(applicationId.value);
+    }
+    if (sectionName.present) {
+      map['section_name'] = Variable<String>(sectionName.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (subtitle.present) {
+      map['subtitle'] = Variable<String>(subtitle.value);
+    }
+    if (dateRange.present) {
+      map['date_range'] = Variable<String>(dateRange.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CvCustomItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('applicationId: $applicationId, ')
+          ..write('sectionName: $sectionName, ')
+          ..write('title: $title, ')
+          ..write('subtitle: $subtitle, ')
+          ..write('dateRange: $dateRange, ')
+          ..write('description: $description, ')
+          ..write('sortOrder: $sortOrder')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -5535,6 +6057,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $CvEducationsTable cvEducations = $CvEducationsTable(this);
   late final $CvSkillsTable cvSkills = $CvSkillsTable(this);
   late final $CvLanguagesTable cvLanguages = $CvLanguagesTable(this);
+  late final $CvCustomItemsTable cvCustomItems = $CvCustomItemsTable(this);
   late final ApplicationsDao applicationsDao = ApplicationsDao(
     this as AppDatabase,
   );
@@ -5561,6 +6084,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cvEducations,
     cvSkills,
     cvLanguages,
+    cvCustomItems,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -5626,6 +6150,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('cv_languages', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'applications',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('cv_custom_items', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -5861,6 +6392,24 @@ final class $$ApplicationsTableReferences
     ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_cvLanguagesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CvCustomItemsTable, List<CvCustomItem>>
+  _cvCustomItemsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cvCustomItems,
+    aliasName: 'applications__id__cv_custom_items__application_id',
+  );
+
+  $$CvCustomItemsTableProcessedTableManager get cvCustomItemsRefs {
+    final manager = $$CvCustomItemsTableTableManager(
+      $_db,
+      $_db.cvCustomItems,
+    ).filter((f) => f.applicationId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cvCustomItemsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -6232,6 +6781,31 @@ class $$ApplicationsTableFilterComposer
           }) => $$CvLanguagesTableFilterComposer(
             $db: $db,
             $table: $db.cvLanguages,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cvCustomItemsRefs(
+    Expression<bool> Function($$CvCustomItemsTableFilterComposer f) f,
+  ) {
+    final $$CvCustomItemsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvCustomItems,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvCustomItemsTableFilterComposer(
+            $db: $db,
+            $table: $db.cvCustomItems,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -6740,6 +7314,31 @@ class $$ApplicationsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> cvCustomItemsRefs<T extends Object>(
+    Expression<T> Function($$CvCustomItemsTableAnnotationComposer a) f,
+  ) {
+    final $$CvCustomItemsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cvCustomItems,
+      getReferencedColumn: (t) => t.applicationId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CvCustomItemsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cvCustomItems,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ApplicationsTableTableManager
@@ -6765,6 +7364,7 @@ class $$ApplicationsTableTableManager
             bool cvEducationsRefs,
             bool cvSkillsRefs,
             bool cvLanguagesRefs,
+            bool cvCustomItemsRefs,
           })
         > {
   $$ApplicationsTableTableManager(_$AppDatabase db, $ApplicationsTable table)
@@ -6917,6 +7517,7 @@ class $$ApplicationsTableTableManager
                 cvEducationsRefs = false,
                 cvSkillsRefs = false,
                 cvLanguagesRefs = false,
+                cvCustomItemsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -6930,6 +7531,7 @@ class $$ApplicationsTableTableManager
                     if (cvEducationsRefs) db.cvEducations,
                     if (cvSkillsRefs) db.cvSkills,
                     if (cvLanguagesRefs) db.cvLanguages,
+                    if (cvCustomItemsRefs) db.cvCustomItems,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -7123,6 +7725,27 @@ class $$ApplicationsTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (cvCustomItemsRefs)
+                        await $_getPrefetchedData<
+                          Application,
+                          $ApplicationsTable,
+                          CvCustomItem
+                        >(
+                          currentTable: table,
+                          referencedTable: $$ApplicationsTableReferences
+                              ._cvCustomItemsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ApplicationsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cvCustomItemsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.applicationId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -7153,6 +7776,7 @@ typedef $$ApplicationsTableProcessedTableManager =
         bool cvEducationsRefs,
         bool cvSkillsRefs,
         bool cvLanguagesRefs,
+        bool cvCustomItemsRefs,
       })
     >;
 typedef $$TemplatesTableCreateCompanionBuilder = TemplatesCompanion Function({
@@ -10281,6 +10905,381 @@ typedef $$CvLanguagesTableProcessedTableManager =
       CvLanguage,
       PrefetchHooks Function({bool applicationId})
     >;
+typedef $$CvCustomItemsTableCreateCompanionBuilder =
+    CvCustomItemsCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      required String sectionName,
+      required String title,
+      Value<String?> subtitle,
+      Value<String?> dateRange,
+      Value<String?> description,
+      Value<int> sortOrder,
+    });
+typedef $$CvCustomItemsTableUpdateCompanionBuilder =
+    CvCustomItemsCompanion Function({
+      Value<int> id,
+      Value<int?> applicationId,
+      Value<String> sectionName,
+      Value<String> title,
+      Value<String?> subtitle,
+      Value<String?> dateRange,
+      Value<String?> description,
+      Value<int> sortOrder,
+    });
+
+final class $$CvCustomItemsTableReferences
+    extends BaseReferences<_$AppDatabase, $CvCustomItemsTable, CvCustomItem> {
+  $$CvCustomItemsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $ApplicationsTable _applicationIdTable(_$AppDatabase db) => db
+      .applications
+      .createAlias('cv_custom_items__application_id__applications__id');
+
+  $$ApplicationsTableProcessedTableManager? get applicationId {
+    final $_column = $_itemColumn<int>('application_id');
+    if ($_column == null) return null;
+    final manager = $$ApplicationsTableTableManager(
+      $_db,
+      $_db.applications,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_applicationIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CvCustomItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $CvCustomItemsTable> {
+  $$CvCustomItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sectionName => $composableBuilder(
+    column: $table.sectionName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subtitle => $composableBuilder(
+    column: $table.subtitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dateRange => $composableBuilder(
+    column: $table.dateRange,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ApplicationsTableFilterComposer get applicationId {
+    final $$ApplicationsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableFilterComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvCustomItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CvCustomItemsTable> {
+  $$CvCustomItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sectionName => $composableBuilder(
+    column: $table.sectionName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subtitle => $composableBuilder(
+    column: $table.subtitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dateRange => $composableBuilder(
+    column: $table.dateRange,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ApplicationsTableOrderingComposer get applicationId {
+    final $$ApplicationsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableOrderingComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvCustomItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CvCustomItemsTable> {
+  $$CvCustomItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get sectionName => $composableBuilder(
+    column: $table.sectionName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get subtitle =>
+      $composableBuilder(column: $table.subtitle, builder: (column) => column);
+
+  GeneratedColumn<String> get dateRange =>
+      $composableBuilder(column: $table.dateRange, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  $$ApplicationsTableAnnotationComposer get applicationId {
+    final $$ApplicationsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.applicationId,
+      referencedTable: $db.applications,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ApplicationsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.applications,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CvCustomItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CvCustomItemsTable,
+          CvCustomItem,
+          $$CvCustomItemsTableFilterComposer,
+          $$CvCustomItemsTableOrderingComposer,
+          $$CvCustomItemsTableAnnotationComposer,
+          $$CvCustomItemsTableCreateCompanionBuilder,
+          $$CvCustomItemsTableUpdateCompanionBuilder,
+          (CvCustomItem, $$CvCustomItemsTableReferences),
+          CvCustomItem,
+          PrefetchHooks Function({bool applicationId})
+        > {
+  $$CvCustomItemsTableTableManager(_$AppDatabase db, $CvCustomItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CvCustomItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CvCustomItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CvCustomItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                Value<String> sectionName = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> subtitle = const Value.absent(),
+                Value<String?> dateRange = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+              }) => CvCustomItemsCompanion(
+                id: id,
+                applicationId: applicationId,
+                sectionName: sectionName,
+                title: title,
+                subtitle: subtitle,
+                dateRange: dateRange,
+                description: description,
+                sortOrder: sortOrder,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int?> applicationId = const Value.absent(),
+                required String sectionName,
+                required String title,
+                Value<String?> subtitle = const Value.absent(),
+                Value<String?> dateRange = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+              }) => CvCustomItemsCompanion.insert(
+                id: id,
+                applicationId: applicationId,
+                sectionName: sectionName,
+                title: title,
+                subtitle: subtitle,
+                dateRange: dateRange,
+                description: description,
+                sortOrder: sortOrder,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CvCustomItemsTable, CvCustomItem>(table),
+                  $$CvCustomItemsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({applicationId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (applicationId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.applicationId,
+                        referencedTable: $$CvCustomItemsTableReferences
+                            ._applicationIdTable(db),
+                        referencedColumn: $$CvCustomItemsTableReferences
+                            ._applicationIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CvCustomItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CvCustomItemsTable,
+      CvCustomItem,
+      $$CvCustomItemsTableFilterComposer,
+      $$CvCustomItemsTableOrderingComposer,
+      $$CvCustomItemsTableAnnotationComposer,
+      $$CvCustomItemsTableCreateCompanionBuilder,
+      $$CvCustomItemsTableUpdateCompanionBuilder,
+      (CvCustomItem, $$CvCustomItemsTableReferences),
+      CvCustomItem,
+      PrefetchHooks Function({bool applicationId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -10307,4 +11306,6 @@ class $AppDatabaseManager {
       $$CvSkillsTableTableManager(_db, _db.cvSkills);
   $$CvLanguagesTableTableManager get cvLanguages =>
       $$CvLanguagesTableTableManager(_db, _db.cvLanguages);
+  $$CvCustomItemsTableTableManager get cvCustomItems =>
+      $$CvCustomItemsTableTableManager(_db, _db.cvCustomItems);
 }

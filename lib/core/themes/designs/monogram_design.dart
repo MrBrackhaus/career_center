@@ -29,11 +29,9 @@ class MonogramDesign extends DocumentDesign {
         .take(2)
         .join('');
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 94, right: 75, top: 50, bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -52,10 +50,10 @@ class MonogramDesign extends DocumentDesign {
                 ),
                 child: Text(
                   initials,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF374151),
+                    color: dc.textColor,
                     letterSpacing: -2,
                   ),
                 ),
@@ -75,7 +73,7 @@ class MonogramDesign extends DocumentDesign {
                     buildEditableText(
                       dc.userProfessionCtrl,
                       14,
-                      color: const Color(0xFF4B5563),
+                      color: dc.textColor.withValues(alpha: 0.8),
                     ),
                   ],
                 ),
@@ -112,7 +110,7 @@ class MonogramDesign extends DocumentDesign {
                     buildEditableText(
                       dc.userEmailCtrl,
                       12,
-                      color: const Color(0xFF4B5563),
+                      color: dc.textColor.withValues(alpha: 0.8),
                     ),
                   ],
                 ),
@@ -132,7 +130,7 @@ class MonogramDesign extends DocumentDesign {
                     buildEditableText(
                       dc.userAddressCtrl,
                       12,
-                      color: const Color(0xFF4B5563),
+                      color: dc.textColor.withValues(alpha: 0.8),
                       maxLines: null,
                     ),
                   ],
@@ -153,7 +151,7 @@ class MonogramDesign extends DocumentDesign {
                     buildEditableText(
                       dc.userPhoneCtrl,
                       12,
-                      color: const Color(0xFF4B5563),
+                      color: dc.textColor.withValues(alpha: 0.8),
                     ),
                   ],
                 ),
@@ -189,7 +187,6 @@ class MonogramDesign extends DocumentDesign {
             ],
           ),
         ],
-      ),
     );
   }
 
@@ -219,7 +216,7 @@ class MonogramDesign extends DocumentDesign {
         : accentColor;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+      padding: cvData.pageMargins,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -242,10 +239,10 @@ class MonogramDesign extends DocumentDesign {
                 ),
                 child: Text(
                   cvData.initials.isNotEmpty ? cvData.initials : 'MK',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF374151),
+                    color: cvData.textColor,
                     letterSpacing: -2,
                     height: 1.0,
                   ),
@@ -326,17 +323,17 @@ class MonogramDesign extends DocumentDesign {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: _buildInfoBlock('E-MAIL:', cvData.email, primaryColor),
+                child: _buildInfoBlock('E-MAIL:', cvData.email, primaryColor, cvData.textColor),
               ),
               Expanded(
                 child: _buildInfoBlock(
                   'ANSCHRIFT:',
                   cvData.address,
-                  primaryColor,
+                  primaryColor, cvData.textColor
                 ),
               ),
               Expanded(
-                child: _buildInfoBlock('TELEFON:', cvData.phone, primaryColor),
+                child: _buildInfoBlock('TELEFON:', cvData.phone, primaryColor, cvData.textColor),
               ),
             ],
           ),
@@ -348,21 +345,21 @@ class MonogramDesign extends DocumentDesign {
                 child: _buildInfoBlock(
                   'FAMILIENSTAND:',
                   cvData.maritalStatus,
-                  primaryColor,
+                  primaryColor, cvData.textColor
                 ),
               ),
               Expanded(
                 child: _buildInfoBlock(
                   'GEBURTSORT:',
                   cvData.birthplace,
-                  primaryColor,
+                  primaryColor, cvData.textColor
                 ),
               ),
               Expanded(
                 child: _buildInfoBlock(
                   'GEBURTSDATUM:',
                   cvData.birthdate,
-                  primaryColor,
+                  primaryColor, cvData.textColor
                 ),
               ),
             ],
@@ -380,6 +377,7 @@ class MonogramDesign extends DocumentDesign {
                 cvData.experiences[i].subtitle,
                 cvData.experiences[i].description,
                 primaryColor,
+                cvData.textColor,
                 isLast: i == cvData.experiences.length - 1,
               ),
           ],
@@ -396,12 +394,103 @@ class MonogramDesign extends DocumentDesign {
                 cvData.educations[i].subtitle,
                 cvData.educations[i].description,
                 primaryColor,
+                cvData.textColor,
                 isLast: i == cvData.educations.length - 1,
               ),
           ],
+
+          if (cvData.skills.isNotEmpty || cvData.languages.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (cvData.skills.isNotEmpty)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionHeader('FÄHIGKEITEN', primaryColor),
+                        const SizedBox(height: 16),
+                        ...cvData.skills.map<Widget>((s) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('• ', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                              Expanded(child: Text(s.name.toString(), style: TextStyle(color: cvData.textColor, fontSize: 11, height: 1.4))),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                if (cvData.skills.isNotEmpty && cvData.languages.isNotEmpty)
+                  const SizedBox(width: 32),
+                if (cvData.languages.isNotEmpty)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSectionHeader('SPRACHEN', primaryColor),
+                        const SizedBox(height: 16),
+                        ...cvData.languages.map<Widget>((l) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('• ', style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                              Expanded(
+                                child: Text(
+                                  l.level != null && l.level!.toString().isNotEmpty ? '${l.name} (${l.level})' : l.name.toString(),
+                                  style: TextStyle(color: cvData.textColor, fontSize: 11, height: 1.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ],
+
+          ..._buildCustomSections(cvData.customItems, primaryColor, cvData.textColor),
         ],
       ),
     );
+  }
+
+
+  List<Widget> _buildCustomSections(List<dynamic> customItems, Color primaryColor, Color textColor) {
+    if (customItems.isEmpty) return [];
+    final Map<String, List<dynamic>> grouped = {};
+    for (var item in customItems) {
+      final sectionName = item.sectionName as String;
+      if (!grouped.containsKey(sectionName)) grouped[sectionName] = [];
+      grouped[sectionName]!.add(item);
+    }
+    
+    final List<Widget> widgets = [];
+    for (var entry in grouped.entries) {
+      widgets.add(const SizedBox(height: 24));
+      widgets.add(_buildSectionHeader(entry.key.toUpperCase(), primaryColor));
+      widgets.add(const SizedBox(height: 16));
+      
+      for (int i = 0; i < entry.value.length; i++) {
+        final item = entry.value[i];
+        widgets.add(_buildTimelineItem(
+          item.dateRange ?? '',
+          item.title,
+          item.subtitle ?? '',
+          item.description ?? '',
+          primaryColor,
+          textColor,
+          isLast: i == entry.value.length - 1,
+        ));
+      }
+    }
+    return widgets;
   }
 
   Widget _buildSectionHeader(String title, Color accentColor) {
@@ -422,7 +511,7 @@ class MonogramDesign extends DocumentDesign {
     );
   }
 
-  Widget _buildInfoBlock(String label, String value, Color accentColor) {
+  Widget _buildInfoBlock(String label, String value, Color accentColor, Color textColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -437,7 +526,7 @@ class MonogramDesign extends DocumentDesign {
         const SizedBox(height: 4),
         Text(
           value.isNotEmpty ? value : '-',
-          style: const TextStyle(fontSize: 10, color: Colors.black87),
+          style: TextStyle(fontSize: 10, color: textColor),
         ),
       ],
     );
@@ -448,7 +537,8 @@ class MonogramDesign extends DocumentDesign {
     String title,
     String subtitle,
     String desc,
-    Color accentColor, {
+    Color accentColor,
+    Color textColor, {
     bool isLast = false,
   }) {
     return Row(
@@ -460,7 +550,7 @@ class MonogramDesign extends DocumentDesign {
             padding: const EdgeInsets.only(top: 1),
             child: Text(
               date,
-              style: const TextStyle(fontSize: 10, color: Colors.black87),
+              style: TextStyle(fontSize: 10, color: textColor),
               textAlign: TextAlign.right,
             ),
           ),
@@ -482,10 +572,10 @@ class MonogramDesign extends DocumentDesign {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: textColor,
                       ),
                     ),
                     if (subtitle.isNotEmpty) ...[

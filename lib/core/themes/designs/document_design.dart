@@ -12,6 +12,7 @@ class CoverLetterDesignContext {
   final TextEditingController companyAddressCtrl;
   final TextEditingController dateCtrl;
   final Color accentColor;
+  final Color textColor;
 
   CoverLetterDesignContext({
     required this.userNameCtrl,
@@ -24,6 +25,7 @@ class CoverLetterDesignContext {
     required this.companyAddressCtrl,
     required this.dateCtrl,
     required this.accentColor,
+    this.textColor = const Color(0xFF374151),
   });
 }
 
@@ -55,6 +57,11 @@ class CvData {
   final String? profileImagePath;
   final List<CvTimelineItem> experiences;
   final List<CvTimelineItem> educations;
+  final List<dynamic> skills;
+  final List<dynamic> languages;
+  final List<dynamic> customItems;
+  final Color textColor;
+  final EdgeInsets pageMargins;
 
   const CvData({
     this.initials = '',
@@ -70,6 +77,11 @@ class CvData {
     this.profileImagePath,
     this.experiences = const [],
     this.educations = const [],
+    this.skills = const [],
+    this.languages = const [],
+    this.customItems = const [],
+    this.textColor = const Color(0xFF374151),
+    this.pageMargins = const EdgeInsets.only(left: 94, top: 170, right: 32, bottom: 32),
   });
 }
 
@@ -116,7 +128,7 @@ abstract class DocumentDesign {
     double fontSize, {
     FontWeight? fontWeight,
     int? maxLines = 1,
-    Color color = Colors.black87,
+    Color color = const Color(0xFF374151),
     TextAlign textAlign = TextAlign.left,
   }) {
     return TextFormField(

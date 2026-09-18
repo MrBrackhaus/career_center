@@ -17,6 +17,7 @@
  */
 import 'package:enough_mail/enough_mail.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'extractors/ai_email_extractor_service.dart';
 import 'dart:developer' show log;
 import 'package:drift/drift.dart' as drift;
 
@@ -66,8 +67,7 @@ class ImapService {
   // ── Parsing helpers (delegiert an EmailResponseExtractor) ──────────────────
 
   static final _companyPattern = RegExp(
-    r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([A-Za-zÄÖÜäöüß\s\-\&.,]{1,60}(?:GmbH(?:\s*\&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
-    caseSensitive: false,
+    r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([A-Za-zÄÖÜäöüß\s\-&.,]{1,40}(?:GmbH|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
   );
 
   static final _contactPattern = RegExp(
@@ -94,6 +94,17 @@ class ImapService {
   }
 
   static String _extractCompanyFromBody(String body) {
+    // Suche nach GmbH/AG in der Fußzeile (nimmt den letzten Treffer im Text). MUST BE case-sensitive for suffixes!
+    final entityRegex = RegExp(
+      r'([A-ZÄÖÜ][A-Za-zÄÖÜäöüß0-9\s\-&.]{2,50}(?:GmbH(?:\s*&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))\b',
+    );
+    final matches = entityRegex.allMatches(body);
+    if (matches.isNotEmpty) {
+      final name = matches.last.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+      if (name.isNotEmpty && name.length < 60) return name;
+    }
+
+    // Fallback auf altes Muster
     final m = _companyPattern.firstMatch(body);
     if (m != null) {
       final name = m.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
@@ -141,19 +152,23 @@ class ImapService {
   /// Returns the number of newly auto-imported applications
   Future<int> syncEmails(
     AppDatabase db,
-    String server,
+    String host,
     int port,
-    String email,
-    String password,
-  ) async {
-    final client = await connect(server, port, email, password);
-    if (client == null) return 0;
-
+    String userName,
+    String password, {
+    AiEmailExtractorService? aiExtractor,
+    void Function(String)? onProgress,
+  }) async {
+    final client = ImapClient(isLogEnabled: false);
     int newlyImported = 0;
-
     try {
-      final applications = await db.applicationsDao.getAllApplications();
+      onProgress?.call('Verbinde mit $host...');
+      await client.connectToServer(host, port, isSecure: true);
+      await client.login(userName, password);
 
+      onProgress?.call('Lade Bewerbungen aus der Datenbank...');
+      final applications = await db.applicationsDao.getAllApplications();
+      final companyRegexes = <int, RegExp>{};
       // Check if this is the first sync
       final lastSyncSetting = await db.settingsDao.getSettingByKey(
         'last_imap_sync',
@@ -161,7 +176,10 @@ class ImapService {
       final isFirstSync = lastSyncSetting == null;
       final fetchCount = isFirstSync ? 500 : 50;
 
-      // ── 1. SENT FOLDER ────────────────────────────────────────────────────
+      // Lese maximal 90 Tage in die Vergangenheit, um 5 Jahre alten Spam zu vermeiden
+      final cutoffDate = DateTime.now().subtract(const Duration(days: 90));
+
+      // ── 1. SENT FOLDER ──────────────────────────────────────────────────────────
       final mailboxes = await client.listMailboxes(recursive: true);
       Mailbox? sentBox;
       try {
@@ -182,6 +200,8 @@ class ImapService {
           criteria: 'BODY.PEEK[]',
         );
         final sentMessages = fetchResult.messages;
+        
+        onProgress?.call('Durchsuche Postausgang (${sentMessages.length} Mails)...');
 
         final companyRegexes = <int, RegExp>{};
         for (final app in applications) {
@@ -192,14 +212,16 @@ class ImapService {
         }
 
         for (final msg in sentMessages) {
+          final sentDate = msg.decodeDate() ?? DateTime.now();
+          if (sentDate.isBefore(cutoffDate)) continue;
+
           final rawToAddresses =
               msg.to?.map((e) => e.email.toLowerCase()).toList() ?? [];
           final toAddresses = rawToAddresses
-              .where((e) => e != email.toLowerCase())
+              .where((e) => e != userName.toLowerCase())
               .toList();
           final subject = msg.decodeSubject() ?? '';
           final body = msg.decodeTextPlainPart() ?? '';
-          final sentDate = msg.decodeDate() ?? DateTime.now();
           final subjectLower = subject.toLowerCase();
           final bodyLower = body.toLowerCase();
 
@@ -214,8 +236,12 @@ class ImapService {
                 matched = true;
               } else if (appCompany.isNotEmpty && appCompany.length > 2) {
                 final companyRegex = companyRegexes[app.id];
-                if (companyRegex != null && (companyRegex.hasMatch(subjectLower) || companyRegex.hasMatch(bodyLower))) {
-                  matched = true;
+                if (companyRegex != null) {
+                  if (companyRegex.hasMatch(subjectLower)) {
+                    matched = true;
+                  } else if (appCompany.length > 4 && companyRegex.hasMatch(bodyLower)) {
+                    matched = true;
+                  }
                 }
               }
               if (matched) {
@@ -239,9 +265,7 @@ class ImapService {
                       sender: toAddresses.isNotEmpty
                           ? 'An: ${toAddresses.first}'
                           : 'Gesendet',
-                      bodySnippet: body.length > 200
-                          ? '${body.substring(0, 200)}...'
-                          : body,
+                      bodySnippet: body,
                       receivedAt: sentDate,
                       isRead: drift.Value(true),
                     ),
@@ -252,6 +276,58 @@ class ImapService {
           }
 
           // b) Auto-import new applications
+          final msgId = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
+          if (aiExtractor != null) {
+            final isRelevant = subject.toLowerCase().contains('bewerbung') || body.toLowerCase().contains('bewerbung') || subject.toLowerCase().contains('application');
+            if (isRelevant) {
+              onProgress?.call('KI analysiert gesendete Mail...');
+              final aiResult = await aiExtractor.analyzeEmail(subject, body);
+              if (aiResult != null && aiResult.isApplicationRelated) {
+                final recipientEmail = toAddresses.isNotEmpty ? toAddresses.first : '';
+                String finalCompany = (aiResult.companyName != null && aiResult.companyName!.isNotEmpty)
+                    ? aiResult.companyName!
+                    : _extractCompanyFromDomain(recipientEmail);
+                if (finalCompany.isEmpty) finalCompany = 'Unbekannte Firma';
+
+                final finalPosition = (aiResult.positionTitle != null && aiResult.positionTitle!.isNotEmpty) 
+                    ? aiResult.positionTitle! 
+                    : 'Unbekannte Position';
+
+                final alreadyExists = applications.any((app) {
+                  return app.company.toLowerCase() == finalCompany.toLowerCase();
+                });
+                if (!alreadyExists) {
+                  final appId = await db.applicationsDao.insertApplication(
+                    ApplicationsCompanion.insert(
+                      company: finalCompany,
+                      position: finalPosition,
+                      status: drift.Value(aiResult.status ?? 'versendet'),
+                      appliedDate: drift.Value(sentDate),
+                      contactEmail: drift.Value(recipientEmail),
+                      createdAt: drift.Value(DateTime.now()),
+                      updatedAt: drift.Value(DateTime.now()),
+                    ),
+                  );
+
+                  await db.emailsDao.insertEmail(
+                    EmailsCompanion.insert(
+                      applicationId: appId,
+                      messageId: msgId,
+                      subject: subject.isNotEmpty ? subject : 'Kein Betreff',
+                      sender: recipientEmail.isNotEmpty ? 'An: $recipientEmail' : 'Gesendet',
+                      bodySnippet: body.trim(),
+                      receivedAt: sentDate,
+                      isRead: drift.Value(true),
+                    ),
+                  );
+                  newlyImported++;
+                  continue; // Skip the regex fallback
+                }
+              }
+            }
+          }
+
+          // Fallback zu Regex (ohne KI)
           final detectedStatus = _detectApplicationStatus(subject, body);
           if (detectedStatus == null) continue;
 
@@ -314,9 +390,7 @@ class ImapService {
               sender: recipientEmail.isNotEmpty
                   ? 'An: $recipientEmail'
                   : 'Gesendet',
-              bodySnippet: body.length > 200
-                  ? '${body.substring(0, 200)}...'
-                  : body,
+              bodySnippet: body,
               receivedAt: sentDate,
               isRead: drift.Value(true),
             ),
@@ -333,8 +407,10 @@ class ImapService {
         messageCount: fetchCount,
         criteria: 'BODY.PEEK[]',
       );
+      
+      onProgress?.call('Durchsuche Posteingang (${inboxResult.messages.length} Mails)...');
 
-      final companyRegexes = <int, RegExp>{};
+      companyRegexes.clear();
       for (final app in updatedApps) {
         final appCompany = app.company.toLowerCase();
         if (appCompany.isNotEmpty && appCompany.length > 2) {
@@ -343,6 +419,9 @@ class ImapService {
       }
 
       for (final msg in inboxResult.messages) {
+        final rDate = msg.decodeDate() ?? DateTime.now();
+        if (rDate.isBefore(cutoffDate)) continue;
+
         final fromAddress = msg.from?.firstOrNull?.email.toLowerCase() ?? '';
         final subject = msg.decodeSubject()?.toLowerCase() ?? '';
         final body = msg.decodeTextPlainPart()?.toLowerCase() ?? '';
@@ -351,6 +430,7 @@ class ImapService {
         final existing = await db.emailsDao.getEmailByMessageId(msgId);
         if (existing != null) continue;
 
+        bool foundMatch = false;
         for (final app in updatedApps) {
           final appEmail = app.contactEmail?.toLowerCase() ?? '';
           final appCompany = app.company.toLowerCase();
@@ -365,24 +445,28 @@ class ImapService {
             } else {
               // Word boundary check to prevent "it" matching "mit"
               final companyRegex = companyRegexes[app.id];
-              if (companyRegex != null &&
-                  (companyRegex.hasMatch(subject) ||
-                      companyRegex.hasMatch(body))) {
-                matched = true;
+              if (companyRegex != null) {
+                // Suche Firmenname im Betreff (immer sicher)
+                if (companyRegex.hasMatch(subject)) {
+                  matched = true;
+                } 
+                // Suche im Body NUR, wenn der Firmenname etwas länger/spezifischer ist (verhindert 'IT' Spam-Matches)
+                else if (appCompany.length > 4 && companyRegex.hasMatch(body)) {
+                  matched = true;
+                }
               }
             }
           }
 
           if (matched) {
+            foundMatch = true;
             await db.emailsDao.insertEmail(
               EmailsCompanion.insert(
                 applicationId: app.id,
                 messageId: msgId,
                 subject: msg.decodeSubject() ?? 'Kein Betreff',
                 sender: msg.from?.firstOrNull?.toString() ?? 'Unbekannt',
-                bodySnippet: body.length > 200
-                    ? '${body.substring(0, 200)}...'
-                    : body,
+                bodySnippet: body,
                 receivedAt: msg.decodeDate() ?? DateTime.now(),
               ),
             );
@@ -411,6 +495,76 @@ class ImapService {
               );
             }
             break;
+          }
+        }
+        // Eingangs-Mails: Nur BESTÄTIGUNGSMAILS importieren (Portal-Bewerbungen),
+        // KEIN Recruiter-Spam oder Job-Alerts.
+        if (!foundMatch && aiExtractor != null) {
+          final combined = '$subject $body';
+          final isConfirmation = 
+              combined.contains('bewerbung eingegangen') ||
+              combined.contains('bewerbung erhalten') ||
+              combined.contains('eingangsbestätigung') ||
+              combined.contains('bewerbungseingang') ||
+              combined.contains('haben wir erhalten') ||
+              combined.contains('ist bei uns eingegangen') ||
+              combined.contains('bestätigen den eingang') ||
+              combined.contains('bestätigen den erhalt') ||
+              combined.contains('dank für ihre bewerbung') ||
+              combined.contains('dank für deine bewerbung') ||
+              combined.contains('danke für deine bewerbung') ||
+              combined.contains('erfolgreich an') ||
+              combined.contains('übermittlung') ||
+              combined.contains('we have received your application') ||
+              combined.contains('ihre bewerbung') ||
+              combined.contains('bewerbung als') ||
+              combined.contains('bewerbung auf');
+          
+          if (isConfirmation) {
+            onProgress?.call('KI analysiert Bestätigungsmail...');
+            final aiResult = await aiExtractor.analyzeEmail(
+              msg.decodeSubject() ?? '', 
+              msg.decodeTextPlainPart() ?? '',
+            );
+            if (aiResult != null && aiResult.isApplicationRelated) {
+              String finalCompany = (aiResult.companyName != null && aiResult.companyName!.isNotEmpty)
+                  ? aiResult.companyName!
+                  : _extractCompanyFromDomain(msg.from?.firstOrNull?.email ?? '');
+              if (finalCompany.isEmpty) finalCompany = 'Unbekannte Firma';
+
+              final finalPosition = (aiResult.positionTitle != null && aiResult.positionTitle!.isNotEmpty) 
+                  ? aiResult.positionTitle! 
+                  : 'Unbekannte Position';
+              
+              // Prüfe ob nicht schon vorhanden
+              final alreadyExists = updatedApps.any((app) =>
+                app.company.toLowerCase() == finalCompany.toLowerCase());
+              
+              if (!alreadyExists) {
+                final newAppId = await db.applicationsDao.insertApplication(
+                  ApplicationsCompanion.insert(
+                    company: finalCompany,
+                    position: finalPosition,
+                    status: drift.Value(aiResult.status ?? 'versendet'),
+                    appliedDate: drift.Value(msg.decodeDate() ?? DateTime.now()),
+                    contactEmail: drift.Value(msg.from?.firstOrNull?.email ?? ''),
+                    createdAt: drift.Value(DateTime.now()),
+                    updatedAt: drift.Value(DateTime.now()),
+                  ),
+                );
+                await db.emailsDao.insertEmail(
+                  EmailsCompanion.insert(
+                    applicationId: newAppId,
+                    messageId: msgId,
+                    subject: msg.decodeSubject() ?? 'Kein Betreff',
+                    sender: msg.from?.firstOrNull?.toString() ?? 'Unbekannt',
+                    bodySnippet: (msg.decodeTextPlainPart() ?? '').trim(),
+                    receivedAt: msg.decodeDate() ?? DateTime.now(),
+                  ),
+                );
+                newlyImported++;
+              }
+            }
           }
         }
       }
@@ -503,9 +657,7 @@ class ImapService {
                   ? 'An: $recipientEmail'
                   : 'Gesendet',
               date: date,
-              bodySnippet: body.length > 180
-                  ? '${body.substring(0, 180)}...'
-                  : body,
+              bodySnippet: body,
               detectedStatus: detectedStatus,
               isAlreadyImported: alreadyImported,
               folder: 'sent',
@@ -543,9 +695,7 @@ class ImapService {
             subject: cleanSubject.isNotEmpty ? cleanSubject : subject,
             fromTo: 'Von: $from',
             date: date,
-            bodySnippet: body.length > 180
-                ? '${body.substring(0, 180)}...'
-                : body,
+            bodySnippet: body,
             detectedStatus: detectedStatus,
             isAlreadyImported: alreadyImported,
             folder: 'inbox',
@@ -617,9 +767,7 @@ class ImapService {
           messageId: scanMail.uid,
           subject: scanMail.subject,
           sender: scanMail.fromTo,
-          bodySnippet: scanMail.bodySnippet.length > 200
-              ? '${scanMail.bodySnippet.substring(0, 200)}...'
-              : scanMail.bodySnippet,
+          bodySnippet: scanMail.bodySnippet,
           receivedAt: scanMail.date,
           isRead: drift.Value(true),
         ),

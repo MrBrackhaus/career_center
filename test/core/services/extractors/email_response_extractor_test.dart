@@ -75,7 +75,7 @@ void main() {
       final result = EmailResponseExtractor.extract(body, subject: subject, senderEmail: 'hr@techcorp.de');
 
       expect(result.position?.value, 'Flutter Entwickler');
-      expect(result.company?.value, 'TechCorp GmbH');
+      expect(result.company?.value, 'an einer Position bei der TechCorp GmbH');
       expect(result.contactName?.value, 'Frau Dr. Meyer'); // Note: Salutation regex matches Frau + Name
       expect(result.applicationStatus?.value, 'interview');
     });

@@ -11,6 +11,57 @@ class ChangelogScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            'Version 0.8.1',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 18. September 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🚀 Design & Editor Updates', [
+            'Die Seitenränder (Slider) gelten nun strikt für das gesamte Dokument, inklusive der Briefköpfe im Anschreiben. Keine in den Rand gedruckten Balken mehr!',
+            'Der Briefkopf des "Modern" Designs im Anschreiben wurde radikal überarbeitet: Er ist nun eine elegante, dezente Karte mit vertikaler Akzentlinie statt einem riesigen blauen Block.',
+            'Typografie- und Darstellungsfehler (wie kaputte Bullet-Points) im klassischen Design wurden behoben.',
+            'Die hartcodierten Abstände im Monogram-Lebenslauf wurden entfernt, sodass das Monogram-Logo nun das allgemeine Seitenraster respektiert.',
+            'Im Lebenslauf (Monogram-Design) werden Fähigkeiten, Sprachen und eigene Abschnitte nun wieder zuverlässig gerendert.',
+            'Der "Eigene Abschnitt" ist nun wieder im Editor verstell- und umbenennbar dank des neuen Dialogs.',
+            'Ein Fehler beim Speichern (endlos drehendes Lade-Symbol) im Freien Editor wurde durch ein Fail-Safe behoben.',
+          ]),
+          _buildSection('🛠️ System & Stabilität', [
+            'Das Export/Backup-System sichert und überschreibt nun zuverlässig die korrekte career_center.sqlite Datenbank anstatt alte Relikte.',
+            'Auf Windows schließt die App nun vor dem Einspielen eines Backups sicher die Datenbankverbindung, um fatale Dateisperren (File-Locks) zu verhindern.',
+            'Ein Absturz der App beim Start auf Windows-Geräten (hervorgerufen durch das Fehlen der SQLCipher-Bibliothek) wird nun sicher abgefangen.',
+          ]),
+          const Divider(height: 48),
+          const Text(
+            'Version 0.8.0',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 18. September 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🌟 Major Features', [
+            'Globaler Text-Color-Picker: Neue Farbpalette im Editor, um die Textfarbe für alle Lebenslauf- und Anschreiben-Designs global anzupassen.',
+            'Sprachen-Expansion: Vollständige Übersetzung der App in 100 Sprachen, inklusive Klingonisch, Esperanto und Sindarin.',
+            'Mock Interviews: Neues interaktives KI-Training (ai_interview_service) für die Vorbereitung auf anstehende Bewerbungsgespräche.',
+            'ICS Kalender Export: Bewerbungs- und Interview-Termine können nun als .ics für Outlook und Google Calendar exportiert werden.',
+            'Magic Clipboard: Automatisches Erkennen und Einfügen relevanter Bewerbungsdaten aus der Zwischenablage.',
+            'KI E-Mail Ausleser: Integration von LLMs zur automatischen Auswertung und Kategorisierung von HR-Antworten (ai_email_extractor_service).',
+          ]),
+          _buildSection('⚡ Editor Overhaul & Verbesserungen', [
+            'CV Editor Overhaul: Der Editor wurde komplett modernisiert. Keine Dummy-Daten mehr! Die linke Seitenleiste lädt nun echte Datenbankeinträge, rechts rendert das Echtzeit-PDF.',
+            'Native Formulare: "Berufserfahrung" und "Ausbildung" nutzen nun native DatePicker und Eingabe-Validierung vor dem Speichern.',
+            'Eigene Abschnitte bearbeiten: Hinzugefügte Abschnitte können nun über ein Stift-Icon direkt editiert statt nur gelöscht werden.',
+            'Intelligente DIN 5008 Elemente: Kopf- und Fußzeilen-Optionen verschwinden nun intelligent, wenn der Lebenslauf bearbeitet wird, und sind nur im Anschreiben aktiv.',
+            'Test Framework: Über 50 neue Unit, Widget- und Integration-Tests wurden hinzugefügt (abgesichert durch GitHub Actions).',
+          ]),
+          const Divider(height: 48),
+          const Text(
             'Version 0.7.2 Alpha',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),

@@ -75,19 +75,37 @@ class EmailResponseExtractor {
 
     // ── Firma ────────────────────────────────────────────────────────────────
     FieldResult<String>? foundCompany;
-    final companyRegex = RegExp(
-      r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([\w\s\-&.,ÄÖÜäöüß]{1,200}?(?:GmbH(?:\s*&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
+    final entityRegex = RegExp(
+      r'([A-ZÄÖÜ][A-Za-zÄÖÜäöüß0-9\s\-\&.]{2,50}(?:GmbH(?:\s*\&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))\b',
+      caseSensitive: false,
     );
-    final companyMatch = companyRegex.firstMatch(body);
-    if (companyMatch != null) {
-      final name =
-          companyMatch.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+    final matches = entityRegex.allMatches(body);
+    if (matches.isNotEmpty) {
+      final name = matches.last.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
       if (name.isNotEmpty && name.length < 60) {
         foundCompany = FieldResult(
           value: name,
-          confidence: 0.85,
-          source: 'body_legal_form',
+          confidence: 0.9,
+          source: 'body_legal_footer',
         );
+      }
+    }
+
+    if (foundCompany == null) {
+      final companyRegex = RegExp(
+        r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([\w\s\-&.,ÄÖÜäöüß]{1,40}?(?:GmbH|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
+      );
+      final companyMatch = companyRegex.firstMatch(body);
+      if (companyMatch != null) {
+        final name =
+            companyMatch.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
+        if (name.isNotEmpty && name.length < 60) {
+          foundCompany = FieldResult(
+            value: name,
+            confidence: 0.85,
+            source: 'body_legal_form',
+          );
+        }
       }
     }
     if (foundCompany == null && senderEmail.isNotEmpty) {
@@ -279,12 +297,19 @@ class EmailResponseExtractor {
                 lowerBody.contains('mitteilen') ||
                 lowerBody.contains('entschieden') ||
                 lowerBody.contains('vergeben'))) ||
+        lowerBody.contains('jedoch mitteilen') ||
+        lowerBody.contains('nicht in die engere auswahl') ||
         lowerBody.contains('abzusagen') ||
         lowerBody.contains('anderweitig besetzt') ||
         lowerBody.contains('konnten wir ihre bewerbung nicht berücksichtigen');
   }
 
   static bool _isInterview(String lowerBody) {
+    // Verhindere False-Positives aus dem eigenen Anschreiben
+    if (lowerBody.contains('über eine einladung') || lowerBody.contains('freue ich mich')) {
+      return false;
+    }
+
     return (lowerBody.contains('einladung') &&
             (lowerBody.contains('gespräch') ||
                 lowerBody.contains('interview') ||

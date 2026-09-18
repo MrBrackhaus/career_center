@@ -42,6 +42,7 @@ class BasicDataTab extends StatelessWidget {
       ),
       maxLines: maxLines,
       keyboardType: keyboardType,
+      textInputAction: maxLines == 1 ? TextInputAction.next : TextInputAction.newline,
       maxLength: maxLength,
       validator: isRequired
           ? (val) => val == null || val.isEmpty ? 'Pflichtfeld' : null
@@ -472,18 +473,20 @@ class BasicDataTab extends StatelessWidget {
             const SizedBox(height: 24),
 
             // === SPEICHERN ===
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: bundle.onSave,
-                icon: const Icon(Icons.save),
-                label: Text(
-                  AppLocalizations.of(context)!.formBasicSave,
-                  style: TextStyle(fontSize: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: bundle.isSaving ? null : bundle.onSave,
+                  icon: bundle.isSaving 
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) 
+                      : const Icon(Icons.save),
+                  label: Text(
+                    AppLocalizations.of(context)!.formBasicSave,
+                    style: TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
-            ),
 
             if (bundle.isEditing && bundle.onDelete != null) ...[
               const SizedBox(height: 12),

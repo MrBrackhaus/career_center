@@ -5,6 +5,20 @@ function getBrowser() {
   return typeof browser !== 'undefined' ? browser : chrome;
 }
 
+
+async function getToken() {
+  try {
+    const res = await fetch(`${SERVER_URL}/status`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.token;
+    }
+  } catch(e) {
+    console.error('Failed to get token', e);
+  }
+  return '';
+}
+
 function showStatus(msg, isError = false, duration = 3000) {
   const el = document.getElementById('status');
   el.textContent = msg;
@@ -41,9 +55,10 @@ document.getElementById('btn-import').addEventListener('click', async () => {
       console.warn('Screenshot fehlgeschlagen', e);
     }
 
+    const token = await getToken();
     const response = await fetch(`${SERVER_URL}/import`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-token': token },
       body: JSON.stringify({ url: tab.url, html, screenshot })
     });
 
@@ -66,9 +81,10 @@ document.getElementById('btn-autofill').addEventListener('click', async () => {
 
   try {
     // 1. Fetch profile from the local app
+    const token = await getToken();
     const response = await fetch(`${SERVER_URL}/profile`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'x-api-token': token }
     });
 
     if (!response.ok) {

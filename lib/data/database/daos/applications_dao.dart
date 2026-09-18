@@ -48,6 +48,12 @@ class ApplicationsDao extends DatabaseAccessor<AppDatabase>
     return update(applications).replace(application);
   }
 
+  Future<int> partialUpdate(int id, ApplicationsCompanion companion) {
+    return (update(applications)..where((t) => t.id.equals(id))).write(
+      companion.copyWith(updatedAt: Value(DateTime.now())),
+    );
+  }
+
   Future<int> deleteApplication(Application application) {
     return delete(applications).delete(application);
   }

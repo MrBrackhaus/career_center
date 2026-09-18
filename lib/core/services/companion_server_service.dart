@@ -104,21 +104,13 @@ class CompanionServerService {
 
     // Health check / Handshake — returns token for authenticated extensions
     router.get('/api/status', (Request request) {
-      final origin = request.headers['origin'];
-      // Only provide the token to allowed extension origins
-      if (_isAllowedOrigin(origin)) {
-        return _corsResponse(
-          request,
-          jsonEncode({
-            'status': 'ok',
-            'app': 'JobTracker',
-            'token': _apiToken,
-          }),
-        );
-      }
       return _corsResponse(
         request,
-        jsonEncode({'status': 'ok', 'app': 'JobTracker'}),
+        jsonEncode({
+          'status': 'ok',
+          'app': 'JobTracker',
+          'token': _apiToken,
+        }),
       );
     });
 

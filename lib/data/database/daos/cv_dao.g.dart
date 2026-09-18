@@ -10,6 +10,7 @@ mixin _$CvDaoMixin on DatabaseAccessor<AppDatabase> {
   $CvEducationsTable get cvEducations => attachedDatabase.cvEducations;
   $CvSkillsTable get cvSkills => attachedDatabase.cvSkills;
   $CvLanguagesTable get cvLanguages => attachedDatabase.cvLanguages;
+  $CvCustomItemsTable get cvCustomItems => attachedDatabase.cvCustomItems;
   CvDaoManager get managers => CvDaoManager(this);
 }
 
@@ -29,4 +30,6 @@ class CvDaoManager {
       $$CvSkillsTableTableManager(_db.attachedDatabase, _db.cvSkills);
   $$CvLanguagesTableTableManager get cvLanguages =>
       $$CvLanguagesTableTableManager(_db.attachedDatabase, _db.cvLanguages);
+  $$CvCustomItemsTableTableManager get cvCustomItems =>
+      $$CvCustomItemsTableTableManager(_db.attachedDatabase, _db.cvCustomItems);
 }

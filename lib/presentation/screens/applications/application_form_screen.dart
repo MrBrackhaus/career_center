@@ -1,4 +1,4 @@
-﻿import '../../../l10n/app_localizations.dart';
+import '../../../l10n/app_localizations.dart';
 
 /*
  * JobTracker
@@ -18,6 +18,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
@@ -26,6 +27,7 @@ import 'package:file_selector/file_selector.dart';
 
 import 'email_composer_dialog.dart';
 import '../../providers/application_form_notifier.dart';
+import '../../providers/ai_settings_provider.dart';
 import '../../../core/services/document_intelligence_service.dart';
 import '../../../domain/enums/document_type.dart';
 import '../../../domain/models/extraction_result.dart';
@@ -47,8 +49,17 @@ import 'application_form_state_bundle.dart';
 
 import '../../../domain/models/application_form_dto.dart';
 import '../../providers/database_provider.dart';
+import '../../providers/ai_settings_provider.dart';
 import '../../providers/applications_provider.dart';
 import 'dart:developer' show log;
+
+class SaveIntent extends Intent {
+  const SaveIntent();
+}
+
+class CloseIntent extends Intent {
+  const CloseIntent();
+}
 
 class ApplicationFormScreen extends ConsumerStatefulWidget {
   final int? applicationId;
@@ -98,6 +109,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   List<String> _activeCustomColumns = [];
   bool _isLoading = false;
   bool _isAutoFilling = false;
+  bool _isSaving = false;
   bool _isDragging = false;
   ExtractionResult? _lastExtractionResult;
 
@@ -600,11 +612,23 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.applicationId != null;
-    final tabCount = isEditing ? 4 : 1;
+    final isAiEnabled = ref.watch(aiSettingsProvider).value?.isAiEnabled ?? false;
+    final tabCount = isEditing ? (isAiEnabled ? 4 : 3) : 1;
 
-    return DefaultTabController(
-      length: tabCount,
-      child: Scaffold(
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyS): const SaveIntent(),
+        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyS): const SaveIntent(),
+        LogicalKeySet(LogicalKeyboardKey.escape): const CloseIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          SaveIntent: CallbackAction<SaveIntent>(onInvoke: (intent) => _save()),
+          CloseIntent: CallbackAction<CloseIntent>(onInvoke: (intent) => context.pop()),
+        },
+        child: DefaultTabController(
+          length: tabCount,
+          child: Scaffold(
         appBar: AppBar(
           title: Text(isEditing ? 'Bewerbung bearbeiten' : 'Neue Bewerbung'),
           actions: [
@@ -649,7 +673,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
             isScrollable: true,
             tabs: [
               Tab(text: AppLocalizations.of(context)!.formTabBasic),
-              if (isEditing)
+              if (isEditing && isAiEnabled)
                 Tab(text: AppLocalizations.of(context)!.formTabEmails),
               if (isEditing)
                 Tab(text: AppLocalizations.of(context)!.formTabDocs),
@@ -669,7 +693,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
                   : TabBarView(
                       children: [
                         _buildSplitView(context, isEditing),
-                        if (isEditing)
+                        if (isEditing && isAiEnabled)
                           EmailsAndContactsTab(
                             applicationId: widget.applicationId!,
                           ),
@@ -708,7 +732,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           ),
         ),
       ),
-    );
+    )));
   }
 
   bool get _hasDocumentPreview =>
@@ -737,6 +761,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       followUpDate: _followUpDate,
       activeCustomColumns: _activeCustomColumns,
       isAutoFilling: _isAutoFilling,
+      isSaving: _isSaving,
       lastExtractionResult: _lastExtractionResult,
       isEditing: isEditing,
       activeMarkerField: _activeMarkerField,
@@ -919,7 +944,14 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   }
 
   Future<void> _save() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
+    
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
 
     // Custom fields als JSON
     String? customFieldsJson;
@@ -1032,5 +1064,12 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     }
 
     if (mounted) context.pop();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 }

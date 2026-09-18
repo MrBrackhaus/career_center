@@ -18,10 +18,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/imap_service.dart';
+import '../../core/services/extractors/ai_email_extractor_service.dart';
 import 'database_provider.dart';
 import '../../domain/entities/setting_entity.dart';
 
 final imapServiceProvider = Provider((ref) => ImapService());
+
+class ImapSyncStatusNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  
+  void updateStatus(String? status) {
+    state = status;
+  }
+}
+
+final imapSyncStatusProvider = NotifierProvider<ImapSyncStatusNotifier, String?>(
+  ImapSyncStatusNotifier.new,
+);
 
 class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
   @override
@@ -60,7 +74,13 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
         int.tryParse(portSetting.value) ?? 993,
         emailSetting.value,
         password,
+        aiExtractor: ref.read(aiEmailExtractorProvider),
+        onProgress: (msg) {
+          ref.read(imapSyncStatusProvider.notifier).updateStatus(msg);
+        },
       );
+
+      ref.read(imapSyncStatusProvider.notifier).updateStatus(null);
 
       await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
         SettingEntity(key: 'imapLastSync', value: DateTime.now().toIso8601String()),
@@ -73,6 +93,7 @@ class ImapSyncNotifier extends Notifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
       return imported;
     } catch (e, st) {
+      ref.read(imapSyncStatusProvider.notifier).updateStatus(null);
       state = AsyncValue.error(e, st);
       rethrow;
     }

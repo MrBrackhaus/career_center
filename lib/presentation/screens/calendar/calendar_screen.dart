@@ -23,6 +23,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../providers/applications_provider.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../domain/entities/application_entity.dart';
+import '../../../core/utils/ics_exporter.dart';
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({super.key});
@@ -88,6 +89,19 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     _Legend(
                       color: Colors.red,
                       label: AppLocalizations.of(context)!.calOverdue,
+                    ),
+                    const SizedBox(width: 24),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final success = await IcsExporter.exportAll(apps);
+                        if (success && context.mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                             const SnackBar(content: Text('Kalender exportiert!'))
+                           );
+                        }
+                      },
+                      icon: const Icon(Icons.download, size: 18),
+                      label: const Text('.ics Alle'),
                     ),
                   ],
                 ),

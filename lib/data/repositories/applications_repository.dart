@@ -35,19 +35,29 @@ class ApplicationsRepository {
     await _db.applicationsDao.updateApplication(app.toCompanion(isUpdate: true));
   }
 
-  Future<void> updateCoverLetterContent(int id, String content) async {
-    await _db.applicationsDao.updateApplication(
+  Future<void> updateApplicationStatus(int id, String status, {String? rejectionReason}) async {
+    await _db.applicationsDao.partialUpdate(
+      id,
       ApplicationsCompanion(
-        id: drift.Value(id),
+        status: drift.Value(status),
+        rejectionReason: rejectionReason != null ? drift.Value(rejectionReason) : const drift.Value.absent(),
+      ),
+    );
+  }
+
+  Future<void> updateCoverLetterContent(int id, String content) async {
+    await _db.applicationsDao.partialUpdate(
+      id,
+      ApplicationsCompanion(
         coverLetterContent: drift.Value(content),
       ),
     );
   }
 
   Future<void> updateJobDescription(int id, String text) async {
-    await _db.applicationsDao.updateApplication(
+    await _db.applicationsDao.partialUpdate(
+      id,
       ApplicationsCompanion(
-        id: drift.Value(id),
         jobDescriptionText: drift.Value(text),
       ),
     );
@@ -60,6 +70,17 @@ class ApplicationsRepository {
         
       final app = await _db.applicationsDao.getApplicationById(id);
       if (app == null) return;
+      
+      // Lösche manuell alle verknüpften Daten, da ON DELETE CASCADE in der SQLite DB fehlt
+      await (_db.delete(_db.emails)..where((e) => e.applicationId.equals(id))).go();
+      await (_db.delete(_db.notes)..where((n) => n.applicationId.equals(id))).go();
+      await (_db.delete(_db.contacts)..where((c) => c.applicationId.equals(id))).go();
+      await (_db.delete(_db.cvWorkExperiences)..where((w) => w.applicationId.equals(id))).go();
+      await (_db.delete(_db.cvEducations)..where((e) => e.applicationId.equals(id))).go();
+      await (_db.delete(_db.cvSkills)..where((s) => s.applicationId.equals(id))).go();
+      await (_db.delete(_db.cvLanguages)..where((l) => l.applicationId.equals(id))).go();
+      await (_db.delete(_db.documents)..where((d) => d.applicationId.equals(id))).go();
+      
       await _db.applicationsDao.deleteApplication(app);
 
       for (final doc in docs) {

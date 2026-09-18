@@ -1,44 +1,21 @@
-/*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
- */
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import '../../widgets/signature_dialog.dart' as signature_dialog;
-
 import '../changelog/changelog_screen.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:package_info_plus/package_info_plus.dart';
 
-import 'package:package_info_plus/package_info_plus.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import '../../providers/theme_provider.dart';
-import '../../providers/auto_updater_provider.dart';
-import 'widgets/update_banner.dart';
 import '../../providers/auto_updater_provider.dart';
 import 'widgets/update_banner.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/database_provider.dart';
-
-
 import '../../providers/custom_columns_provider.dart';
 import '../../providers/imap_provider.dart';
 import '../../../core/router/app_router.dart';
@@ -56,6 +33,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  int _selectedIndex = 0;
+
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _emailController = TextEditingController();
@@ -67,8 +46,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _linkedinController = TextEditingController();
   final _websiteController = TextEditingController();
   final _weeklyGoalController = TextEditingController();
+
   final _aiUrlController = TextEditingController();
   final _aiModelController = TextEditingController();
+  final _apiKeyController = TextEditingController();
+
   String _selectedPreset = 'IT / Software';
   String _spellCheckLanguage = 'de';
   String _customColumns = '';
@@ -82,10 +64,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _imapEmailController = TextEditingController();
   final _imapPasswordController = TextEditingController();
   String _selectedMailProvider = 'Manuell';
+  String _lastSyncDate = 'Nie';
 
   bool _isLoading = true;
   bool _jobcenterMode = false;
   bool _aiCvAssistantEnabled = false;
+  bool _cloudAiEnabled = false;
   String _appVersion = '';
 
   final _presets = {
@@ -118,23 +102,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final colsSetting = await dao.getSettingByKey('customColumns');
     final jobcenterSetting = await dao.getSettingByKey('jobcenterMode');
     final spellLangSetting = await dao.getSettingByKey('spellCheckLanguage');
+    final aiCvSetting = await dao.getSettingByKey('aiCvAssistantEnabled');
+    final cloudAiSetting = await dao.getSettingByKey('cloudAiEnabled');
+    final apiKeySetting = await dao.getSettingByKey('aiApiKey');
 
     final imapProviderSetting = await dao.getSettingByKey('imapProvider');
     final imapServerSetting = await dao.getSettingByKey('imapServer');
     final imapPortSetting = await dao.getSettingByKey('imapPort');
     final smtpServerSetting = await dao.getSettingByKey('smtpServer');
     final smtpPortSetting = await dao.getSettingByKey('smtpPort');
-    final weeklyGoalSetting = await dao.getSettingByKey(
-      'weeklyApplicationGoal',
-    );
+    final lastSyncSetting = await dao.getSettingByKey('lastImapSyncDate');
+    final weeklyGoalSetting = await dao.getSettingByKey('weeklyApplicationGoal');
+    
     _weeklyGoalController.text = weeklyGoalSetting?.value ?? '5';
+    
     final aiUrlSetting = await dao.getSettingByKey('aiServerUrl');
-    _aiUrlController.text =
-        aiUrlSetting?.value ?? 'http://localhost:11434/api/generate';
+    _aiUrlController.text = aiUrlSetting?.value ?? 'http://localhost:11434/api/generate';
     final aiModelSetting = await dao.getSettingByKey('aiModelName');
     _aiModelController.text = aiModelSetting?.value ?? 'llama3.2';
+    
+    _apiKeyController.text = apiKeySetting?.value ?? '';
+    
     final imapEmailSetting = await dao.getSettingByKey('imapEmail');
-    final aiCvSetting = await dao.getSettingByKey('aiCvAssistantEnabled');
     final packageInfo = await PackageInfo.fromPlatform();
 
     if (mounted) {
@@ -157,6 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _jobcenterMode = jobcenterSetting?.value == 'true';
         _spellCheckLanguage = spellLangSetting?.value ?? 'de';
         _aiCvAssistantEnabled = aiCvSetting?.value == 'true';
+        _cloudAiEnabled = cloudAiSetting?.value == 'true';
 
         _selectedMailProvider = imapProviderSetting?.value ?? 'Manuell';
         _imapServerController.text = imapServerSetting?.value ?? '';
@@ -164,7 +154,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _smtpServerController.text = smtpServerSetting?.value ?? '';
         _smtpPortController.text = smtpPortSetting?.value ?? '465';
         _imapEmailController.text = imapEmailSetting?.value ?? '';
-        _imapPasswordController.text = '********'; // Fake password indicator
+        _imapPasswordController.text = '********'; 
+        _lastSyncDate = lastSyncSetting?.value ?? 'Nie';
 
         _isLoading = false;
       });
@@ -173,92 +164,41 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _saveSettings() async {
     final dao = ref.read(databaseProvider).settingsDao;
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userName', value: _nameController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userEmail', value: _emailController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userPhone', value: _phoneController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userAddress', value: _addressController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userCity', value: _cityController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userZip', value: _zipController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userBirthdate', value: _birthdateController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userSkills', value: _skillsController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userLinkedin', value: _linkedinController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'userWebsite', value: _websiteController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'weeklyApplicationGoal', value: _weeklyGoalController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'aiServerUrl', value: _aiUrlController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'aiModelName', value: _aiModelController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'aiCvAssistantEnabled', value: _aiCvAssistantEnabled.toString()),
-    );
+    await dao.insertOrUpdateSetting(Setting(key: 'userName', value: _nameController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userEmail', value: _emailController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userPhone', value: _phoneController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userAddress', value: _addressController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userCity', value: _cityController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userZip', value: _zipController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userBirthdate', value: _birthdateController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userSkills', value: _skillsController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userLinkedin', value: _linkedinController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'userWebsite', value: _websiteController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'weeklyApplicationGoal', value: _weeklyGoalController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'aiServerUrl', value: _aiUrlController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'aiModelName', value: _aiModelController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'aiApiKey', value: _apiKeyController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'aiCvAssistantEnabled', value: _aiCvAssistantEnabled.toString()));
+    await dao.insertOrUpdateSetting(Setting(key: 'cloudAiEnabled', value: _cloudAiEnabled.toString()));
+    await dao.insertOrUpdateSetting(Setting(key: 'profilePreset', value: _selectedPreset));
+    await dao.insertOrUpdateSetting(Setting(key: 'customColumns', value: _customColumnsController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'imapProvider', value: _selectedMailProvider));
+    await dao.insertOrUpdateSetting(Setting(key: 'imapServer', value: _imapServerController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'imapPort', value: _imapPortController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'smtpServer', value: _smtpServerController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'smtpPort', value: _smtpPortController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'imapEmail', value: _imapEmailController.text));
 
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'profilePreset', value: _selectedPreset),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'customColumns', value: _customColumnsController.text),
-    );
-
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'imapProvider', value: _selectedMailProvider),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'imapServer', value: _imapServerController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'imapPort', value: _imapPortController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'smtpServer', value: _smtpServerController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'smtpPort', value: _smtpPortController.text),
-    );
-    await dao.insertOrUpdateSetting(
-      Setting(key: 'imapEmail', value: _imapEmailController.text),
-    );
-
-    if (_imapPasswordController.text != '********' &&
-        _imapPasswordController.text.isNotEmpty) {
+    if (_imapPasswordController.text != '********' && _imapPasswordController.text.isNotEmpty) {
       await ImapService.savePassword(_imapPasswordController.text);
-      await dao.insertOrUpdateSetting(
-        const Setting(key: 'imapPassword', value: 'SECURE_STORAGE'),
-      );
+      await dao.insertOrUpdateSetting(const Setting(key: 'imapPassword', value: 'SECURE_STORAGE'));
     }
 
-    // Live-Update: customColumnsProvider in ApplicationsScreen sofort neu laden
     ref.invalidate(customColumnsProvider);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('âœ… Einstellungen gespeichert'),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text('✅ Einstellungen gespeichert'), backgroundColor: Colors.green),
       );
     }
   }
@@ -266,95 +206,62 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _exportBackup() async {
     try {
       final dbFolder = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(dbFolder.path, 'jobtracker.sqlite'));
+      final dbFile = File(p.join(dbFolder.path, 'career_center.sqlite'));
 
       if (!await dbFile.exists()) {
-        if (mounted)
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Keine Datenbankdatei gefunden.')),
-          );
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Keine Datenbankdatei gefunden.')));
         return;
       }
 
       final saveLocation = await getSaveLocation(
-        acceptedTypeGroups: [
-          const XTypeGroup(
-            label: 'SQLite Database',
-            extensions: ['sqlite', 'db'],
-          ),
-        ],
-        suggestedName: 'jobtracker_backup.sqlite',
+        acceptedTypeGroups: [const XTypeGroup(label: 'SQLite Database', extensions: ['sqlite', 'db'])],
+        suggestedName: 'career_center_backup.sqlite',
       );
 
       if (saveLocation == null) return;
-
       await dbFile.copy(saveLocation.path);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('âœ… Backup erfolgreich gespeichert!'),
-            backgroundColor: Colors.green,
-          ),
+          const SnackBar(content: Text('✅ Backup erfolgreich gespeichert!'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red),
-        );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
     }
   }
 
   Future<void> _importBackup() async {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.settingsExportRestart),
-          duration: Duration(seconds: 4),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context)!.settingsExportRestart), duration: const Duration(seconds: 4)),
       );
     }
-
     try {
-      final typeGroup = const XTypeGroup(
-        label: 'SQLite Database',
-        extensions: ['sqlite', 'db'],
-      );
-      final file = await openFile(acceptedTypeGroups: [typeGroup]);
-
+      final file = await openFile(acceptedTypeGroups: [const XTypeGroup(label: 'SQLite Database', extensions: ['sqlite', 'db'])]);
       if (file == null) return;
 
       final dbFolder = await getApplicationDocumentsDirectory();
-      final dbFile = File(p.join(dbFolder.path, 'jobtracker.sqlite'));
+      final dbFile = File(p.join(dbFolder.path, 'career_center.sqlite'));
 
-      // Copy uploaded file to the db location (overwriting it)
-      final uploadedFile = File(file.path);
-      await uploadedFile.copy(dbFile.path);
+        await ref.read(databaseProvider).close();
+        await File(file.path).copy(dbFile.path);
 
       if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
-            title: const Text('âœ… Import erfolgreich'),
-            content: const Text(
-              'Die Datenbank wurde ersetzt. Bitte schlieÃŸe die App komplett und starte sie neu, um die Ã„nderungen zu laden.',
-            ),
+            title: const Text('✅ Import erfolgreich'),
+            content: const Text('Die Datenbank wurde ersetzt. Bitte schließe die App komplett und starte sie neu, um die Änderungen zu laden.'),
             actions: [
-              TextButton(
-                onPressed: () => exit(0),
-                child: Text(AppLocalizations.of(context)!.settingsAppQuit),
-              ),
+              TextButton(onPressed: () => exit(0), child: Text(AppLocalizations.of(context)!.settingsAppQuit)),
             ],
           ),
         );
       }
     } catch (e) {
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red),
-        );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -364,1188 +271,502 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final themeState = ref.watch(themeProvider);
-
-
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.settingsTitle)),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: ListView(
-            padding: const EdgeInsets.all(16.0),
+      body: Column(
+        children: [
+          const UpdateBanner(),
+          Expanded(
+            child: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _selectedIndex,
+                  onDestinationSelected: (int index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  destinations: const [
+                    NavigationRailDestination(icon: Icon(Icons.person), label: Text('Profil & Kontakt')),
+                    NavigationRailDestination(icon: Icon(Icons.psychology), label: Text('KI & Automatisierung')),
+                    NavigationRailDestination(icon: Icon(Icons.email), label: Text('E-Mail Scanner')),
+                    NavigationRailDestination(icon: Icon(Icons.bar_chart), label: Text('Bewerbungs-Setup')),
+                    NavigationRailDestination(icon: Icon(Icons.save), label: Text('Export & Backup')),
+                    NavigationRailDestination(icon: Icon(Icons.info), label: Text('Über die App')),
+                  ],
+                ),
+                const VerticalDivider(thickness: 1, width: 1),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 800),
+                      child: _buildSelectedContent(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedContent() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildProfileContact();
+      case 1:
+        return _buildAiAutomation();
+      case 2:
+        return _buildEmailScanner();
+      case 3:
+        return _buildApplicationSetup();
+      case 4:
+        return _buildExportBackup();
+      case 5:
+        return _buildAboutApp();
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildProfileContact() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Profil & Kontakt', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(child: TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()))),
+            const SizedBox(width: 16),
+            Expanded(child: TextField(controller: _birthdateController, decoration: const InputDecoration(labelText: 'Geburtsdatum (TT.MM.JJJJ)', border: OutlineInputBorder()))),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'E-Mail', border: OutlineInputBorder()), keyboardType: TextInputType.emailAddress)),
+            const SizedBox(width: 16),
+            Expanded(child: TextField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Telefon', border: OutlineInputBorder()), keyboardType: TextInputType.phone)),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(flex: 2, child: TextField(controller: _addressController, decoration: const InputDecoration(labelText: 'Adresse', border: OutlineInputBorder()))),
+            const SizedBox(width: 16),
+            Expanded(child: TextField(controller: _zipController, decoration: const InputDecoration(labelText: 'PLZ', border: OutlineInputBorder()))),
+            const SizedBox(width: 16),
+            Expanded(flex: 2, child: TextField(controller: _cityController, decoration: const InputDecoration(labelText: 'Stadt', border: OutlineInputBorder()))),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(controller: _skillsController, decoration: const InputDecoration(labelText: 'Skills / Kenntnisse (kommagetrennt)', border: OutlineInputBorder()), maxLines: 2),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: TextField(controller: _linkedinController, decoration: const InputDecoration(labelText: 'LinkedIn / Xing URL', border: OutlineInputBorder()))),
+            const SizedBox(width: 16),
+            Expanded(child: TextField(controller: _websiteController, decoration: const InputDecoration(labelText: 'Website / Portfolio', border: OutlineInputBorder()))),
+          ],
+        ),
+        const SizedBox(height: 24),
+        Align(alignment: Alignment.centerRight, child: ElevatedButton(onPressed: _saveSettings, child: const Text('Speichern'))),
+      ],
+    );
+  }
+
+  Widget _buildAiAutomation() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('KI & Automatisierung', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 24),
+        
+        // LOKALE KI SECTION
+        Text('Lokale KI (z.B. lokaler Jetson / Ollama)', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary)),
+        const SizedBox(height: 8),
+        const Text('Die KI läuft komplett offline auf deiner eigenen Hardware. 100% Datenschutz.'),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text('Lokale KI-Verarbeitung (Datenschutz)'),
+          subtitle: const Text('Erlaubt der App, deine E-Mails und Daten lokal auf deinem eigenen Rechner auszuwerten. Absolut sicher und privat.'),
+          value: _aiCvAssistantEnabled, // Wir nutzen diesen Key weiterhin für die lokale KI Freigabe
+          onChanged: (val) {
+            setState(() => _aiCvAssistantEnabled = val);
+            _saveSettings();
+          },
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _aiUrlController,
+          decoration: const InputDecoration(labelText: 'Lokale Server URL', hintText: 'http://localhost:11434', border: OutlineInputBorder(), prefixIcon: Icon(Icons.computer)),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _aiModelController,
+          decoration: const InputDecoration(labelText: 'Lokales KI-Modell', hintText: 'llama3.1', border: OutlineInputBorder(), prefixIcon: Icon(Icons.memory)),
+        ),
+        
+        const SizedBox(height: 32),
+        const Divider(),
+        const SizedBox(height: 16),
+
+        // CLOUD KI SECTION
+        Text('Cloud KI (z.B. OpenAI / Anthropic)', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Theme.of(context).colorScheme.secondary)),
+        const SizedBox(height: 8),
+        const Text('Nutze eine externe, kostenpflichtige API, falls du keine Hardware für eine lokale KI besitzt.'),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text('Cloud-API Zugriff erlauben (DSGVO)'),
+          subtitle: const Text('Achtung: Erlaubt der App, deine E-Mails und Daten an externe Cloud-Server (wie OpenAI) zu senden. Nur aktivieren, wenn du die externe API nutzt!'),
+          value: _cloudAiEnabled,
+          onChanged: (val) async {
+            if (val == true) {
+              final accepted = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('⚠️ WICHTIGER DATENSCHUTZ-HINWEIS', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                  content: const Text(
+                    'Wenn du diese Option aktivierst, werden ALLE abgerufenen E-Mails komplett UNGEFILTERT an die externe Cloud-LLM (z.B. OpenAI) gesendet!\n\n'
+                    'Das bedeutet: Jede einzelne deiner E-Mails liegt dann im Klartext auf den Servern des LLM-Herstellers und wird von diesem verarbeitet.\n\n'
+                    'DIESE OPTION WIRD AUSDRÜCKLICH NICHT EMPFOHLEN UND IST REIN EXPERIMENTELL!\n\n'
+                    'Du handelst vollständig auf eigene Gefahr. Akzeptierst du dieses Risiko?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Abbrechen'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Ich verstehe die Gefahr und akzeptiere'),
+                    ),
+                  ],
+                ),
+              );
+              
+              if (accepted == true) {
+                setState(() => _cloudAiEnabled = true);
+                _saveSettings();
+              }
+            } else {
+              setState(() => _cloudAiEnabled = false);
+              _saveSettings();
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _apiKeyController,
+          decoration: const InputDecoration(labelText: 'API-Key', hintText: 'sk-...', border: OutlineInputBorder(), prefixIcon: Icon(Icons.vpn_key)),
+          obscureText: true,
+        ),
+        
+        const SizedBox(height: 32),
+        const Divider(),
+        const SizedBox(height: 16),
+
+        // SONSTIGES
+        Text('Sonstiges', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          decoration: const InputDecoration(labelText: 'Sprache der Rechtschreibprüfung', border: OutlineInputBorder(), prefixIcon: Icon(Icons.spellcheck)),
+          initialValue: _spellCheckLanguage,
+          items: SpellChecker.availableLanguages.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+          onChanged: (val) async {
+            if (val == null) return;
+            setState(() => _spellCheckLanguage = val);
+            await ref.read(databaseProvider).settingsDao.insertOrUpdateSetting(Setting(key: 'spellCheckLanguage', value: val));
+            SpellChecker.loadDictionary(language: val);
+          },
+        ),
+        const SizedBox(height: 24),
+        Align(alignment: Alignment.centerRight, child: ElevatedButton(onPressed: _saveSettings, child: const Text('Speichern'))),
+      ],
+    );
+  }
+
+  Widget _buildEmailScanner() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('E-Mail Scanner', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 24),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedMailProvider,
+          decoration: const InputDecoration(labelText: 'E-Mail Anbieter', border: OutlineInputBorder()),
+          items: ['Manuell', 'Gmail', 'GMX', 'Web.de', 'Outlook', 'iCloud'].map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedMailProvider = val;
+                if (val == 'Gmail') {
+                  _imapServerController.text = 'imap.gmail.com'; _imapPortController.text = '993'; _smtpServerController.text = 'smtp.gmail.com'; _smtpPortController.text = '465';
+                } else if (val == 'GMX') {
+                  _imapServerController.text = 'imap.gmx.net'; _imapPortController.text = '993'; _smtpServerController.text = 'mail.gmx.net'; _smtpPortController.text = '465';
+                } else if (val == 'Web.de') {
+                  _imapServerController.text = 'imap.web.de'; _imapPortController.text = '993'; _smtpServerController.text = 'smtp.web.de'; _smtpPortController.text = '465';
+                } else if (val == 'Outlook') {
+                  _imapServerController.text = 'outlook.office365.com'; _imapPortController.text = '993'; _smtpServerController.text = 'smtp.office365.com'; _smtpPortController.text = '587';
+                } else if (val == 'iCloud') {
+                  _imapServerController.text = 'imap.mail.me.com'; _imapPortController.text = '993'; _smtpServerController.text = 'smtp.mail.me.com'; _smtpPortController.text = '587';
+                }
+              });
+            }
+          },
+        ),
+        if (_selectedMailProvider == 'Gmail' || _selectedMailProvider == 'iCloud')
+          Container(
+            margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(8), color: Colors.amber.withValues(alpha: 0.1),
+            child: const Row(children: [Icon(Icons.warning_amber, color: Colors.amber, size: 20), SizedBox(width: 8), Expanded(child: Text('Wichtig: Ein App-Passwort wird benötigt!'))]),
+          ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(flex: 3, child: TextField(controller: _imapServerController, decoration: const InputDecoration(labelText: 'IMAP Server', border: OutlineInputBorder()), enabled: _selectedMailProvider == 'Manuell')),
+            const SizedBox(width: 12),
+            Expanded(flex: 1, child: TextField(controller: _imapPortController, decoration: const InputDecoration(labelText: 'Port', border: OutlineInputBorder()), keyboardType: TextInputType.number, enabled: _selectedMailProvider == 'Manuell')),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(flex: 3, child: TextField(controller: _smtpServerController, decoration: const InputDecoration(labelText: 'SMTP Server', border: OutlineInputBorder()), enabled: _selectedMailProvider == 'Manuell')),
+            const SizedBox(width: 12),
+            Expanded(flex: 1, child: TextField(controller: _smtpPortController, decoration: const InputDecoration(labelText: 'Port', border: OutlineInputBorder()), keyboardType: TextInputType.number, enabled: _selectedMailProvider == 'Manuell')),
+          ],
+        ),
+        const SizedBox(height: 16),
+        TextField(controller: _imapEmailController, decoration: const InputDecoration(labelText: 'E-Mail Adresse', border: OutlineInputBorder()), keyboardType: TextInputType.emailAddress),
+        const SizedBox(height: 16),
+        TextField(controller: _imapPasswordController, decoration: const InputDecoration(labelText: 'Passwort / App-Passwort', border: OutlineInputBorder()), obscureText: true),
+        const SizedBox(height: 16),
+        ListTile(
+          title: const Text('Letzter Sync-Zeitpunkt'),
+          subtitle: Text(_lastSyncDate),
+          trailing: IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            tooltip: 'Letzten Sync-Zeitpunkt löschen',
+            onPressed: () async {
+              await ref.read(databaseProvider).settingsDao.insertOrUpdateSetting(const Setting(key: 'lastImapSyncDate', value: 'Nie'));
+              setState(() => _lastSyncDate = 'Nie');
+              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sync-Zeitpunkt gelöscht.')));
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () async {
+                final server = _imapServerController.text;
+                final port = int.tryParse(_imapPortController.text) ?? 993;
+                final email = _imapEmailController.text;
+                final pass = _imapPasswordController.text;
+                if (server.isEmpty || email.isEmpty || pass.isEmpty) return;
+                try {
+                  String actualPass = pass == '********' ? await ImapService.getPassword() : pass;
+                  final client = await ref.read(imapServiceProvider).connect(server, port, email, actualPass);
+                  if (client != null) {
+                    await client.disconnect();
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erfolgreich verbunden!'), backgroundColor: Colors.green));
+                  }
+                } catch (e) {
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
+                }
+              },
+              icon: const Icon(Icons.cable),
+              label: const Text('Testen'),
+            ),
+            const SizedBox(width: 16),
+            ElevatedButton(onPressed: _saveSettings, child: const Text('Speichern')),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildApplicationSetup() {
+    final themeState = ref.watch(themeProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Bewerbungs-Setup', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 24),
+        DropdownButtonFormField<String>(
+          initialValue: _selectedPreset,
+          decoration: const InputDecoration(labelText: 'Berufsfeld / Preset', border: OutlineInputBorder()),
+          items: _presets.keys.map((key) => DropdownMenuItem(value: key, child: Text(key))).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedPreset = val;
+                if (val != 'Individuell') _customColumnsController.text = _presets[val]!;
+              });
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _customColumnsController,
+          decoration: const InputDecoration(labelText: 'Eigene Spalten (kommagetrennt)', hintText: 'z.B. Portfolio-Link, Sprachen', border: OutlineInputBorder()),
+          maxLines: 2,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _weeklyGoalController,
+          decoration: const InputDecoration(labelText: 'Wöchentliches Bewerbungsziel', border: OutlineInputBorder()),
+          keyboardType: TextInputType.number,
+        ),
+        const SizedBox(height: 16),
+        SwitchListTile(
+          title: const Text('Jobcenter Modus'),
+          subtitle: const Text('Aktiviert zusätzliche Felder und Export-Optionen für die Agentur für Arbeit.'),
+          value: _jobcenterMode,
+          onChanged: (val) async {
+            setState(() => _jobcenterMode = val);
+            await ref.read(databaseProvider).settingsDao.insertOrUpdateSetting(Setting(key: 'jobcenterMode', value: val.toString()));
+            ref.invalidate(jobcenterModeProvider);
+          },
+        ),
+        const Divider(),
+        const Text('Design & Personalisierung', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        Consumer(
+          builder: (context, ref, child) {
+            final locale = ref.watch(localeProvider);
+            return DropdownButtonFormField<String>(
+              decoration: const InputDecoration(labelText: 'App Sprache', border: OutlineInputBorder(), prefixIcon: Icon(Icons.translate)),
+              initialValue: locale?.languageCode ?? '',
+              items: const [
+                DropdownMenuItem(value: '', child: Text('Systemstandard')),
+                DropdownMenuItem(value: 'de', child: Text('Deutsch')),
+                DropdownMenuItem(value: 'en', child: Text('English')),
+              ],
+              onChanged: (val) {
+                if (val == null) return;
+                if (val.isEmpty) ref.read(localeProvider.notifier).clearLocale();
+                else ref.read(localeProvider.notifier).setLocale(val);
+              },
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        ListTile(
+          leading: const Icon(Icons.brightness_6), title: const Text('Theme'),
+          trailing: DropdownButton<ThemeMode>(
+            value: themeState.themeMode,
+            items: const [
+              DropdownMenuItem(value: ThemeMode.system, child: Text('System')),
+              DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+              DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+            ],
+            onChanged: (mode) { if (mode != null) ref.read(themeProvider.notifier).setThemeMode(mode); },
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.color_lens), title: const Text('Akzentfarbe'),
+          trailing: Wrap(
+            spacing: 8,
+            children: [Colors.teal, Colors.blue, Colors.purple, Colors.orange, Colors.green, Colors.pink].map((color) {
+              return InkWell(
+                onTap: () => ref.read(themeProvider.notifier).setSeedColor(color),
+                child: Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: (themeState.preset == ThemePreset.standard && themeState.seedColor.toARGB32() == color.toARGB32()) ? Colors.white : Colors.transparent, width: 2)),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        ListTile(
+          leading: const Icon(Icons.auto_awesome), title: const Text('Design-Preset'),
+          trailing: Wrap(
+            spacing: 8,
             children: [
-              const UpdateBanner(),
-              // Design & Personalisierung
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context)!.settingsLanguage,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final locale = ref.watch(localeProvider);
-                          return DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              labelText: AppLocalizations.of(context)!
-                                  .settingsAppLanguage,
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.translate),
-                            ),
-                            initialValue: locale?.languageCode ?? '',
-                            items: [
-                              DropdownMenuItem(
-                                value: '',
-                                child: Text('Systemstandard'),
-                              ),
-                              DropdownMenuItem(value: 'af', child: Text('Afrikaans')),
-                              DropdownMenuItem(value: 'ak', child: Text('Akan (Twi)')),
-                              DropdownMenuItem(value: 'am', child: Text('አማርኛ (Amharic)')),
-                              DropdownMenuItem(value: 'ar', child: Text('العربية (Arabic)')),
-                              DropdownMenuItem(value: 'az', child: Text('Azərbaycan (Azerbaijani)')),
-                              DropdownMenuItem(value: 'bg', child: Text('Български (Bulgarian)')),
-                              DropdownMenuItem(value: 'bn', child: Text('বাংলা (Bengali)')),
-                              DropdownMenuItem(value: 'bs', child: Text('Bosanski (Bosnian)')),
-                              DropdownMenuItem(value: 'ca', child: Text('Català (Catalan)')),
-                              DropdownMenuItem(value: 'cs', child: Text('Čeština (Czech)')),
-                              DropdownMenuItem(value: 'cy', child: Text('Cymraeg (Welsh)')),
-                              DropdownMenuItem(value: 'da', child: Text('Dansk (Danish)')),
-                              DropdownMenuItem(value: 'de', child: Text('Deutsch')),
-                              DropdownMenuItem(value: 'el', child: Text('Ελληνικά (Greek)')),
-                              DropdownMenuItem(value: 'en', child: Text('English')),
-                              DropdownMenuItem(value: 'eo', child: Text('Esperanto')),
-                              DropdownMenuItem(value: 'es', child: Text('Español')),
-                              DropdownMenuItem(value: 'et', child: Text('Eesti (Estonian)')),
-                              DropdownMenuItem(value: 'eu', child: Text('Euskara (Basque)')),
-                              DropdownMenuItem(value: 'fa', child: Text('فارسی (Persian)')),
-                              DropdownMenuItem(value: 'fi', child: Text('Suomi (Finnish)')),
-                              DropdownMenuItem(value: 'fr', child: Text('Français')),
-                              DropdownMenuItem(value: 'ga', child: Text('Gaeilge (Irish)')),
-                              DropdownMenuItem(value: 'gl', child: Text('Galego (Galician)')),
-                              DropdownMenuItem(value: 'gn', child: Text('Avañe\'ẽ (Guarani)')),
-                              DropdownMenuItem(value: 'gu', child: Text('ગુજરાતી (Gujarati)')),
-                              DropdownMenuItem(value: 'ha', child: Text('Hausa')),
-                              DropdownMenuItem(value: 'he', child: Text('עברית (Hebrew)')),
-                              DropdownMenuItem(value: 'hi', child: Text('हिन्दी (Hindi)')),
-                              DropdownMenuItem(value: 'hr', child: Text('Hrvatski (Croatian)')),
-                              DropdownMenuItem(value: 'ht', child: Text('Kreyòl Ayisyen (Haitian Creole)')),
-                              DropdownMenuItem(value: 'hu', child: Text('Magyar (Hungarian)')),
-                              DropdownMenuItem(value: 'hy', child: Text('Հայերեն (Armenian)')),
-                              DropdownMenuItem(value: 'id', child: Text('Bahasa Indonesia')),
-                              DropdownMenuItem(value: 'ig', child: Text('Igbo')),
-                              DropdownMenuItem(value: 'is', child: Text('Íslenska (Icelandic)')),
-                              DropdownMenuItem(value: 'it', child: Text('Italiano')),
-                              DropdownMenuItem(value: 'ja', child: Text('日本語 (Japanese)')),
-                              DropdownMenuItem(value: 'jv', child: Text('Basa Jawa (Javanese)')),
-                              DropdownMenuItem(value: 'ka', child: Text('ქართული (Georgian)')),
-                              DropdownMenuItem(value: 'kk', child: Text('Қазақ тілі (Kazakh)')),
-                              DropdownMenuItem(value: 'km', child: Text('ខ្មែរ (Khmer)')),
-                              DropdownMenuItem(value: 'kn', child: Text('ಕನ್ನಡ (Kannada)')),
-                              DropdownMenuItem(value: 'ko', child: Text('한국어 (Korean)')),
-                              DropdownMenuItem(value: 'ku', child: Text('Kurdî (Kurdish)')),
-                              DropdownMenuItem(value: 'ky', child: Text('Кыргызча (Kyrgyz)')),
-                              DropdownMenuItem(value: 'lo', child: Text('ລາວ (Lao)')),
-                              DropdownMenuItem(value: 'lt', child: Text('Lietuvių (Lithuanian)')),
-                              DropdownMenuItem(value: 'lv', child: Text('Latviešu (Latvian)')),
-                              DropdownMenuItem(value: 'mg', child: Text('Malagasy')),
-                              DropdownMenuItem(value: 'mk', child: Text('Македонски (Macedonian)')),
-                              DropdownMenuItem(value: 'ml', child: Text('മലയാളം (Malayalam)')),
-                              DropdownMenuItem(value: 'mn', child: Text('Монгол (Mongolian)')),
-                              DropdownMenuItem(value: 'mr', child: Text('मराठी (Marathi)')),
-                              DropdownMenuItem(value: 'mt', child: Text('Malti (Maltese)')),
-                              DropdownMenuItem(value: 'my', child: Text('မြန်မာစာ (Burmese)')),
-                              DropdownMenuItem(value: 'ne', child: Text('नेपाली (Nepali)')),
-                              DropdownMenuItem(value: 'nl', child: Text('Nederlands')),
-                              DropdownMenuItem(value: 'no', child: Text('Norsk (Norwegian)')),
-                              DropdownMenuItem(value: 'ny', child: Text('Chichewa')),
-                              DropdownMenuItem(value: 'om', child: Text('Afaan Oromoo (Oromo)')),
-                              DropdownMenuItem(value: 'pa', child: Text('ਪੰਜਾਬੀ (Punjabi)')),
-                              DropdownMenuItem(value: 'pl', child: Text('Polski')),
-                              DropdownMenuItem(value: 'prs', child: Text('دری (Dari)')),
-                              DropdownMenuItem(value: 'ps', child: Text('پښتو (Pashto)')),
-                              DropdownMenuItem(value: 'pt', child: Text('Português')),
-                              DropdownMenuItem(value: 'qu', child: Text('Runa Simi (Quechua)')),
-                              DropdownMenuItem(value: 'qya', child: Text('Quenya (High Elvish)')),
-                              DropdownMenuItem(value: 'ro', child: Text('Română')),
-                              DropdownMenuItem(value: 'ru', child: Text('Русский')),
-                              DropdownMenuItem(value: 'rw', child: Text('Kinyarwanda')),
-                              DropdownMenuItem(value: 'si', child: Text('සිංහල (Sinhala)')),
-                              DropdownMenuItem(value: 'sjn', child: Text('Sindarin (Elvish)')),
-                              DropdownMenuItem(value: 'sk', child: Text('Slovenčina (Slovak)')),
-                              DropdownMenuItem(value: 'sl', child: Text('Slovenščina (Slovenian)')),
-                              DropdownMenuItem(value: 'sn', child: Text('chiShona (Shona)')),
-                              DropdownMenuItem(value: 'so', child: Text('Af-Soomaali (Somali)')),
-                              DropdownMenuItem(value: 'sq', child: Text('Shqip (Albanian)')),
-                              DropdownMenuItem(value: 'sr', child: Text('Српски (Serbian)')),
-                              DropdownMenuItem(value: 'su', child: Text('Basa Sunda (Sundanese)')),
-                              DropdownMenuItem(value: 'sv', child: Text('Svenska (Swedish)')),
-                              DropdownMenuItem(value: 'sw', child: Text('Kiswahili (Swahili)')),
-                              DropdownMenuItem(value: 'ta', child: Text('தமிழ் (Tamil)')),
-                              DropdownMenuItem(value: 'te', child: Text('తెలుగు (Telugu)')),
-                              DropdownMenuItem(value: 'tg', child: Text('Тоҷикӣ (Tajik)')),
-                              DropdownMenuItem(value: 'th', child: Text('ไทย (Thai)')),
-                              DropdownMenuItem(value: 'tk', child: Text('Türkmençe (Turkmen)')),
-                              DropdownMenuItem(value: 'tl', child: Text('Tagalog (Filipino)')),
-                              DropdownMenuItem(value: 'tlh', child: Text('tlhIngan Hol (Klingon)')),
-                              DropdownMenuItem(value: 'tr', child: Text('Türkçe')),
-                              DropdownMenuItem(value: 'uk', child: Text('Українська')),
-                              DropdownMenuItem(value: 'ur', child: Text('اردو (Urdu)')),
-                              DropdownMenuItem(value: 'uz', child: Text('Oʻzbekcha (Uzbek)')),
-                              DropdownMenuItem(value: 'vi', child: Text('Tiếng Việt')),
-                              DropdownMenuItem(value: 'wo', child: Text('Wolof')),
-                              DropdownMenuItem(value: 'xh', child: Text('isiXhosa (Xhosa)')),
-                              DropdownMenuItem(value: 'yo', child: Text('Èdè Yorùbá (Yoruba)')),
-                              DropdownMenuItem(value: 'zh', child: Text('中文 (Chinese Simplified)')),
-                              DropdownMenuItem(value: 'zu', child: Text('isiZulu (Zulu)')),
-                            ],
-                            onChanged: (val) {
-                              if (val == null) return;
-                              if (val.isEmpty) {
-                                ref.read(localeProvider.notifier).clearLocale();
-                              } else {
-                                ref
-                                    .read(localeProvider.notifier)
-                                    .setLocale(val);
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Sprache der Rechtschreibpr\u00fcfung',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.spellcheck),
-                        ),
-                        initialValue: _spellCheckLanguage,
-                        items: SpellChecker.availableLanguages.entries
-                            .map(
-                              (e) => DropdownMenuItem(
-                                value: e.key,
-                                child: Text(e.value),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) async {
-                          if (val == null) return;
-                          setState(() => _spellCheckLanguage = val);
-                          final dao = ref.read(databaseProvider).settingsDao;
-                          await dao.insertOrUpdateSetting(
-                            Setting(key: 'spellCheckLanguage', value: val),
-                          );
-                          // Reload dictionary in background
-                          SpellChecker.loadDictionary(language: val);
-                        },
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        'KI & Text-Korrektur (Lokales LLM)',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _aiUrlController,
-                        decoration: const InputDecoration(
-                          labelText: 'Ollama API URL (z.B. http://192.168.2.147:11434/api/generate)',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.computer),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _aiModelController,
-                        decoration: const InputDecoration(
-                          labelText: 'Ollama Modell (z.B. llama3.2)',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.memory),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Text(
-                        AppLocalizations.of(context)!.settingsDesignTitle,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ListTile(
-                        leading: const Icon(Icons.brightness_6),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsTheme,
-                        ),
-                        trailing: DropdownButton<ThemeMode>(
-                          value: themeState.themeMode,
-                          items: [
-                            DropdownMenuItem(
-                              value: ThemeMode.system,
-                              child: Text(
-                                AppLocalizations.of(context)!
-                                    .settingsThemeSystem,
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: ThemeMode.light,
-                              child: Text(
-                                AppLocalizations.of(context)!
-                                    .settingsThemeLight,
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: ThemeMode.dark,
-                              child: Text(
-                                AppLocalizations.of(context)!.settingsThemeDark,
-                              ),
-                            ),
-                          ],
-                          onChanged: (mode) {
-                            if (mode != null) ref.read(themeProvider.notifier).setThemeMode(mode);
-                          },
-                        ),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.color_lens),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsAccentColor,
-                        ),
-                        trailing: Wrap(
-                          spacing: 8,
-                          children:
-                              [
-                                Colors.teal,
-                                Colors.blue,
-                                Colors.purple,
-                                Colors.orange,
-                                Colors.green,
-                                Colors.pink,
-                              ].map((color) {
-                                return InkWell(
-                                  onTap: () =>
-                                      ref.read(themeProvider.notifier).setSeedColor(color),
-                                  child: Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: color,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color:
-                                            (themeState.preset ==
-                                                    ThemePreset.standard &&
-                                                themeState.seedColor
-                                                        .toARGB32() ==
-                                                    color.toARGB32())
-                                            ? Colors.white
-                                            : Colors.transparent,
-                                        width: 2,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                        ),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.auto_awesome),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsPreset,
-                        ),
-                        subtitle: Text(
-                          AppLocalizations.of(context)!.settingsPresetDesc,
-                        ),
-                        trailing: Wrap(
-                          spacing: 8,
-                          children: [
-                            FilterChip(
-                              label: const Text('Standard'),
-                              selected:
-                                  themeState.preset == ThemePreset.standard,
-                              onSelected: (_) =>
-                                  ref.read(themeProvider.notifier).setPreset(ThemePreset.standard),
-                            ),
-                            FilterChip(
-                              label: const Text('🖤 Obsidian'),
-                              selected:
-                                  themeState.preset == ThemePreset.obsidian,
-                              selectedColor: const Color(0xFF45475A),
-                              labelStyle: TextStyle(
-                                color: themeState.preset == ThemePreset.obsidian
-                                    ? const Color(0xFFCBA6F7)
-                                    : null,
-                              ),
-                              onSelected: (_) {
-                                ref.read(themeProvider.notifier).setPreset(ThemePreset.obsidian);
-                                ref.read(themeProvider.notifier).setThemeMode(ThemeMode.dark);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(),
-                      SwitchListTile(
-                        secondary: const Icon(Icons.account_balance),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsJobcenterMode,
-                        ),
-                        subtitle: Text(
-                          AppLocalizations.of(context)!.settingsJobcenterDesc,
-                        ),
-                        value: _jobcenterMode,
-                        onChanged: (val) async {
-                          setState(() => _jobcenterMode = val);
-                          final dao = ref.read(databaseProvider).settingsDao;
-                          await dao.insertOrUpdateSetting(
-                            Setting(
-                              key: 'jobcenterMode',
-                              value: val.toString(),
-                            ),
-                          );
-                          ref.invalidate(jobcenterModeProvider);
-                        },
-                      ),
-                      const Divider(),
-                      ListTile(
-                        leading: const Icon(Icons.draw),
-                        title: const Text('Unterschrift konfigurieren'),
-                        subtitle: const Text('Zeichne deine Unterschrift für Lebenslauf und Anschreiben'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () async {
-                          await showDialog(
-                            context: context,
-                            builder: (context) => const signature_dialog.SignatureDialog(),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Berufsfeld
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context)!.settingsFieldTitle,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedPreset,
-                        decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)!
-                              .settingsFieldSelect,
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _presets.keys
-                            .map(
-                              (key) => DropdownMenuItem(
-                                value: key,
-                                child: Text(key),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _selectedPreset = val;
-                              if (val != 'Individuell') {
-                                _customColumnsController.text = _presets[val]!;
-                              }
-                            });
-                          }
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _customColumnsController,
-                        decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)!
-                              .settingsCustomCols,
-                          hintText:
-                              'z.B. Portfolio-Link, Sprachen, Remote-Anteil',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Persönliche Daten
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context)!.settingsPersonalData,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _nameController,
-                              decoration: InputDecoration(
-                                labelText: AppLocalizations.of(context)!
-                                    .settingsYourName,
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _birthdateController,
-                              decoration: InputDecoration(
-                                labelText: 'Geburtsdatum',
-                                hintText: 'TT.MM.JJJJ',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _emailController,
-                              decoration: InputDecoration(
-                                labelText: 'E-Mail',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _phoneController,
-                              decoration: InputDecoration(
-                                labelText: 'Telefon',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.phone,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: TextField(
-                              controller: _addressController,
-                              decoration: InputDecoration(
-                                labelText: AppLocalizations.of(context)!
-                                    .settingsYourAddress,
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _zipController,
-                              decoration: InputDecoration(
-                                labelText: 'PLZ',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 2,
-                            child: TextField(
-                              controller: _cityController,
-                              decoration: InputDecoration(
-                                labelText: 'Stadt',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _skillsController,
-                        decoration: InputDecoration(
-                          labelText: 'Skills / Kenntnisse',
-                          hintText: 'z.B. Java, Flutter, Projektmanagement (kommagetrennt)',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _linkedinController,
-                              decoration: InputDecoration(
-                                labelText: 'LinkedIn / Xing Profil URL',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: TextField(
-                              controller: _websiteController,
-                              decoration: InputDecoration(
-                                labelText: 'Persönliche Website / Portfolio',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton(
-                          onPressed: _saveSettings,
-                          child: Text(
-                            AppLocalizations.of(context)!.settingsImapSave,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Lokale KI-Assistenz
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.auto_awesome),
-                          SizedBox(width: 8),
-                          Text('Lokale KI-Assistenz', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      SwitchListTile(
-                        secondary: const Icon(Icons.auto_awesome),
-                        title: const Text('KI-Zauberstab im Lebenslauf-Editor aktivieren'),
-                        subtitle: const Text('Nutzt den lokalen Ollama Server, um Beschreibungstexte im Lebenslauf professioneller zu formulieren.'),
-                        value: _aiCvAssistantEnabled,
-                        onChanged: (val) {
-                          setState(() => _aiCvAssistantEnabled = val);
-                          _saveSettings();
-                        },
-                      ),
-                      if (_aiCvAssistantEnabled) ...[
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: TextField(
-                                controller: _aiUrlController,
-                                decoration: const InputDecoration(labelText: 'Ollama API URL', border: OutlineInputBorder(), hintText: 'http://localhost:11434/api/generate'),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: TextField(
-                                controller: _aiModelController,
-                                decoration: const InputDecoration(labelText: 'Modell Name', border: OutlineInputBorder(), hintText: 'llama3.2'),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton(onPressed: _saveSettings, child: Text(AppLocalizations.of(context)!.settingsImapSave)),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // IMAP E-Mail Integration
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.settingsImapTitle,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: Colors.orange.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            child: const Text(
-                              'âš— EXPERIMENTELL',
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        AppLocalizations.of(context)!.settingsImapDesc,
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: Colors.orange.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.warning_amber_rounded,
-                              color: Colors.orange,
-                              size: 18,
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                AppLocalizations.of(context)!
-                                    .settingsImapWarning,
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedMailProvider,
-                        decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)!
-                              .settingsImapProvider,
-                          border: OutlineInputBorder(),
-                        ),
-                        items: [
-                          DropdownMenuItem(
-                            value: 'Manuell',
-                            child: Text(
-                              AppLocalizations.of(context)!.settingsImapManual,
-                            ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Gmail',
-                            child: Text('Gmail'),
-                          ),
-                          DropdownMenuItem(value: 'GMX', child: Text('GMX')),
-                          DropdownMenuItem(
-                            value: 'Web.de',
-                            child: Text('Web.de'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'Outlook',
-                            child: Text('Outlook / Hotmail'),
-                          ),
-                          DropdownMenuItem(
-                            value: 'iCloud',
-                            child: Text('iCloud'),
-                          ),
-                        ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _selectedMailProvider = val;
-                              if (val == 'Gmail') {
-                                _imapServerController.text = 'imap.gmail.com';
-                                _imapPortController.text = '993';
-                                _smtpServerController.text = 'smtp.gmail.com';
-                                _smtpPortController.text = '465';
-                              }
-                              if (val == 'GMX') {
-                                _imapServerController.text = 'imap.gmx.net';
-                                _imapPortController.text = '993';
-                                _smtpServerController.text = 'mail.gmx.net';
-                                _smtpPortController.text = '465';
-                              }
-                              if (val == 'Web.de') {
-                                _imapServerController.text = 'imap.web.de';
-                                _imapPortController.text = '993';
-                                _smtpServerController.text = 'smtp.web.de';
-                                _smtpPortController.text = '465';
-                              }
-                              if (val == 'Outlook') {
-                                _imapServerController.text =
-                                    'outlook.office365.com';
-                                _imapPortController.text = '993';
-                                _smtpServerController.text =
-                                    'smtp.office365.com';
-                                _smtpPortController.text = '587';
-                              }
-                              if (val == 'iCloud') {
-                                _imapServerController.text = 'imap.mail.me.com';
-                                _imapPortController.text = '993';
-                                _smtpServerController.text = 'smtp.mail.me.com';
-                                _smtpPortController.text = '587';
-                              }
-                            });
-                          }
-                        },
-                      ),
-                      if (_selectedMailProvider == 'Gmail' ||
-                          _selectedMailProvider == 'iCloud') ...[
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.amber.withValues(alpha: 0.1),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.warning_amber,
-                                color: Colors.amber,
-                                size: 20,
-                              ),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Wichtig: Für diesen Anbieter musst du in deinen Account-Einstellungen ein "App-Passwort" generieren! Dein normales Passwort funktioniert hier nicht.',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Eingangsserver (IMAP)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: TextField(
-                              controller: _imapServerController,
-                              decoration: InputDecoration(
-                                labelText: AppLocalizations.of(context)!
-                                    .settingsImapServer,
-                                border: OutlineInputBorder(),
-                              ),
-                              enabled: _selectedMailProvider == 'Manuell',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 1,
-                            child: TextField(
-                              controller: _imapPortController,
-                              decoration: InputDecoration(
-                                labelText: AppLocalizations.of(context)!
-                                    .settingsImapPort,
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                              enabled: _selectedMailProvider == 'Manuell',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Ausgangsserver (SMTP)',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: TextField(
-                              controller: _smtpServerController,
-                              decoration: InputDecoration(
-                                labelText: 'SMTP Server (Versand)',
-                                border: OutlineInputBorder(),
-                              ),
-                              enabled: _selectedMailProvider == 'Manuell',
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 1,
-                            child: TextField(
-                              controller: _smtpPortController,
-                              decoration: InputDecoration(
-                                labelText: 'SMTP Port',
-                                border: OutlineInputBorder(),
-                              ),
-                              keyboardType: TextInputType.number,
-                              enabled: _selectedMailProvider == 'Manuell',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Zugangsdaten',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _imapEmailController,
-                        decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)!
-                              .settingsImapEmail,
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: _imapPasswordController,
-                        decoration: InputDecoration(
-                          labelText: AppLocalizations.of(context)!
-                              .settingsImapPassword,
-                          border: OutlineInputBorder(),
-                        ),
-                        obscureText: true,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              final server = _imapServerController.text;
-                              final port =
-                                  int.tryParse(_imapPortController.text) ?? 993;
-                              final email = _imapEmailController.text;
-                              final pass = _imapPasswordController.text;
-
-                              if (server.isEmpty ||
-                                  email.isEmpty ||
-                                  pass.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Bitte Server, E-Mail und Passwort ausfüllen.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Verbindung wird getestet...'),
-                                ),
-                              );
-
-                              try {
-                                String actualPass = pass;
-                                if (pass == '********') {
-                                  actualPass = await ImapService.getPassword();
-                                }
-
-                                final client = await ref
-                                    .read(imapServiceProvider)
-                                    .connect(server, port, email, actualPass);
-                                if (client != null) {
-                                  await client.disconnect();
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Erfolgreich verbunden!'),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-                                  }
-                                } else {
-                                  throw Exception('Fehler bei der Anmeldung.');
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Verbindung fehlgeschlagen: $e',
-                                      ),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.cable),
-                            label: const Text('Verbindung testen'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: ElevatedButton(
-                          onPressed: _saveSettings,
-                          child: Text(
-                            AppLocalizations.of(context)!.settingsImapSave,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Daten-Export
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocalizations.of(context)!.settingsExportTitle,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ListTile(
-                        leading: const Icon(Icons.picture_as_pdf),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsExportPdf,
-                        ),
-                        onTap: () async {
-                          final applications = await ref
-                              .read(applicationsRepositoryProvider)
-                              .getAllApplications();
-                          final settingsDao = ref
-                              .read(databaseProvider)
-                              .settingsDao;
-                          await PdfGenerator.generateAndSharePdf(
-                            applications,
-                            ref.read(settingsRepositoryProvider),
-                          );
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.table_chart),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsExportCsv,
-                        ),
-                        onTap: () async {
-                          final applications = await ref
-                              .read(applicationsRepositoryProvider)
-                              .getAllApplications();
-                          await CsvGenerator.generateAndShareCsv(applications);
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.backup),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsExportBackup,
-                        ),
-                        onTap: _exportBackup,
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.restore),
-                        title: Text(
-                          AppLocalizations.of(context)!.settingsExportRestore,
-                        ),
-                        onTap: _importBackup,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Über diese App
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.3),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Über diese App',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      ListTile(
-                        leading: const Icon(Icons.info_outline),
-                        title: Text('Version'),
-                        trailing: Text(
-                          _appVersion.isNotEmpty ? _appVersion : 'Lade...',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.new_releases),
-                        title: const Text('Changelog ansehen'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ChangelogScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      Consumer(
-                        builder: (context, ref, child) {
-                          final updateState = ref.watch(autoUpdaterProvider);
-                          final isChecking = updateState.status == UpdaterStatus.checking;
-                          return ListTile(
-                            leading: const Icon(Icons.system_update_alt),
-                            title: const Text('Nach Updates suchen'),
-                            trailing: isChecking 
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) 
-                                : const Icon(Icons.chevron_right),
-                            onTap: isChecking ? null : () async {
-                              await ref.read(autoUpdaterProvider.notifier).checkForUpdates(isManual: true);
-                              if (context.mounted) {
-                                final status = ref.read(autoUpdaterProvider).status;
-                                if (status == UpdaterStatus.upToDate) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Die App ist bereits auf dem neuesten Stand.')),
-                                  );
-                                } else if (status == UpdaterStatus.error) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Fehler bei der Update-Prüfung: ${ref.read(autoUpdaterProvider).errorMessage}')),
-                                  );
-                                } else if (status == UpdaterStatus.available) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Ein neues Update ist verfügbar! (Siehe Banner ganz oben)')),
-                                  );
-                                }
-                              }
-                            },
-                          );
-                        },
-                      ),
-                      ListTile(
-                        leading: const Icon(Icons.description_outlined),
-                        title: const Text('Open-Source-Lizenzen'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () {
-                          showLicensePage(
-                            context: context,
-                            applicationName: 'Bewerbungszentrale',
-                            applicationVersion: _appVersion.isNotEmpty ? _appVersion : 'Lade...',
-                            applicationLegalese: '© 2026 Alle Rechte vorbehalten.',
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
+              FilterChip(label: const Text('Standard'), selected: themeState.preset == ThemePreset.standard, onSelected: (_) => ref.read(themeProvider.notifier).setPreset(ThemePreset.standard)),
+              FilterChip(label: const Text('🖤 Obsidian'), selected: themeState.preset == ThemePreset.obsidian, selectedColor: const Color(0xFF45475A), labelStyle: TextStyle(color: themeState.preset == ThemePreset.obsidian ? const Color(0xFFCBA6F7) : null), onSelected: (_) { ref.read(themeProvider.notifier).setPreset(ThemePreset.obsidian); ref.read(themeProvider.notifier).setThemeMode(ThemeMode.dark); }),
             ],
           ),
         ),
-      ),
+        ListTile(
+          leading: const Icon(Icons.draw), title: const Text('Unterschrift konfigurieren'), trailing: const Icon(Icons.chevron_right),
+          onTap: () async => showDialog(context: context, builder: (context) => const signature_dialog.SignatureDialog()),
+        ),
+        const SizedBox(height: 24),
+        Align(alignment: Alignment.centerRight, child: ElevatedButton(onPressed: _saveSettings, child: const Text('Speichern'))),
+      ],
+    );
+  }
+
+  Widget _buildExportBackup() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Export & Backup', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 24),
+        ListTile(
+          leading: const Icon(Icons.picture_as_pdf), title: const Text('Als PDF exportieren'),
+          onTap: () async {
+            final applications = await ref.read(applicationsRepositoryProvider).getAllApplications();
+            await PdfGenerator.generateAndSharePdf(applications, ref.read(settingsRepositoryProvider));
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.table_chart), title: const Text('Als CSV exportieren'),
+          onTap: () async {
+            final applications = await ref.read(applicationsRepositoryProvider).getAllApplications();
+            await CsvGenerator.generateAndShareCsv(applications);
+          },
+        ),
+        ListTile(leading: const Icon(Icons.backup), title: const Text('Backup erstellen'), onTap: _exportBackup),
+        ListTile(leading: const Icon(Icons.restore), title: const Text('Backup wiederherstellen'), onTap: _importBackup),
+      ],
+    );
+  }
+
+  Widget _buildAboutApp() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Über die App', style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: 24),
+        ListTile(leading: const Icon(Icons.info_outline), title: const Text('Version'), trailing: Text(_appVersion.isNotEmpty ? _appVersion : 'Lade...', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+        ListTile(
+          leading: const Icon(Icons.new_releases), title: const Text('Changelog ansehen'), trailing: const Icon(Icons.chevron_right),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChangelogScreen())),
+        ),
+        Consumer(
+          builder: (context, ref, child) {
+            final updateState = ref.watch(autoUpdaterProvider);
+            final isChecking = updateState.status == UpdaterStatus.checking;
+            return ListTile(
+              leading: const Icon(Icons.system_update_alt), title: const Text('Nach Updates suchen'),
+              trailing: isChecking ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.chevron_right),
+              onTap: isChecking ? null : () async {
+                await ref.read(autoUpdaterProvider.notifier).checkForUpdates(isManual: true);
+                if (context.mounted) {
+                  final status = ref.read(autoUpdaterProvider).status;
+                  if (status == UpdaterStatus.upToDate) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Die App ist auf dem neuesten Stand.')));
+                  else if (status == UpdaterStatus.error) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: ${ref.read(autoUpdaterProvider).errorMessage}')));
+                  else if (status == UpdaterStatus.available) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Neues Update verfügbar!')));
+                }
+              },
+            );
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.description_outlined), title: const Text('Open-Source-Lizenzen'), trailing: const Icon(Icons.chevron_right),
+          onTap: () => showLicensePage(context: context, applicationName: 'Bewerbungszentrale', applicationVersion: _appVersion.isNotEmpty ? _appVersion : 'Lade...', applicationLegalese: '© 2026 Alle Rechte vorbehalten.'),
+        ),
+      ],
     );
   }
 }

@@ -2,10 +2,14 @@
   "manifest_version": 3,
   "name": "Bewerbungszentrale Companion",
   "version": "1.1.0",
-  "description": "Importiert Stellenanzeigen und füllt Bewerbungsformulare automatisch mit deinen Profildaten aus – lokal, sicher, DSGVO-konform.",
+  "description": "Importiert Stellenanzeigen und f\u00fcllt Bewerbungsformulare automatisch mit deinen Profildaten aus \u2013 lokal, sicher, DSGVO-konform.",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Bewerbungszentrale"
+    "default_title": "Bewerbungszentrale",
+    "default_icon": {
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
   },
   "permissions": [
     "activeTab",
@@ -17,8 +21,12 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["content_autofill.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "content_autofill.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "browser_specific_settings": {

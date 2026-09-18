@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/database_provider.dart';
@@ -23,16 +23,28 @@ class _TutorialFlowState extends State<TutorialFlow> {
       'color': Colors.blue,
     },
     {
+      'icon': Icons.security,
+      'title': 'KI & Datenschutz (DSGVO)',
+      'text': 'Wir nehmen Datenschutz ernst! Diese App nutzt standardmäßig ausschließlich lokale KI-Modelle. Es werden keine Daten ungefragt an Cloud-Anbieter gesendet.\n\nHinweis: Wenn du die App über eine Agent-Schnittstelle (MCP) fernsteuerst oder eigene Cloud-APIs konfigurierst, stimmst du der Datenverarbeitung durch diese Dienste zu.',
+      'color': Colors.teal,
+    },
+    {
       'icon': Icons.edit_document,
       'title': 'Dokumente & Freier Editor',
       'text': 'Unter "Meine Dokumente" pflegst du Lebensläufe und Anschreiben. Importiere PDF-Originale (1:1 Übernahme) oder nutze den "Freien Editor" für pixelperfekte A4-Bewerbungsschreiben mit integrierter ATS-Prüfung.',
       'color': Colors.indigo,
     },
     {
-      'icon': Icons.add_task,
-      'title': 'Bewerbungen: Manuell & Automatisch',
-      'text': 'Lege neue Bewerbungen manuell an, oder lass die App die Arbeit machen: Füge einfach eine Stellen-URL (z.B. Arbeitsagentur) ein oder lade ein Job-PDF hoch. Die App extrahiert automatisch alle wichtigen Metadaten.',
+      'icon': Icons.add_link,
+      'title': 'Neue Stellenanzeigen importieren',
+      'text': 'Unter "Bewerbungen" findest du das Plus-Symbol. Füge dort einfach die URL einer Stellenanzeige (z.B. von der Arbeitsagentur oder StepStone) ein. Die KI liest die Seite aus und trägt Unternehmen, Position und Ansprechpartner automatisch für dich ein!',
       'color': Colors.orange,
+    },
+    {
+      'icon': Icons.picture_as_pdf,
+      'title': 'Alte Bewerbungen übernehmen',
+      'text': 'Du hast bereits bestehende Bewerbungen? Kein Problem! Lade einfach das PDF deines bisherigen Anschreibens oder der Stellenanzeige hoch. Die App scannt das Dokument und übernimmt alle Daten automatisch in dein Kanban-Board.',
+      'color': Colors.deepOrange,
     },
     {
       'icon': Icons.smart_toy_outlined,
@@ -176,4 +188,16 @@ class _TutorialFlowState extends State<TutorialFlow> {
 }
 }
 
-Future<void> showTutorialIfNeeded(BuildContext context, WidgetRef ref) async {}
+Future<void> showTutorialIfNeeded(BuildContext context, WidgetRef ref) async {
+  final dao = ref.read(databaseProvider).settingsDao;
+  final setting = await dao.getSettingByKey('has_seen_tutorial');
+  if (setting?.value != 'true') {
+    if (context.mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const TutorialFlow(),
+      );
+    }
+  }
+}

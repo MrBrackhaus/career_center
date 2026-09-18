@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.8.0] - 2026-09-18
+
+### Added
+- **Global Text Color Picker**: Added a full Material Color picker (`flutter_colorpicker`) to the Editor toolbar, allowing precise global text color selection across all CV and cover letter designs.
+- **Massive Localization Expansion**: Added complete translations and localizations for 100 languages, including rare and fictional languages (Esperanto, Sindarin, Klingon).
+- **Extensive Test Framework**: Integrated over 50 new Unit, Widget, and Integration tests. App is now protected by GitHub Actions CI/CD pipelines.
+- **Mock Interviews (`ai_interview_service`)**: Drafted a new AI-powered interactive mock interview practice feature.
+- **ICS Calendar Export**: You can now export application and interview dates as `.ics` files for Outlook or Google Calendar.
+- **Magic Clipboard**: Added a smart clipboard service to auto-detect and paste relevant application information.
+- **AI Email Extraction (`ai_email_extractor_service`)**: Integrated LLMs to parse and automatically categorize incoming HR emails.
+
+### Changed
+- **CV Editor Overhaul**: Completely modernized the CV editor. Dummy data is gone. The left sidebar now dynamically renders real database entries, while the right side updates the PDF in real-time.
+- **Native Forms & Validation**: "Berufserfahrung" and "Ausbildung" now use native Flutter DatePickers. Inputs are validated before saving.
+- **Edit Custom Sections**: Added the ability to edit existing custom sections ("Eigene Abschnitte") via a pencil icon instead of having to delete and recreate them.
+- **Smart DIN 5008 Elements**: Header and footer toggles now intelligently hide themselves when editing the CV, and only appear in the Cover Letter mode.
+- **Licensing Update**: Changed the project license from GPL to "All Rights Reserved" with updated legal attribution.
+- **IMAP System Optimization**: Improved the email fetching and filtering logic (`imap_service.dart`) to robustly handle complex HR responses.
+
+### Fixed
+- **Margin Sliders**: Fixed a bug where page margin sliders in the editor did not update the PDF view.
+- **Dark Mode Readability**: Fixed a contrast bug where text in the left sidebar was unreadable (black on dark grey) in Dark Mode.
+
+
 ## [0.7.4] - 2026-09-15
 
 ### Added

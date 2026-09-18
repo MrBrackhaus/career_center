@@ -108,63 +108,60 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       columns: [
-                        DataColumn(
-                          label: Text(AppLocalizations.of(context)!.reportDate),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            AppLocalizations.of(context)!.reportCompany,
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            AppLocalizations.of(context)!.reportPosition,
-                          ),
-                        ),
-                        DataColumn(label: Text('KONTAKT')),
-                        DataColumn(
-                          label: Text(
-                            AppLocalizations.of(context)!.reportStatus,
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            AppLocalizations.of(context)!.reportRejectionReason,
-                          ),
-                        ),
+                        DataColumn(label: Text('BEWERBUNGSDATUM')),
+                        DataColumn(label: Text('FIRMA / ADRESSE')),
+                        DataColumn(label: Text('ANSPRECHPARTNER')),
+                        DataColumn(label: Text('POSITION')),
+                        DataColumn(label: Text('BEWERBUNGSART')),
+                        DataColumn(label: Text('AKTIVITÄTEN')),
+                        DataColumn(label: Text('STATUS / ERGEBNIS')),
                       ],
                       rows: applications.map((app) {
-                        final contactInfos = [
-                          app.contactName,
-                          app.contactEmail,
-                          app.contactPhone,
-                          app.address,
-                        ].where((s) => s != null && s.isNotEmpty).join(', ');
+                        final dateStr = app.appliedDate != null
+                            ? '${app.appliedDate!.day.toString().padLeft(2, '0')}.${app.appliedDate!.month.toString().padLeft(2, '0')}.${app.appliedDate!.year}'
+                            : '-';
+
+                        final companyBlock = [
+                          app.company,
+                          if (app.address != null && app.address!.isNotEmpty) app.address,
+                        ].join('\n');
+
+                        final contactBlock = [
+                          if (app.contactName != null && app.contactName!.isNotEmpty) app.contactName,
+                          if (app.contactEmail != null && app.contactEmail!.isNotEmpty) app.contactEmail,
+                          if (app.contactPhone != null && app.contactPhone!.isNotEmpty) app.contactPhone,
+                        ].where((s) => s != null).join('\n');
+
+                        String bewerbungsArt = 'Online / E-Mail';
+                        if (app.jobUrl != null && app.jobUrl!.isNotEmpty) {
+                          bewerbungsArt = 'Online-Portal';
+                        } else if (app.contactEmail != null && app.contactEmail!.isNotEmpty) {
+                          bewerbungsArt = 'E-Mail';
+                        }
+
+                        final activities = <String>[];
+                        if (app.followupDate != null) {
+                          activities.add('Nachgefasst: ${app.followupDate!.day.toString().padLeft(2, '0')}.${app.followupDate!.month.toString().padLeft(2, '0')}.${app.followupDate!.year}');
+                        }
+                        if (app.status == 'interview' || (app.nextStep != null && app.nextStep!.toLowerCase().contains('gespräch'))) {
+                          activities.add('Gespräch: ${app.nextStep ?? "Ja"}');
+                        }
+                        final activitiesBlock = activities.isNotEmpty ? activities.join('\n') : '-';
+
+                        String ergebnis = app.status.toUpperCase();
+                        if (app.status == 'absage' && app.rejectionReason != null && app.rejectionReason!.isNotEmpty) {
+                          ergebnis += '\nGrund: ${app.rejectionReason}';
+                        }
 
                         return DataRow(
                           cells: [
-                            DataCell(
-                              Text(
-                                app.appliedDate != null
-                                    ? _formatDateYMD(app.appliedDate!)
-                                    : '-',
-                              ),
-                            ),
-                            DataCell(Text(app.company)),
+                            DataCell(Text(dateStr)),
+                            DataCell(Text(companyBlock)),
+                            DataCell(Text(contactBlock.isNotEmpty ? contactBlock : '-')),
                             DataCell(Text(app.position)),
-                            DataCell(
-                              Text(
-                                contactInfos.isNotEmpty ? contactInfos : '-',
-                              ),
-                            ),
-                            DataCell(Text(app.status)),
-                            DataCell(
-                              Text(
-                                app.rejectionReason?.isNotEmpty == true
-                                    ? app.rejectionReason!
-                                    : '-',
-                              ),
-                            ),
+                            DataCell(Text(bewerbungsArt)),
+                            DataCell(Text(activitiesBlock)),
+                            DataCell(Text(ergebnis)),
                           ],
                         );
                       }).toList(),

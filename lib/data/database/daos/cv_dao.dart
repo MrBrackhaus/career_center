@@ -4,7 +4,7 @@ import '../app_database.dart';
 
 part 'cv_dao.g.dart';
 
-@DriftAccessor(tables: [CvWorkExperiences, CvEducations, CvSkills, CvLanguages])
+@DriftAccessor(tables: [CvWorkExperiences, CvEducations, CvSkills, CvLanguages, CvCustomItems])
 class CvDao extends DatabaseAccessor<AppDatabase> with _$CvDaoMixin {
   CvDao(super.db);
 
@@ -101,4 +101,25 @@ class CvDao extends DatabaseAccessor<AppDatabase> with _$CvDaoMixin {
   Future<int> deleteLanguage(int id) {
     return (delete(cvLanguages)..where((t) => t.id.equals(id))).go();
   }
+
+  // === Custom Items ===
+  Future<List<CvCustomItem>> getCustomItems(int? applicationId) {
+    if (applicationId == null) {
+      return (select(cvCustomItems)..where((t) => t.applicationId.isNull())..orderBy([(t) => OrderingTerm(expression: t.sortOrder)])).get();
+    }
+    return (select(cvCustomItems)..where((t) => t.applicationId.equals(applicationId))..orderBy([(t) => OrderingTerm(expression: t.sortOrder)])).get();
+  }
+
+  Future<int> insertCustomItem(CvCustomItemsCompanion entry) {
+    return into(cvCustomItems).insert(entry);
+  }
+
+  Future<bool> updateCustomItem(CvCustomItemsCompanion entry) {
+    return update(cvCustomItems).replace(entry);
+  }
+
+  Future<int> deleteCustomItem(int id) {
+    return (delete(cvCustomItems)..where((t) => t.id.equals(id))).go();
+  }
 }
+

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * JobTracker
  * Copyright (C) 2026 
  *
@@ -75,34 +75,69 @@ Future<Uint8List> _buildPdf(Map<String, dynamic> data) async {
           pw.SizedBox(height: 20),
           pw.TableHelper.fromTextArray(
             context: context,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
+            cellStyle: const pw.TextStyle(fontSize: 8),
+            cellAlignment: pw.Alignment.centerLeft,
             headers: [
-              'Datum',
-              'Firma',
+              'Bewerbungsdatum',
+              'Firma / Adresse',
+              'Ansprechpartner',
               'Position',
-              'Kontakt',
-              'Status',
-              'Absagegrund',
+              'Art der Bewerbung',
+              'Aktivitäten',
+              'Status / Ergebnis',
             ],
             data: applications.map((app) {
-              final contactInfos =
-                  [
-                        app.contactName,
-                        app.contactEmail,
-                        app.contactPhone,
-                        app.address,
-                      ]
-                      .where((s) => s != null && s.isNotEmpty)
-                      .join('\n'); // Newline in PDF table
+              // Datum formattieren
+              final dateStr = app.appliedDate != null
+                  ? '${app.appliedDate!.day.toString().padLeft(2, '0')}.${app.appliedDate!.month.toString().padLeft(2, '0')}.${app.appliedDate!.year}'
+                  : '-';
+                  
+              // Firma & Adresse
+              final companyBlock = [
+                app.company,
+                if (app.address != null && app.address!.isNotEmpty) app.address,
+              ].join('\n');
+              
+              // Ansprechpartner & Kontakt
+              final contactBlock = [
+                if (app.contactName != null && app.contactName!.isNotEmpty) app.contactName,
+                if (app.contactEmail != null && app.contactEmail!.isNotEmpty) app.contactEmail,
+                if (app.contactPhone != null && app.contactPhone!.isNotEmpty) app.contactPhone,
+              ].where((s) => s != null).join('\n');
+
+              // Art der Bewerbung
+              String bewerbungsArt = 'Online / E-Mail';
+              if (app.jobUrl != null && app.jobUrl!.isNotEmpty) {
+                bewerbungsArt = 'Online-Portal';
+              } else if (app.contactEmail != null && app.contactEmail!.isNotEmpty) {
+                bewerbungsArt = 'E-Mail';
+              }
+
+              // Aktivitäten (Nachgehakt, Gespräch)
+              final activities = <String>[];
+              if (app.followupDate != null) {
+                activities.add('Nachgefasst am: ${app.followupDate!.day.toString().padLeft(2, '0')}.${app.followupDate!.month.toString().padLeft(2, '0')}.${app.followupDate!.year}');
+              }
+              if (app.status == 'interview' || (app.nextStep != null && app.nextStep!.toLowerCase().contains('gespräch'))) {
+                activities.add('Gespräch: ${app.nextStep ?? "Ja"}');
+              }
+              final activitiesBlock = activities.isNotEmpty ? activities.join('\n') : '-';
+
+              // Ergebnis / Absagegrund
+              String ergebnis = app.status.toUpperCase();
+              if (app.status == 'absage' && app.rejectionReason != null && app.rejectionReason!.isNotEmpty) {
+                ergebnis += '\nGrund: ${app.rejectionReason}';
+              }
 
               return [
-                app.appliedDate != null
-                    ? '${app.appliedDate!.day}.${app.appliedDate!.month}.${app.appliedDate!.year}'
-                    : '-',
-                app.company,
+                dateStr,
+                companyBlock,
+                contactBlock.isNotEmpty ? contactBlock : '-',
                 app.position,
-                contactInfos.isNotEmpty ? contactInfos : '-',
-                app.status,
-                app.rejectionReason ?? '-',
+                bewerbungsArt,
+                activitiesBlock,
+                ergebnis,
               ];
             }).toList(),
           ),

@@ -26,6 +26,7 @@ class ApplicationFormStateBundle {
   final DateTime? followUpDate;
   final List<String> activeCustomColumns;
   final bool isAutoFilling;
+  final bool isSaving;
 
   final ExtractionResult? lastExtractionResult;
   final bool isEditing;
@@ -33,9 +34,9 @@ class ApplicationFormStateBundle {
   final Function(String?) onMarkerToggled;
 
   final VoidCallback onSave;
-  final VoidCallback onAutoFillFromUrl;
+  final VoidCallback? onAutoFillFromUrl;
   final Function(String) onCoverLetterGenerated;
-  final VoidCallback onAutoFillFromPdf;
+  final VoidCallback? onAutoFillFromPdf;
   final Function(String) onStatusChange;
   final Function(DateTime?) onAppliedDateChange;
   final Function(DateTime?) onFollowUpDateChange;
@@ -64,14 +65,15 @@ class ApplicationFormStateBundle {
     required this.followUpDate,
     required this.activeCustomColumns,
     required this.isAutoFilling,
+    this.isSaving = false,
     this.lastExtractionResult,
     required this.isEditing,
     this.activeMarkerField,
     required this.onMarkerToggled,
     required this.onSave,
-    required this.onAutoFillFromUrl,
+    this.onAutoFillFromUrl,
     required this.onCoverLetterGenerated,
-    required this.onAutoFillFromPdf,
+    this.onAutoFillFromPdf,
     required this.onStatusChange,
     required this.onAppliedDateChange,
     required this.onFollowUpDateChange,

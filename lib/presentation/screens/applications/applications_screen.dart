@@ -1,21 +1,32 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
+
 import '../../../core/services/document_sanitizer_service.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'widgets/mock_interview_screen.dart';
+
+import '../../../core/utils/ics_exporter.dart';
+
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'widgets/mock_interview_screen.dart';
 import 'package:career_center/l10n/app_localizations.dart';
 
 import '../../../domain/entities/application_entity.dart';
 import '../../../domain/models/application_form_dto.dart';
 import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
+import '../../../core/services/extractors/magic_clipboard_service.dart';
 import '../../providers/imap_provider.dart';
+import '../../providers/ai_settings_provider.dart';
 
 import 'widgets/ai_cover_letter_dialog.dart';
 import '../onboarding/tutorial_flow.dart';
 import 'widgets/application_card.dart';
 import 'email_scanner_dialog.dart';
+
 import 'dart:developer' show log;
 
 class ApplicationsScreen extends ConsumerStatefulWidget {
@@ -59,6 +70,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         actions: [
           Consumer(
             builder: (context, ref, child) {
+              final aiSettings = ref.watch(aiSettingsProvider).value;
+              final isAiEnabled = aiSettings?.isAiEnabled ?? false;
+
+              if (!isAiEnabled) {
+                return const SizedBox.shrink(); // Hide email features if AI is disabled
+              }
+
               final syncState = ref.watch(imapSyncProvider);
               final lastSync = ref.watch(imapLastSyncProvider).value;
 
@@ -71,30 +89,47 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                   lastSyncText =
                       'Zuletzt: heute ${lastSync.hour.toString().padLeft(2, '0')}:${lastSync.minute.toString().padLeft(2, '0')}';
                 } else {
-                  lastSyncText = 'Zuletzt: ${lastSync.day}.${lastSync.month}.';
+                  lastSyncText =
+                      'Zuletzt: ${lastSync.day.toString().padLeft(2, '0')}.${lastSync.month.toString().padLeft(2, '0')}.';
                 }
               }
 
               return Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (lastSyncText.isNotEmpty && !syncState.isLoading)
+                  if (lastSyncText.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
+                      padding: const EdgeInsets.only(right: 16.0),
                       child: Text(
                         lastSyncText,
                         style: TextStyle(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
                         ),
                       ),
                     ),
                   if (syncState.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.only(right: 16.0),
-                      child: SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          if (ref.watch(imapSyncStatusProvider) != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              ref.watch(imapSyncStatusProvider)!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   TextButton.icon(
@@ -114,6 +149,37 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       onPressed: syncState.isLoading
                           ? null
                           : () async {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: Colors.orange),
+                                      SizedBox(width: 8),
+                                      Text('Experimentelle Funktion'),
+                                    ],
+                                  ),
+                                  content: const Text(
+                                    'Der KI-basierte E-Mail-Import ist noch experimentell.\n'
+                                    'Besonders bei kleinen Modellen (< 14B Parameter) kann es zu falschen Zuordnungen oder "erfundenen" Firmennamen kommen.\n\n'
+                                    'Wir empfehlen, vor der Nutzung ein Backup der Datenbankdatei "career_center.sqlite" zu erstellen.\n\n'
+                                    'Trotzdem fortfahren?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context).pop(false),
+                                      child: const Text('Abbrechen'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.of(context).pop(true),
+                                      child: const Text('Sync starten'),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmed != true) return;
+
                               try {
                                 final count = await ref
                                     .read(imapSyncProvider.notifier)
@@ -130,7 +196,11 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                   ),
                                 );
                               } on Exception catch (e, st) {
-                                log('An error occurred: $e', error: e, stackTrace: st);
+                                log(
+                                  'An error occurred: $e',
+                                  error: e,
+                                  stackTrace: st,
+                                );
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -218,6 +288,21 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             ? null
                             : value,
                       ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                FilledButton.tonalIcon(
+                  onPressed: () => _handleMagicClipboard(context),
+                  icon: const Icon(Icons.content_paste_go),
+                  label: const Text('Zwischenablage auswerten'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -314,20 +399,40 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             ),
                             const SizedBox(height: 32),
                             if (_searchQuery.isEmpty && _statusFilter == null)
-                              FilledButton.icon(
-                                onPressed: () =>
-                                    context.go('/applications/add'),
-                                icon: const Icon(Icons.add),
-                                label: Text(loc.btnNewApplication),
-                                style: FilledButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 20,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  FilledButton.tonalIcon(
+                                    onPressed: () => _handleMagicClipboard(context),
+                                    icon: const Icon(Icons.content_paste_go),
+                                    label: const Text('Zwischenablage auswerten'),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 20,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
                                   ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                  const SizedBox(width: 16),
+                                  FilledButton.icon(
+                                    onPressed: () =>
+                                        context.go('/applications/add'),
+                                    icon: const Icon(Icons.add),
+                                    label: Text(loc.btnNewApplication),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 20,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
                           ],
                         ),
@@ -388,7 +493,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         final uri = Uri.parse(app.companyUrl!);
         logoUrl = 'https://logo.clearbit.com/${uri.host}';
       } catch (_) {}
-        log('An error occurred');
+      log('An error occurred');
     }
 
     return Container(
@@ -509,157 +614,214 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                               .colorScheme
                               .onPrimaryContainer,
                         ),
-                        onPressed: () async {
-                          String jobDesc = app.jobDescriptionText ?? '';
-                          if (jobDesc.isEmpty) {
-                            final controller = TextEditingController();
-                            jobDesc =
-                                await showDialog<String>(
-                                  context: context,
-                                  builder: (context) => StatefulBuilder(
-                                    builder: (context, setStateDialog) =>
-                                        AlertDialog(
-                                          title: const Text(
-                                            'Stellenanzeige einfügen',
-                                          ),
-                                          content: SizedBox(
-                                            width: 400,
-                                            child: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Text(
-                                                  'Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.',
-                                                ),
-                                                const SizedBox(height: 8),
-                                                TextField(
-                                                  controller: controller,
-                                                  maxLines: 5,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 8),
-                                                TextButton.icon(
-                                                  onPressed: () async {
-                                                    try {
-                                                      final typeGroup =
-                                                          const XTypeGroup(
-                                                            label: 'PDF',
-                                                            extensions: ['pdf'],
-                                                          );
-                                                      final file =
-                                                          await openFile(
-                                                            acceptedTypeGroups:
-                                                                [typeGroup],
-                                                          );
-                                                      if (file == null) return;
-                                                      final bytes = await file
-                                                          .readAsBytes();
-                                                      final resultText = await DocumentSanitizerService.extractTextFromPdf(bytes);
-                                                      setStateDialog(() {
-                                                        controller.text =
-                                                            resultText;
-                                                      });
-                                                    } on Exception catch (e, st) {
-                                                      log('An error occurred: $e', error: e, stackTrace: st);
-                                                      if (!context.mounted) return;
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                            'Fehler beim Auslesen: ',
-                                                          ),
+                        onPressed:
+                            ref.watch(aiSettingsProvider).value?.isAiEnabled !=
+                                true
+                            ? null
+                            : () async {
+                                String jobDesc = app.jobDescriptionText ?? '';
+                                if (jobDesc.isEmpty) {
+                                  final controller = TextEditingController();
+                                  jobDesc =
+                                      await showDialog<String>(
+                                        context: context,
+                                        builder: (context) => StatefulBuilder(
+                                          builder: (context, setStateDialog) => AlertDialog(
+                                            title: const Text(
+                                              'Stellenanzeige einfügen',
+                                            ),
+                                            content: SizedBox(
+                                              width: 400,
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Text(
+                                                    'Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.',
+                                                  ),
+                                                  const SizedBox(height: 8),
+                                                  TextField(
+                                                    controller: controller,
+                                                    maxLines: 5,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          border:
+                                                              OutlineInputBorder(),
                                                         ),
-                                                      );
-                                                    }
-                                                  },
-                                                  icon: const Icon(
-                                                    Icons.picture_as_pdf,
                                                   ),
-                                                  label: const Text(
-                                                    'Stellenanzeige als PDF hochladen',
+                                                  const SizedBox(height: 8),
+                                                  TextButton.icon(
+                                                    onPressed: () async {
+                                                      try {
+                                                        final typeGroup =
+                                                            const XTypeGroup(
+                                                              label: 'PDF',
+                                                              extensions: [
+                                                                'pdf',
+                                                              ],
+                                                            );
+                                                        final file =
+                                                            await openFile(
+                                                              acceptedTypeGroups:
+                                                                  [typeGroup],
+                                                            );
+                                                        if (file == null)
+                                                          return;
+                                                        final bytes = await file
+                                                            .readAsBytes();
+                                                        final resultText =
+                                                            await DocumentSanitizerService.extractTextFromPdf(
+                                                              bytes,
+                                                            );
+                                                        setStateDialog(() {
+                                                          controller.text =
+                                                              resultText;
+                                                        });
+                                                      } on Exception catch (
+                                                        e,
+                                                        st
+                                                      ) {
+                                                        log(
+                                                          'An error occurred: $e',
+                                                          error: e,
+                                                          stackTrace: st,
+                                                        );
+                                                        if (!context.mounted)
+                                                          return;
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              'Fehler beim Auslesen: ',
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    },
+                                                    icon: const Icon(
+                                                      Icons.picture_as_pdf,
+                                                    ),
+                                                    label: const Text(
+                                                      'Stellenanzeige als PDF hochladen',
+                                                    ),
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: const Text('Abbrechen'),
-                                            ),
-                                            ElevatedButton(
-                                              onPressed: () => Navigator.pop(
-                                                context,
-                                                controller.text,
+                                                ],
                                               ),
-                                              child: const Text('Weiter'),
                                             ),
-                                          ],
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
+                                                child: const Text('Abbrechen'),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(
+                                                  context,
+                                                  controller.text,
+                                                ),
+                                                child: const Text('Weiter'),
+                                              ),
+                                            ],
+                                          ),
                                         ),
+                                      ) ??
+                                      '';
+
+                                  if (jobDesc.isEmpty) return;
+
+                                  if (jobDesc.trim().startsWith('<') ||
+                                      jobDesc.contains('<!DOCTYPE')) {
+                                    jobDesc =
+                                        DocumentSanitizerService.sanitizeHtml(
+                                          jobDesc,
+                                        );
+                                  }
+
+                                  final notifier = ref.read(
+                                    applicationNotifierProvider,
+                                  );
+                                  await notifier.updateJobDescription(
+                                    app.id,
+                                    jobDesc,
+                                  );
+                                }
+
+                                if (!mounted) return;
+                                final success = await showDialog<bool>(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (context) => AiCoverLetterDialog(
+                                    company: app.company,
+                                    position: app.position,
+                                    jobDescription: jobDesc,
+                                    onCoverLetterGenerated: (deltaJson) async {
+                                      final notifier = ref.read(
+                                        applicationNotifierProvider,
+                                      );
+                                      await notifier.updateCoverLetterContent(
+                                        app.id,
+                                        deltaJson,
+                                      );
+                                      await notifier.updateJobDescription(
+                                        app.id,
+                                        jobDesc,
+                                      );
+
+                                      final tRepo = ref.read(
+                                        templatesRepositoryProvider,
+                                      );
+                                      await tRepo.addTemplate(
+                                        'Anschreiben - ${app.company}',
+                                        'anschreiben',
+                                        deltaJson,
+                                        applicationId: app.id,
+                                      );
+                                    },
                                   ),
-                                ) ??
-                                '';
-
-                            if (jobDesc.isEmpty) return;
-
-                            if (jobDesc.trim().startsWith('<') ||
-                                jobDesc.contains('<!DOCTYPE')) {
-                              jobDesc = DocumentSanitizerService.sanitizeHtml(jobDesc);
-                            }
-
-                            final notifier = ref.read(applicationNotifierProvider);
-                            await notifier.updateJobDescription(app.id, jobDesc);
-                          }
-
-                          if (!mounted) return;
-                          final success = await showDialog<bool>(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (context) => AiCoverLetterDialog(
-                              company: app.company,
-                              position: app.position,
-                              jobDescription: jobDesc,
-                              onCoverLetterGenerated: (deltaJson) async {
-                                final notifier = ref.read(applicationNotifierProvider);
-                                await notifier.updateCoverLetterContent(app.id, deltaJson);
-                                await notifier.updateJobDescription(app.id, jobDesc);
-
-                                final tRepo = ref.read(templatesRepositoryProvider);
-                                await tRepo.addTemplate(
-                                  'Anschreiben - ${app.company}',
-                                  'anschreiben',
-                                  deltaJson,
-                                  applicationId: app.id,
                                 );
+                                if (!mounted) return;
+                                if (success == true) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '✅ Anschreiben generiert! Klicke auf "Komplett bearbeiten" um es im Editor zu sehen.',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
                               },
-                            ),
-                          );
-                          if (!mounted) return;
-                          if (success == true) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  '✅ Anschreiben generiert! Klicke auf "Komplett bearbeiten" um es im Editor zu sehen.',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        },
-                        icon: const Icon(Icons.auto_awesome),
-                        label: const Text('✨ KI-Anschreiben generieren'),
+                          icon: const Icon(Icons.auto_awesome),
+                          label: const Text('✨ KI-Anschreiben generieren'),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .tertiaryContainer,
+                            foregroundColor: Theme.of(context)
+                                .colorScheme
+                                .onTertiaryContainer,
+                          ),
+                          onPressed: () {
+                            context.push('/applications/${app.id}/interview', extra: app);
+                          },
+                          icon: const Icon(Icons.mic),
+                          label: const Text('Mock-Interview starten'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
           // Details
           Expanded(
             child: SingleChildScrollView(
@@ -693,6 +855,47 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         color: colorScheme.onSurfaceVariant,
                       ),
                     ),
+                  if (app.followupDate != null) ...[
+                    const SizedBox(height: 32),
+                    const Text(
+                      'TERMIN / FOLLOW-UP',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: ListTile(
+                        leading: const Icon(Icons.calendar_month),
+                        title: Text(
+                          DateFormat('dd.MM.yyyy HH:mm')
+                              .format(app.followupDate!),
+                        ),
+                        subtitle: const Text('Anstehender Termin'),
+                        trailing: OutlinedButton.icon(
+                          onPressed: () async {
+                            final success =
+                                await IcsExporter.exportFollowupDate(app);
+                            if (success && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Termin wurde erfolgreich als .ics exportiert!',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('.ics Export'),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   const Text(
                     'BEWERBUNGS-VERLAUF',
@@ -848,7 +1051,10 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
-  Future<void> _confirmDelete(BuildContext context, ApplicationEntity app) async {
+  Future<void> _confirmDelete(
+    BuildContext context,
+    ApplicationEntity app,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -872,13 +1078,22 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       ),
     );
     if (confirmed == true) {
-      ref.read(applicationNotifierProvider).deleteApplication(app);
-      if (context.mounted) {
-        setState(() {
-          if (_selectedApplication?.id == app.id) _selectedApplication = null;
-        });
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('${app.company} gelöscht')));
+      try {
+        await ref.read(applicationNotifierProvider).deleteApplication(app);
+        if (context.mounted) {
+          setState(() {
+            if (_selectedApplication?.id == app.id) _selectedApplication = null;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Bewerbung gelöscht.')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler beim Löschen: $e'), backgroundColor: Colors.red),
+          );
+        }
       }
     }
   }
@@ -1110,5 +1325,69 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleMagicClipboard(BuildContext context) async {
+    final apps = ref.read(applicationsProvider).value ?? [];
+    if (apps.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine Bewerbungen zum Abgleich gefunden.')),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Analysiere Zwischenablage...')),
+    );
+
+    final service = ref.read(magicClipboardProvider);
+    final result = await service.analyzeClipboard(apps);
+
+    if (!context.mounted) return;
+
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Keine relevanten Bewerbungs-Infos gefunden.')),
+      );
+      return;
+    }
+
+    if (result.matchedApplication != null && result.detectedStatus != null) {
+      final app = result.matchedApplication!;
+      final newStatus = result.detectedStatus!;
+      
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Text('Status-Update gefunden!'),
+          content: Text('Soll der Status für "${app.position}" bei "${app.company}" auf "$newStatus" gesetzt werden?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Aktualisieren'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await ref.read(applicationNotifierProvider).updateApplicationStatus(
+          app.id, 
+          newStatus, 
+          rejectionReason: newStatus == 'absage' ? result.originalText : null,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status aktualisiert!')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Zwischenablage erkannt, konnte aber nicht exakt zugeordnet werden.')),
+      );
+    }
   }
 }

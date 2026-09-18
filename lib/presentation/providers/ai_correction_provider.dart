@@ -37,15 +37,18 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
     try {
       final urlSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiServerUrl');
       final modelSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiModelName');
-      final baseUrl =
-          urlSetting?.value ?? 'http://localhost:11434/api/generate';
+      final apiKeySetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiApiKey');
+      
+      final baseUrl = urlSetting?.value ?? 'http://localhost:11434/api/generate';
       final modelName = modelSetting?.value ?? 'llama3.2';
+      final apiKey = apiKeySetting?.value ?? '';
 
       final corrected = await service.correctText(
         text,
         language,
         baseUrl,
         modelName,
+        apiKey,
       );
       state = state.copyWith(isCorrecting: false);
       return corrected;

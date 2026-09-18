@@ -24,7 +24,9 @@ import '../../presentation/screens/applications/applications_screen.dart';
 import '../../presentation/screens/settings/settings_screen.dart';
 import '../../presentation/widgets/responsive_shell.dart';
 import '../../presentation/screens/applications/application_form_screen.dart';
+import '../../presentation/screens/applications/widgets/mock_interview_screen.dart';
 import '../../presentation/screens/editor/application_editor_screen.dart';
+import '../../domain/entities/application_entity.dart';
 import '../../presentation/screens/reports/jobcenter_report_screen.dart';
 import '../../presentation/screens/reports/weekly_report_screen.dart';
 import '../../presentation/screens/templates/templates_screen.dart';
@@ -100,6 +102,14 @@ final appRouter = GoRouter(
                 final id = int.tryParse(state.pathParameters['id'] ?? '');
                 if (id == null) return const Scaffold(body: Center(child: Text('Ungültige ID')));
                 return ApplicationEditorScreen(applicationId: id);
+              },
+            ),
+            GoRoute(
+              path: ':id/interview',
+              builder: (context, state) {
+                final app = state.extra as ApplicationEntity?;
+                if (app == null) return const Scaffold(body: Center(child: Text('App fehlt')));
+                return MockInterviewScreen(application: app);
               },
             ),
           ],

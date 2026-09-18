@@ -10,6 +10,7 @@ import '../../providers/auto_updater_provider.dart';
 import '../settings/widgets/update_banner.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../domain/entities/application_entity.dart';
+import '../onboarding/tutorial_flow.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -24,6 +25,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.initState();
     Future.microtask(() {
       ref.read(autoUpdaterProvider.notifier).checkForUpdates();
+      showTutorialIfNeeded(context, ref);
     });
   }
 

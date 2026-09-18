@@ -16,6 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 import 'dart:io';
+import 'dart:math';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'db_migrator.dart';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -169,6 +173,18 @@ class CvLanguages extends Table {
   TextColumn get level => text()(); // e.g. "Muttersprache", "B2"
 }
 
+class CvCustomItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get applicationId =>
+      integer().nullable().references(Applications, #id, onDelete: KeyAction.cascade)();
+  TextColumn get sectionName => text()(); // e.g. "Zertifikate", "Hobbys"
+  TextColumn get title => text()();
+  TextColumn get subtitle => text().nullable()();
+  TextColumn get dateRange => text().nullable()();
+  TextColumn get description => text().nullable()();
+  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+}
+
 @DriftDatabase(
   tables: [
     Applications,
@@ -182,6 +198,7 @@ class CvLanguages extends Table {
     CvEducations,
     CvSkills,
     CvLanguages,
+    CvCustomItems,
   ],
   daos: [
     ApplicationsDao,
@@ -210,7 +227,7 @@ class AppDatabase extends _$AppDatabase {
   CvDao get cvDao => CvDao(this);
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 14;
 
   @override
   MigrationStrategy get migration {
@@ -257,8 +274,16 @@ class AppDatabase extends _$AppDatabase {
         if (from < 11) {
           try { await m.addColumn(applications, applications.cvContent); } catch (e) { print(e); }
         }
+
         if (from < 12) {
           try { await m.addColumn(emails, emails.isSentByMe); } catch (e) { print('isSentByMe already exists'); }
+        }
+        if (from < 14) {
+          try { await m.createTable(cvWorkExperiences); } catch (e) { print(e); }
+          try { await m.createTable(cvEducations); } catch (e) { print(e); }
+          try { await m.createTable(cvSkills); } catch (e) { print(e); }
+          try { await m.createTable(cvLanguages); } catch (e) { print(e); }
+          try { await m.createTable(cvCustomItems); } catch (e) { print(e); }
         }
       },
     );
@@ -269,8 +294,28 @@ LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'career_center.sqlite'));
+
+    const storage = FlutterSecureStorage();
+    String? encryptionKey = await storage.read(key: 'db_encryption_key');
+    if (encryptionKey == null) {
+      final random = Random.secure();
+      final values = List<int>.generate(32, (i) => random.nextInt(256));
+      encryptionKey = base64UrlEncode(values);
+      await storage.write(key: 'db_encryption_key', value: encryptionKey);
+    }
+
     try {
-      return NativeDatabase.createInBackground(file);
+      try {
+        migrateToEncryptedIfNecessary(file, encryptionKey!);
+      } catch (e, stack) {
+        print('Migration failed: $e\n$stack');
+      }
+      return NativeDatabase.createInBackground(
+        file,
+        setup: (db) {
+          db.execute("PRAGMA key = '$encryptionKey';");
+        },
+      );
     } on Exception catch (_) {
       // If the database file is corrupted, back it up and create a fresh one
       final backupFile = File('${file.path}.backup');
@@ -278,8 +323,18 @@ LazyDatabase _openConnection() {
         file.copySync(backupFile.path);
         file.deleteSync();
       }
-      // Try again — if it still fails, let the error propagate
-      return NativeDatabase.createInBackground(file);
+      // Try again
+      return NativeDatabase.createInBackground(
+        file,
+        setup: (db) {
+          db.execute("PRAGMA key = '$encryptionKey';");
+        },
+      );
     }
   });
 }
+
+
+
+
+

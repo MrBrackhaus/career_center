@@ -8,6 +8,7 @@ class AiCorrectionService {
     String language,
     String baseUrl,
     String modelName,
+    String apiKey,
   ) async {
     if (text.trim().isEmpty) return null;
 
@@ -23,7 +24,7 @@ class AiCorrectionService {
           'Vous êtes un correcteur professionnel très méticuleux pour les candidatures en français. Votre SEULE tâche est de corriger les VÉRITABLES fautes d\'orthographe et de grammaire dans le texte suivant. Ne modifiez JAMAIS le style d\'écriture, ne remplacez PAS les mots correctement orthographiés par des synonymes et n\'inventez pas de faits ! Gardez le texte original exactement tel quel, à l\'exception des erreurs corrigées. Répondez EXCLUSIVEMENT avec le texte corrigé, sans introduction, sans commentaires, sans mise en forme :\n\n$text';
     } else if (language == 'es') {
       prompt =
-          'Eres un corrector profesional muy meticuloso para solicitudes de empleo en español. Tu ÚNICA tarea es corregir errores REALES de ortografía y gramática en el siguiente texto. ¡NUNCA cambies el estilo de escritura, NO reemplaces palabras correctamente escritas por sinónimos y no inventes hechos! Mantén el texto original exactamente como está, excepto por los errores corregidos. Responde EXCLUSIVAMENTE con el texto corregido, sin introducción, sin comentarios, sin formato:\n\n$text';
+          'Eres un corrector profesional muy meticuloso para solicitudes de empleo en español. Tu ÚNICA tarea es corregir errores REALES de ortografía y gramática en el siguiente texto. ¡NUNCA cambies el estilo de escritura, NO reemplaces palabras correctamente escritas por sinónimos y no inventes hechos! Mantén el texto original exactamente como está, excepto por los errores corregidos. Responde EXCLUSIVAMENTE con el texto corrigido, sin introducción, sin comentarios, sin formato:\n\n$text';
     } else {
       // Generic fallback
       prompt =
@@ -31,21 +32,49 @@ class AiCorrectionService {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'model': modelName,
-          'prompt': prompt,
-          'stream': false,
-        }),
-      ).timeout(const Duration(seconds: 30));
+      final isOpenAI = baseUrl.contains('openai.com') || apiKey.startsWith('sk-');
+      http.Response response;
+      
+      if (isOpenAI) {
+        final openAiUrl = baseUrl.contains('openai.com') 
+            ? '$baseUrl/v1/chat/completions'
+            : 'https://api.openai.com/v1/chat/completions';
+            
+        response = await http.post(
+          Uri.parse(openAiUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
+          },
+          body: jsonEncode({
+            'model': modelName.isEmpty ? 'gpt-4o-mini' : modelName,
+            'messages': [
+              {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.1,
+          }),
+        ).timeout(const Duration(seconds: 30));
+      } else {
+        response = await http.post(
+          Uri.parse(baseUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'model': modelName,
+            'prompt': prompt,
+            'stream': false,
+          }),
+        ).timeout(const Duration(seconds: 30));
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
-        return data['response']?.toString().trim();
+        if (isOpenAI) {
+          return data['choices'][0]['message']['content']?.toString().trim();
+        } else {
+          return data['response']?.toString().trim();
+        }
       } else {
-        throw Exception('AI Server returned status ${response.statusCode}');
+        throw Exception('AI Server returned status ${response.statusCode} - ${response.body}');
       }
     } on Exception catch (e) {
       throw Exception('KI-Fehler: $e');

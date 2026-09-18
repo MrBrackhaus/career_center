@@ -31,6 +31,11 @@ class ApplicationNotifier {
     await repository.updateApplication(dto);
   }
 
+  Future<void> updateApplicationStatus(int id, String status, {String? rejectionReason}) async {
+    final repository = _ref.read(applicationsRepositoryProvider);
+    await repository.updateApplicationStatus(id, status, rejectionReason: rejectionReason);
+  }
+
   Future<void> updateCoverLetterContent(int id, String content) async {
     final repository = _ref.read(applicationsRepositoryProvider);
     await repository.updateCoverLetterContent(id, content);

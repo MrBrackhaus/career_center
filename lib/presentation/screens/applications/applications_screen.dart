@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
 
@@ -216,7 +217,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                 if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Fehler beim Sync: $e'),
+                                    content: Text('Fehler beim Sync: ${friendlyError(e)}'),
                                     backgroundColor: Colors.red,
                                   ),
                                 );
@@ -505,7 +506,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => Center(child: Text('Fehler: $e')),
+              error: (e, st) => Center(child: Text('Fehler: ${friendlyError(e)}')),
             ),
           ),
         ],
@@ -1005,7 +1006,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Löschen: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Fehler beim Löschen: ${friendlyError(e)}'), backgroundColor: Colors.red),
           );
         }
       }
@@ -1047,7 +1048,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Status konnte nicht geändert werden: $e'),
+                content: Text('Status konnte nicht geändert werden: ${friendlyError(e)}'),
                 backgroundColor: Colors.red,
               ),
             );
@@ -1320,7 +1321,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       log('Zwischenablage-Auswertung fehlgeschlagen: $e', error: e, stackTrace: st);
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Fehler beim Auswerten der Zwischenablage: $e'),
+          content: Text('Fehler beim Auswerten der Zwischenablage: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1361,7 +1362,7 @@ class _JobDescriptionDialogState extends State<_JobDescriptionDialog> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fehler beim Auslesen: $e'),
+          content: Text('Fehler beim Auslesen: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );

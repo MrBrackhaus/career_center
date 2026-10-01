@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import 'database_provider.dart';
@@ -58,7 +59,7 @@ class TemplateEditorNotifier extends Notifier<EditorState> {
       return id;
     } catch (e) {
       if (ref.mounted) {
-        state = state.copyWith(isSaving: false, errorMessage: e.toString());
+        state = state.copyWith(isSaving: false, errorMessage: friendlyError(e));
       }
       rethrow;
     }

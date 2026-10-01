@@ -3,6 +3,7 @@
  * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
  * Siehe README.md.
  */
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -86,7 +87,7 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Fehler: $e'),
+          error: (e, _) => Text('Fehler: ${friendlyError(e)}'),
         ),
       ],
     );
@@ -104,7 +105,7 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Notiz konnte nicht gespeichert werden: $e'),
+          content: Text('Notiz konnte nicht gespeichert werden: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );

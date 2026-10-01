@@ -1,3 +1,4 @@
+import '../utils/error_text.dart';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -75,7 +76,7 @@ class AiCorrectionService {
         throw Exception('AI Server returned status ${response.statusCode} - ${response.body}');
       }
     } on Exception catch (e) {
-      throw Exception('KI-Fehler: $e');
+      throw Exception('KI-Fehler: ${friendlyError(e)}');
     }
   }
 }

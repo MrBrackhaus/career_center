@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -105,7 +106,7 @@ class _CompanionTokenCardState extends State<CompanionTokenCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Fehler: ${friendlyError(e)}'), backgroundColor: Colors.red),
         );
       }
     } finally {

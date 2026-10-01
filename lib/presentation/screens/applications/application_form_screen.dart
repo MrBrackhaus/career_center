@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import '../../../l10n/app_localizations.dart';
 
 /*
@@ -310,7 +311,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
       setState(() => _isAutoFilling = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('❌ Fehler beim Auslesen: $e'),
+          content: Text('❌ Fehler beim Auslesen: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -369,7 +370,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fehler beim Laden der Bewerbung: $e'),
+          content: Text('Fehler beim Laden der Bewerbung: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -416,7 +417,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Fehler: ${friendlyError(e)}'), backgroundColor: Colors.red),
       );
     }
   }
@@ -478,7 +479,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler beim Laden der URL: $e'), backgroundColor: Colors.red),
+            SnackBar(content: Text('Fehler beim Laden der URL: ${friendlyError(e)}'), backgroundColor: Colors.red),
           );
         }
       }
@@ -569,7 +570,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fehler beim PDF auslesen: $e'),
+          content: Text('Fehler beim PDF auslesen: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -602,7 +603,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim PDF auslesen: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Fehler beim PDF auslesen: ${friendlyError(e)}'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -858,7 +859,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Fehler beim Löschen: $e'),
+          content: Text('Fehler beim Löschen: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1325,7 +1326,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Speichern: $e'),
+            content: Text('Fehler beim Speichern: ${friendlyError(e)}'),
             backgroundColor: Colors.red,
           ),
         );

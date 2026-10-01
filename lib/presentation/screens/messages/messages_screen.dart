@@ -1,4 +1,5 @@
-﻿import '../../../domain/entities/application_entity.dart';
+﻿import 'package:career_center/core/utils/error_text.dart';
+import '../../../domain/entities/application_entity.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -110,11 +111,11 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Fehler: $e')),
+          error: (e, _) => Center(child: Text('Fehler: ${friendlyError(e)}')),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Fehler: $e')),
+      error: (e, _) => Center(child: Text('Fehler: ${friendlyError(e)}')),
     );
   }
 
@@ -128,7 +129,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 40),
             const SizedBox(height: 8),
-            Text('E-Mails konnten nicht geladen werden: $e',
+            Text('E-Mails konnten nicht geladen werden: ${friendlyError(e)}',
                 textAlign: TextAlign.center),
             const SizedBox(height: 8),
             OutlinedButton.icon(

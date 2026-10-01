@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -89,7 +90,7 @@ class _CvEducationDialogState extends ConsumerState<CvEducationDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler bei der KI-Korrektur: $e')),
+          SnackBar(content: Text('Fehler bei der KI-Korrektur: ${friendlyError(e)}')),
         );
       }
     } finally {

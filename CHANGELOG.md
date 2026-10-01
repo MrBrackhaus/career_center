@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.3] - 2026-10-01
+
+### Fixed
+- No fake placeholder sender/recipient data ("Dein Name", "Musterstraße 1", …) in the editor/PDF.
+- User-facing errors via `friendlyError()`: no "Exception:" prefix, readable network errors (AI, IMAP, …).
+- Jobcenter report falls back to the first contact when no contact person is set.
+- "Leeres Dokument" for a CV opens the editor in CV mode.
+- IMAP "Testen" gives feedback on empty fields / failed connection; password mask only when a password is stored.
+- Dashboard chart month labels localized.
+
 ## [0.9.2] - 2026-10-01
 
 ### Fixed

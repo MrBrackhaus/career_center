@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -121,7 +122,7 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
         '${_requestTimeout.inSeconds} Sekunden geantwortet.',
       );
     } catch (e) {
-      _addError('Verbindungsfehler: $e');
+      _addError(friendlyError(e));
     } finally {
       if (mounted) {
         setState(() {

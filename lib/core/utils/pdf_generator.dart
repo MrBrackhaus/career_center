@@ -27,6 +27,7 @@ Future<Uint8List> _buildPdf(Map<String, dynamic> data) async {
   final userBirthdate = data['userBirthdate'] as String;
   final userEmail = data['userEmail'] as String;
   final userPhone = data['userPhone'] as String;
+  final contacts = (data['contacts'] as Map<int, String>?) ?? const {};
 
   pdf.addPage(
     pw.MultiPage(
@@ -82,7 +83,11 @@ Future<Uint8List> _buildPdf(Map<String, dynamic> data) async {
               cellAlignment: pw.Alignment.centerLeft,
               headers: JobcenterReport.headers,
               data: applications
-                  .map((app) => JobcenterReport.row(app, now: now))
+                  .map((app) => JobcenterReport.row(
+                        app,
+                        now: now,
+                        fallbackContact: contacts[app.id],
+                      ))
                   .toList(),
             ),
         ];
@@ -108,6 +113,7 @@ class PdfGenerator {
     SettingsRepository settingsRepository, {
     DateTime? from,
     DateTime? to,
+    Map<int, String> contacts = const {},
   }) async {
     Future<String> setting(String key) async =>
         ((await settingsRepository.getSettingByKey(key))?.value ?? '').trim();
@@ -155,6 +161,7 @@ class PdfGenerator {
       'userEmail': userEmail,
       'userPhone': userPhone,
       'userBirthdate': userBirthdate,
+      'contacts': contacts,
     });
 
     final file = File(saveLocation.path);

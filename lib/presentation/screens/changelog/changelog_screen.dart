@@ -11,6 +11,25 @@ class ChangelogScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            'Version 0.9.3',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 1. Oktober 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🐞 Fehlerbehebungen', [
+            'Anschreiben und PDF enthalten keine erfundenen Platzhalter mehr („Dein Name“, „Musterstraße 1“, „0123-456789“) – fehlende Angaben bleiben leer.',
+            'Verständliche Fehlermeldungen: kein „Exception:“ mehr; ist der KI- oder Mailserver nicht erreichbar, steht das im Klartext da.',
+            'Jobcenter-Nachweis: Ist an der Bewerbung kein Ansprechpartner eingetragen, wird der erste Kontakt verwendet.',
+            '„Neuer Lebenslauf → Leeres Dokument“ öffnet direkt im Lebenslauf-Modus.',
+            'E-Mail-Scanner: „Testen“ meldet fehlende Angaben und fehlgeschlagene Verbindungen; die Passwort-Maske erscheint nur, wenn ein Passwort gespeichert ist.',
+            'Dashboard: Monatsnamen im Diagramm in der Sprache der App.',
+          ]),
+          const Divider(height: 48),
+          const Text(
             'Version 0.9.2',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),

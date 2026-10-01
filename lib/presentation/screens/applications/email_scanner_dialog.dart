@@ -3,6 +3,7 @@
  * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
  * Siehe README.md.
  */
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -399,7 +400,7 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                               } catch (e) {
                                 messenger.showSnackBar(
                                   SnackBar(
-                                    content: Text('Import fehlgeschlagen: $e'),
+                                    content: Text('Import fehlgeschlagen: ${friendlyError(e)}'),
                                     backgroundColor: Colors.red,
                                     duration: const Duration(seconds: 6),
                                   ),

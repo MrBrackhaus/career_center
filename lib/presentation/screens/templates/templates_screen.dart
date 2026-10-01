@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:io';
@@ -176,7 +177,7 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
     );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Fehler: $e')),
+      error: (e, _) => Center(child: Text('Fehler: ${friendlyError(e)}')),
     );
   }
 

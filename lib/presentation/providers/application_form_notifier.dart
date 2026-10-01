@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -119,7 +120,7 @@ class ApplicationFormNotifier extends Notifier<ExtractionState> {
 
       state = state.copyWith(isLoading: false, loadedWebContent: body, result: finalResult);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: friendlyError(e));
       rethrow;
     }
   }
@@ -199,7 +200,7 @@ class ApplicationFormNotifier extends Notifier<ExtractionState> {
       final result = await _intelligenceService.analyzeDocument(text, source: DocumentSource.pdf);
       state = state.copyWith(isLoading: false, result: result);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: friendlyError(e));
       rethrow;
     }
   }

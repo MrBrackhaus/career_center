@@ -124,7 +124,13 @@ class JobcenterReport {
   }
 
   /// Eine Tabellenzeile (in der Reihenfolge von [headers]).
-  static List<String> row(ApplicationEntity app, {DateTime? now}) {
+  /// [fallbackContact] wird genutzt, wenn an der Bewerbung selbst kein
+  /// Ansprechpartner hinterlegt ist (z. B. aus der Kontakte-Liste).
+  static List<String> row(
+    ApplicationEntity app, {
+    DateTime? now,
+    String? fallbackContact,
+  }) {
     final companyBlock = [
       app.company,
       if ((app.address ?? '').trim().isNotEmpty) app.address!.trim(),
@@ -136,7 +142,11 @@ class JobcenterReport {
     return [
       app.appliedDate != null ? formatDate(app.appliedDate!) : '-',
       companyBlock,
-      contactBlock.isNotEmpty ? contactBlock : '-',
+      contactBlock.isNotEmpty
+          ? contactBlock
+          : ((fallbackContact ?? '').trim().isNotEmpty
+              ? fallbackContact!.trim()
+              : '-'),
       app.position,
       applicationMethod(app),
       activities(app, now: now),

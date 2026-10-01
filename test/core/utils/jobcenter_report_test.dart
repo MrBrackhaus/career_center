@@ -57,6 +57,13 @@ void main() {
   });
 
   group('JobcenterReport Texte', () {
+    test('Ansprechpartner aus Kontakten, wenn an der Bewerbung keiner steht', () {
+      final row = JobcenterReport.row(_app(1, applied: DateTime(2026, 9, 1)),
+          fallbackContact: 'Frau Beispiel');
+      expect(row[2], 'Frau Beispiel');
+      expect(JobcenterReport.row(_app(1, applied: DateTime(2026, 9, 1)))[2], '-');
+    });
+
     final now = DateTime(2026, 10, 1, 12);
 
     test('Nachgefasst nur für vergangene Daten', () {

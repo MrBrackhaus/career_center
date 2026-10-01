@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import '../../../../l10n/app_localizations.dart';
 
 /*
@@ -65,7 +66,7 @@ class ContactsWidget extends ConsumerWidget {
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (e, _) => Text('Fehler: $e'),
+          error: (e, _) => Text('Fehler: ${friendlyError(e)}'),
         ),
       ],
     );

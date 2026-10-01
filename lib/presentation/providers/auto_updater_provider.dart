@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/auto_updater_service.dart';
@@ -98,7 +99,7 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
     } catch (e) {
       if (!ref.mounted) return;
       state = isManual
-          ? state.copyWith(status: UpdaterStatus.error, errorMessage: e.toString())
+          ? state.copyWith(status: UpdaterStatus.error, errorMessage: friendlyError(e))
           : state.copyWith(status: UpdaterStatus.idle);
     }
   }
@@ -128,7 +129,7 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
         state = state.copyWith(status: UpdaterStatus.error, errorMessage: 'Download fehlgeschlagen');
       }
     } on UpdateIntegrityException catch (e) {
-      state = state.copyWith(status: UpdaterStatus.error, errorMessage: e.toString());
+      state = state.copyWith(status: UpdaterStatus.error, errorMessage: friendlyError(e));
     } catch (e) {
       state = state.copyWith(status: UpdaterStatus.error, errorMessage: 'Download fehlgeschlagen: $e');
     }

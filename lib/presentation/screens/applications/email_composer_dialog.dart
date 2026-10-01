@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -177,7 +178,7 @@ $name
       log('An error occurred: $e', error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler bei Entwurf-Generierung: $e')),
+          SnackBar(content: Text('Fehler bei Entwurf-Generierung: ${friendlyError(e)}')),
         );
       }
     } finally {
@@ -266,7 +267,7 @@ $name
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Fehler beim Senden: $e'),
+            content: Text('Fehler beim Senden: ${friendlyError(e)}'),
             backgroundColor: Colors.red,
           ),
         );

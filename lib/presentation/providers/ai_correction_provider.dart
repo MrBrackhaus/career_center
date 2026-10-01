@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/ai_correction_service.dart';
@@ -53,7 +54,7 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
       state = state.copyWith(isCorrecting: false);
       return corrected;
     } on Exception catch (e) {
-      state = state.copyWith(isCorrecting: false, error: e.toString());
+      state = state.copyWith(isCorrecting: false, error: friendlyError(e));
       return null;
     }
   }

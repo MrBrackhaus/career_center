@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:io';
 import 'dart:isolate';
 
@@ -132,6 +133,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  /// Zeigt die Passwort-Maske nur, wenn wirklich ein Passwort gespeichert ist.
+  Future<void> _loadImapPasswordMask() async {
+    try {
+      final stored = await ImapService.getPassword();
+      if (mounted &&
+          stored.isNotEmpty &&
+          _imapPasswordController.text.isEmpty) {
+        _imapPasswordController.text = '********';
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadSettings() async {
     final db = ref.read(databaseProvider);
     final dao = db.settingsDao;
@@ -201,11 +214,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _smtpServerController.text = smtpServerSetting?.value ?? '';
         _smtpPortController.text = smtpPortSetting?.value ?? '465';
         _imapEmailController.text = imapEmailSetting?.value ?? '';
-        _imapPasswordController.text = '********'; 
+        _imapPasswordController.text = '';
         _lastSyncDate = _formatLastSync(lastSyncSetting?.value);
 
         _isLoading = false;
       });
+      _loadImapPasswordMask();
     }
   }
 
@@ -251,7 +265,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       await SecureSettingsService.setAiApiKey(_apiKeyController.text.trim()).timeout(_secureStorageTimeout);
     } catch (e) {
-      apiKeyError = e.toString();
+      apiKeyError = friendlyError(e);
     }
 
     if (_imapPasswordController.text != '********' && _imapPasswordController.text.isNotEmpty) {
@@ -326,7 +340,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: ${friendlyError(e)}'), backgroundColor: Colors.red));
     }
   }
 
@@ -499,7 +513,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           message: 'Beim Ersetzen der Datenbank ist ein Fehler aufgetreten:\n$e\n\nBitte beende die App und starte sie neu.',
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: ${friendlyError(e)}'), backgroundColor: Colors.red));
       }
     }
   }
@@ -837,16 +851,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 final port = int.tryParse(_imapPortController.text) ?? 993;
                 final email = _imapEmailController.text;
                 final pass = _imapPasswordController.text;
-                if (server.isEmpty || email.isEmpty || pass.isEmpty) return;
+                if (server.isEmpty || email.isEmpty || pass.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Bitte Server, E-Mail und Passwort ausfüllen.')));
+                  return;
+                }
                 try {
                   String actualPass = pass == '********' ? await ImapService.getPassword() : pass;
                   final client = await ref.read(imapServiceProvider).connect(server, port, email, actualPass);
                   if (client != null) {
                     await client.disconnect();
                     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erfolgreich verbunden!'), backgroundColor: Colors.green));
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verbindung fehlgeschlagen. Bitte Zugangsdaten prüfen.'), backgroundColor: Colors.red));
                   }
                 } catch (e) {
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: ${friendlyError(e)}'), backgroundColor: Colors.red));
                 }
               },
               icon: const Icon(Icons.cable),

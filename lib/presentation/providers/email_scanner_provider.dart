@@ -3,6 +3,7 @@
  * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
  * Siehe README.md.
  */
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/imap_service.dart';
@@ -91,7 +92,7 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
       );
     } catch (e) {
       if (!ref.mounted) return;
-      state = state.copyWith(isLoading: false, error: e.toString());
+      state = state.copyWith(isLoading: false, error: friendlyError(e));
     }
   }
 

@@ -3,6 +3,8 @@
  * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
  * Siehe README.md.
  */
+import 'package:drift/drift.dart' show OrderingTerm;
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -25,6 +27,7 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
   String _userName = '';
   late DateTimeRange _range;
   bool _isExporting = false;
+  Map<int, String> _contacts = const {};
 
   @override
   void initState() {
@@ -32,6 +35,28 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
     final month = JobcenterReport.currentMonth();
     _range = DateTimeRange(start: month.from, end: month.to);
     _loadUserName();
+    _loadContacts();
+  }
+
+  /// Erster Kontakt je Bewerbung als Ersatz für einen fehlenden
+  /// Ansprechpartner im Nachweis.
+  Future<void> _loadContacts() async {
+    try {
+      final db = ref.read(databaseProvider);
+      final rows = await (db.select(db.contacts)
+            ..orderBy([(t) => OrderingTerm.asc(t.id)]))
+          .get();
+      final map = <int, String>{};
+      for (final c in rows) {
+        if (map.containsKey(c.applicationId)) continue;
+        final text = [c.name, c.email, c.phone]
+            .where((v) => (v ?? '').trim().isNotEmpty)
+            .map((v) => v!.trim())
+            .join('\n');
+        if (text.isNotEmpty) map[c.applicationId] = text;
+      }
+      if (mounted) setState(() => _contacts = map);
+    } catch (_) {}
   }
 
   Future<void> _loadUserName() async {
@@ -78,6 +103,7 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
         ref.read(settingsRepositoryProvider),
         from: _range.start,
         to: _range.end,
+        contacts: _contacts,
       );
       if (saved) {
         messenger.showSnackBar(
@@ -86,7 +112,7 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
       }
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('PDF konnte nicht erstellt werden: $e')),
+        SnackBar(content: Text('PDF konnte nicht erstellt werden: ${friendlyError(e)}')),
       );
     } finally {
       if (mounted) setState(() => _isExporting = false);
@@ -184,7 +210,11 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
                           DataColumn(label: Text(h.toUpperCase())),
                       ],
                       rows: applications.map((app) {
-                        final cells = JobcenterReport.row(app, now: now);
+                        final cells = JobcenterReport.row(
+                          app,
+                          now: now,
+                          fallbackContact: _contacts[app.id],
+                        );
                         return DataRow(
                           cells: [for (final c in cells) DataCell(Text(c))],
                         );

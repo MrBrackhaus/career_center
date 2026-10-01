@@ -1,3 +1,4 @@
+import '../utils/error_text.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/interview_message.dart';
@@ -98,7 +99,7 @@ REGELN:
         } catch (_) {}
       }
     } catch (e) {
-      yield 'Fehler bei der Verbindung zum KI-Server: $e';
+      yield 'Fehler bei der Verbindung zum KI-Server: ${friendlyError(e)}';
     } finally {
       client.close();
     }

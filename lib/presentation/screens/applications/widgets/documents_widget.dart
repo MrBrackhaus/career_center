@@ -1,4 +1,5 @@
-﻿import '../../../../l10n/app_localizations.dart';
+﻿import 'package:career_center/core/utils/error_text.dart';
+import '../../../../l10n/app_localizations.dart';
 
 /*
  * Bewerbungszentrale (Career Center)
@@ -141,7 +142,7 @@ class DocumentsWidget extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Text('Fehler: $e'),
+          error: (e, _) => Text('Fehler: ${friendlyError(e)}'),
         ),
       ],
     );
@@ -181,7 +182,7 @@ class DocumentsWidget extends ConsumerWidget {
       log('Dokument löschen fehlgeschlagen: $e', error: e, stackTrace: st);
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Fehler beim Löschen: $e'),
+          content: Text('Fehler beim Löschen: ${friendlyError(e)}'),
           backgroundColor: Colors.red,
         ),
       );

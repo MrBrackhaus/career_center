@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/ai_cover_letter_service.dart';
@@ -60,7 +61,7 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
       return result;
     } catch (e) {
       if (ref.mounted) {
-        state = state.copyWith(isLoading: false, error: e.toString());
+        state = state.copyWith(isLoading: false, error: friendlyError(e));
       }
       return null;
     }

@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -68,7 +69,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, st) => Scaffold(body: Center(child: Text('Fehler: $e'))),
+      error: (e, st) => Scaffold(body: Center(child: Text('Fehler: ${friendlyError(e)}'))),
     );
   }
 
@@ -431,7 +432,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                               ); // e.g., '2026-08'
                               final date = DateTime.tryParse('$rawKey-01');
                               final label = date != null
-                                  ? DateFormat('MMM yyyy').format(date)
+                                  ? DateFormat('MMM yyyy', Localizations.localeOf(context).languageCode).format(date)
                                   : rawKey;
                               return Padding(
                                 padding: const EdgeInsets.only(top: 8.0),

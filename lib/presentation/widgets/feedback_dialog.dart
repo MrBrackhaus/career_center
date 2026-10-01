@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -134,7 +135,7 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Fehler beim Senden: $e')));
+            .showSnackBar(SnackBar(content: Text('Fehler beim Senden: ${friendlyError(e)}')));
       }
     } finally {
       client.close(force: true);

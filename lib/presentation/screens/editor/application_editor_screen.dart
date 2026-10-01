@@ -1,3 +1,4 @@
+import 'package:career_center/core/utils/error_text.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -459,6 +460,7 @@ class _ApplicationEditorScreenState
   void initState() {
     super.initState();
     _templateId = widget.template?.id;
+    _isCvMode = widget.template == null && widget.initialType == 'lebenslauf';
     _applicationNotifier = ref.read(applicationNotifierProvider);
     _templateEditorNotifier = ref.read(templateEditorProvider.notifier);
     _settingsRepository = ref.read(settingsRepositoryProvider);
@@ -490,19 +492,22 @@ class _ApplicationEditorScreenState
       );
       if (!mounted) return;
 
-      _userName = nameSetting?.value ?? 'Dein Name';
-      _userEmail = emailSetting?.value ?? 'email@beispiel.de';
-      _userPhone = phoneSetting?.value ?? '0123-456789';
-      _userAddress = addressSetting?.value ?? 'Musterstraße 1';
-      _userZip = zipSetting?.value ?? '12345';
-      _userCity = citySetting?.value ?? 'Musterstadt';
+      _userName = nameSetting?.value ?? '';
+      _userEmail = emailSetting?.value ?? '';
+      _userPhone = phoneSetting?.value ?? '';
+      _userAddress = addressSetting?.value ?? '';
+      _userZip = zipSetting?.value ?? '';
+      _userCity = citySetting?.value ?? '';
       _userProfession = '';
 
       _headerUserNameCtrl.text = _userName;
       _headerUserProfessionCtrl.text = _userProfession;
       _headerUserEmailCtrl.text = _userEmail;
       _headerUserPhoneCtrl.text = _userPhone;
-      _headerUserAddressCtrl.text = '$_userAddress\n$_userZip $_userCity';
+      _headerUserAddressCtrl.text = [
+        _userAddress.trim(),
+        '$_userZip $_userCity'.trim(),
+      ].where((l) => l.isNotEmpty).join('\n');
 
       // Fallback-Kette für das Lebenslauf-Profil:
       // Einstellungen -> Master-Profil -> gespeichertes Profil der Bewerbung.
@@ -548,7 +553,7 @@ class _ApplicationEditorScreenState
           _headerCompanyNameCtrl.text = app.company;
           _headerContactNameCtrl.text = app.contactName ?? 'Personalabteilung';
           _headerCompanyAddressCtrl.text =
-              app.address ?? 'Musterstraße 1, 12345 Stadt';
+              app.address ?? '';
 
           final cvContent = app.cvContent;
           final stored = _decodeJsonMap(cvContent);
@@ -1081,7 +1086,7 @@ class _ApplicationEditorScreenState
                   ),
                 ),
                 loading: () => const SizedBox(width: 794, height: 1123, child: Center(child: CircularProgressIndicator())),
-                error: (e, s) => SizedBox(width: 794, height: 1123, child: Center(child: Text('Fehler: $e'))),
+                error: (e, s) => SizedBox(width: 794, height: 1123, child: Center(child: Text('Fehler: ${friendlyError(e)}'))),
               ),
             ),
           ),
@@ -1282,7 +1287,7 @@ class _ApplicationEditorScreenState
                       ],
                     ),
                     loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, s) => Center(child: Text('Fehler: $e')),
+                    error: (e, s) => Center(child: Text('Fehler: ${friendlyError(e)}')),
                   ),
                   _buildDesignTab(),
                 ],

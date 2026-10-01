@@ -19,7 +19,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:developer' show log;
 
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 
 import 'package:path_provider/path_provider.dart';
@@ -245,42 +244,37 @@ class DocumentIntelligenceService {
   // ── Modell-Persistenz ─────────────────────────────────────────────────────
 
   /// Pfad zur lokalen Modell-Datei.
+  ///
+  /// Versioniert, damit ältere Modell-Dateien (die noch aus den alten,
+  /// nicht anonymisierten Trainingsdaten abgeleitet wurden) nicht mehr geladen werden.
   Future<String> get _modelPath async {
     final dir = await getApplicationDocumentsDirectory();
-    return p.join(dir.path, 'jobtracker_ml_model.json');
+    return p.join(dir.path, 'jobtracker_ml_model_v2.json');
   }
+
+  /// Name der alten, nicht mehr verwendeten Modell-Datei.
+  static const _legacyModelFileName = 'jobtracker_ml_model.json';
 
   /// Lädt ein lokal gespeichertes User-Modell.
   Future<NaiveBayesClassifier?> _loadUserModel() async {
     try {
-      final path = await _modelPath;
-      final file = File(path);
+      final dir = await getApplicationDocumentsDirectory();
 
-      // Load user customized model if it exists
-      if (await file.exists()) {
-        final length = await file.length();
-        if (length < 1000000) {
-          // If it's less than 1MB, it's the old tiny one. Delete it!
-          await file.delete();
-        } else {
-          final jsonStr = await file.readAsString();
-          final jsonData = await compute(jsonDecode, jsonStr) as Map<String, dynamic>;
-          _initialized = true;
-          return NaiveBayesClassifier.fromJson(jsonData);
-        }
+      // Alte Modell-Datei entfernen: sie enthält Tokens aus den früheren,
+      // nicht anonymisierten Trainingsdaten.
+      final legacyFile = File(p.join(dir.path, _legacyModelFileName));
+      if (await legacyFile.exists()) {
+        await legacyFile.delete();
       }
 
-      // Load massive pretrained dataset from assets
-      try {
-        final assetStr = await rootBundle.loadString(
-          'assets/jobtracker_ml_model.json',
-        );
-        final jsonData = await compute(jsonDecode, assetStr) as Map<String, dynamic>;
+      final file = File(await _modelPath);
+      if (await file.exists()) {
+        final jsonStr = await file.readAsString();
+        final jsonData = await compute(jsonDecode, jsonStr) as Map<String, dynamic>;
         _initialized = true;
         return NaiveBayesClassifier.fromJson(jsonData);
-      } catch (assetErr) {
-        return null; // fallback to basic PretrainedModel if asset is missing
       }
+      return null;
     } on Exception catch (_) {
       return null;
     }

@@ -215,21 +215,16 @@ class _ApplicationEditorScreenState
     }
   }
 
-  final _cvNameCtrl = TextEditingController(text: 'Michael Kurz');
-  final _cvTitleCtrl = TextEditingController(
-    text: 'Fachinformatiker für Systemintegration',
-  );
-  final _cvIntroCtrl = TextEditingController(
-    text: 'Lösungsorientierter Fachinformatiker...',
-  );
-  final _cvEmailCtrl = TextEditingController(text: 'bewerbung.kurz@gmail.com');
-  final _cvPhoneCtrl = TextEditingController(text: '0157 / 3 7879 672');
-  final _cvAddressCtrl = TextEditingController(
-    text: 'Breyeller Str. 114, 41334 Nettetal',
-  );
-  final _cvBirthplaceCtrl = TextEditingController(text: 'Berlin / Zehlendorf');
-  final _cvBirthdateCtrl = TextEditingController(text: '06.12.1984');
-  final _cvMaritalStatusCtrl = TextEditingController(text: 'Ledig');
+  // Lebenslauf-Felder starten leer und werden aus dem Profil (Einstellungen) vorbelegt.
+  final _cvNameCtrl = TextEditingController();
+  final _cvTitleCtrl = TextEditingController();
+  final _cvIntroCtrl = TextEditingController();
+  final _cvEmailCtrl = TextEditingController();
+  final _cvPhoneCtrl = TextEditingController();
+  final _cvAddressCtrl = TextEditingController();
+  final _cvBirthplaceCtrl = TextEditingController();
+  final _cvBirthdateCtrl = TextEditingController();
+  final _cvMaritalStatusCtrl = TextEditingController();
 
 
 
@@ -256,6 +251,7 @@ class _ApplicationEditorScreenState
     final addressSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userAddress');
     final zipSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userZip');
     final citySetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userCity');
+    final birthdateSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('userBirthdate');
 
     if (mounted) {
       setState(() {
@@ -265,13 +261,22 @@ class _ApplicationEditorScreenState
         _userAddress = addressSetting?.value ?? 'Musterstraße 1';
         _userZip = zipSetting?.value ?? '12345';
         _userCity = citySetting?.value ?? 'Musterstadt';
-        _userProfession = 'FACHINFORMATIKER FÜR SYSTEMINTEGRATION';
+        _userProfession = '';
 
         _headerUserNameCtrl.text = _userName;
         _headerUserProfessionCtrl.text = _userProfession;
         _headerUserEmailCtrl.text = _userEmail;
         _headerUserPhoneCtrl.text = _userPhone;
         _headerUserAddressCtrl.text = '$_userAddress\n$_userZip $_userCity';
+
+        _cvNameCtrl.text = nameSetting?.value ?? '';
+        _cvEmailCtrl.text = emailSetting?.value ?? '';
+        _cvPhoneCtrl.text = phoneSetting?.value ?? '';
+        _cvAddressCtrl.text = [
+          addressSetting?.value ?? '',
+          '${zipSetting?.value ?? ''} ${citySetting?.value ?? ''}'.trim(),
+        ].where((e) => e.isNotEmpty).join(', ');
+        _cvBirthdateCtrl.text = birthdateSetting?.value ?? '';
 
         _headerDateCtrl.text =
             "${_userCity.isNotEmpty ? _userCity : 'Stadt'}, den ${DateTime.now().day.toString().padLeft(2, '0')}.${DateTime.now().month.toString().padLeft(2, '0')}.${DateTime.now().year}";

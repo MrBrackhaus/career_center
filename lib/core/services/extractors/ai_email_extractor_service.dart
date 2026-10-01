@@ -192,9 +192,9 @@ Text:
         if (position != null && badWords.any((w) => position!.toLowerCase().contains(w))) position = null;
         if (parsed['status'] == 'unbekannt') parsed['status'] = null;
         
-        // Verhindere, dass der eigene Name als Firmenname genommen wird
-        final contactNameLower = (parsed['contact_name']?.toString() ?? '').toLowerCase();
-        if (company != null && company.toLowerCase() == 'michael kurz') company = null;
+        // Verhindere, dass der eigene Name (aus dem Profil) als Firmenname genommen wird
+        final ownName = (await settings.getSettingByKey('userName'))?.value.trim().toLowerCase() ?? '';
+        if (company != null && ownName.isNotEmpty && company.toLowerCase() == ownName) company = null;
         
         return AiEmailExtractionResult(
           isApplicationRelated: parsed['is_application_related'] == true,

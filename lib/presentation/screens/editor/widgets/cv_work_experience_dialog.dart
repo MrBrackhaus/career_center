@@ -68,7 +68,7 @@ class _CvWorkExperienceDialogState extends ConsumerState<CvWorkExperienceDialog>
   }
 
   String _formatDate(DateTime? date) {
-    if (date == null) return 'Select Date';
+    if (date == null) return 'Datum wählen';
     return '${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
@@ -187,7 +187,7 @@ class _CvWorkExperienceDialogState extends ConsumerState<CvWorkExperienceDialog>
                           )
                         : IconButton(
                             icon: const Icon(Icons.auto_awesome, color: Colors.deepPurple),
-                            tooltip: 'Improve with AI',
+                            tooltip: 'Mit KI verbessern',
                             onPressed: _improveDescriptionWithAi,
                           ),
                 ],
@@ -195,7 +195,7 @@ class _CvWorkExperienceDialogState extends ConsumerState<CvWorkExperienceDialog>
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
-                  hintText: 'Describe your responsibilities, achievements, etc.',
+                  hintText: 'Aufgaben, Verantwortung, Erfolge …',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 5,

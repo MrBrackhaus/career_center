@@ -159,9 +159,9 @@ $greeting,
 
 hiermit bewerbe ich mich mit großem Interesse auf die Position als $position bei $company.
 
-In meiner bisherigen Laufbahn konnte ich bereits wertvolle Erfahrungen sammeln, insbesondere in den Bereichen: $skills. Ich bin davon überzeugt, dass ich mit diesen Qualifikationen einen positiven Beitrag zu Ihrem Team leisten kann.
+In meiner bisherigen Laufbahn konnte ich bereits wertvolle Erfahrungen sammeln${skills.trim().isEmpty ? '' : ', insbesondere in den Bereichen: $skills'}. Ich bin davon überzeugt, dass ich mit diesen Qualifikationen einen positiven Beitrag zu Ihrem Team leisten kann.
 
-Meine vollständigen Bewerbungsunterlagen (inkl. Lebenslauf) befinden sich im Anhang dieser E-Mail.
+Meine vollständigen Bewerbungsunterlagen sende ich Ihnen gerne im Anhang bzw. auf Anfrage zu.
 
 Ich freue mich sehr über die Möglichkeit eines persönlichen Gesprächs.
 

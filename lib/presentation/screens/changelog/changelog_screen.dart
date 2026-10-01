@@ -11,6 +11,25 @@ class ChangelogScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            'Version 0.9.2',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 1. Oktober 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🐞 Fehlerbehebungen', [
+            'Kontakt hinzufügen bei einer Bewerbung führt nicht mehr zu einem grauen/roten Bildschirm.',
+            'Wiedervorlage im Kalender-Export (.ics) ist jetzt ein ganztägiger Termin statt 00:00 Uhr.',
+            'Statusfilter zeigt deutsche Bezeichnungen statt interner Werte.',
+            'Textbausteine werden mit Leerzeichen eingefügt, wenn sie an ein Wort anschließen.',
+            'Lebenslauf-Dialoge vollständig auf Deutsch.',
+            'E-Mail-Entwurf: kein leeres „in den Bereichen: .“ mehr ohne Skills, kein falscher Hinweis auf einen Lebenslauf-Anhang.',
+          ]),
+          const Divider(height: 48),
+          const Text(
             'Version 0.9.1',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),

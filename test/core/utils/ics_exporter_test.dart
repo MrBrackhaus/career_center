@@ -71,8 +71,8 @@ void main() {
       expect(uidA, 'careercenter-7-followup@bewerbungszentrale');
       expect(uidA, uidB);
       expect(a, contains('DTSTAMP:20261001T120000Z'));
-      expect(a, contains('DTSTART:20261012T080000Z'));
-      expect(a, contains('DTEND:20261012T090000Z'));
+      expect(a, contains('DTSTART;VALUE=DATE:20261012'));
+      expect(a, contains('DTEND;VALUE=DATE:20261013'));
     });
 
     test('Einzel-Export hat dieselbe UID wie der Gesamt-Export', () {

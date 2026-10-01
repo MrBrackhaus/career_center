@@ -66,7 +66,7 @@ class _CvEducationDialogState extends ConsumerState<CvEducationDialog> {
   }
 
   String _formatDate(DateTime? date) {
-    if (date == null) return 'Select Date';
+    if (date == null) return 'Datum wählen';
     return '${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
@@ -159,14 +159,14 @@ class _CvEducationDialogState extends ConsumerState<CvEducationDialog> {
                         ? const CircularProgressIndicator()
                         : IconButton(
                             icon: const Icon(Icons.auto_awesome, color: Colors.deepPurple),
-                            tooltip: 'Improve with AI',
+                            tooltip: 'Mit KI verbessern',
                             onPressed: _improveDescriptionWithAi,
                           ),
                 ],
               ),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(hintText: 'Describe your studies', border: OutlineInputBorder()),
+                decoration: const InputDecoration(hintText: 'Schwerpunkte, Abschluss, Note …', border: OutlineInputBorder()),
                 maxLines: 5,
               ),
             ],

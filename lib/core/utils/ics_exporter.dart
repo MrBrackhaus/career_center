@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 /// Exportiert Wiedervorlage-/Interview-Termine als iCalendar-Datei (RFC 5545).
 class IcsExporter {
   static final _dateFormat = DateFormat("yyyyMMdd'T'HHmmss'Z'");
+  static final _dayFormat = DateFormat('yyyyMMdd');
 
   /// Maskiert Text für iCalendar-TEXT-Werte (RFC 5545, 3.3.11):
   /// Backslash, Semikolon, Komma und Zeilenumbrüche.
@@ -58,14 +59,16 @@ class IcsExporter {
     required String summary,
     required DateTime now,
   }) {
-    final start = app.followupDate!.toUtc();
-    final end = start.add(const Duration(hours: 1)); // Default 1 hour
+    // Ganztägiger Termin am (lokalen) Follow-up-Datum.
+    final local = app.followupDate!.toLocal();
+    final day = DateTime(local.year, local.month, local.day);
+    final nextDay = DateTime(day.year, day.month, day.day + 1);
 
     _writeLine(buffer, 'BEGIN:VEVENT');
     _writeLine(buffer, 'UID:${uidFor(app.id, 'followup')}');
     _writeLine(buffer, 'DTSTAMP:${_dateFormat.format(now.toUtc())}');
-    _writeLine(buffer, 'DTSTART:${_dateFormat.format(start)}');
-    _writeLine(buffer, 'DTEND:${_dateFormat.format(end)}');
+    _writeLine(buffer, 'DTSTART;VALUE=DATE:${_dayFormat.format(day)}');
+    _writeLine(buffer, 'DTEND;VALUE=DATE:${_dayFormat.format(nextDay)}');
     _writeLine(buffer, 'SUMMARY:${escapeText(summary)}');
 
     final description = StringBuffer(

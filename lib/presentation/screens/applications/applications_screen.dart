@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/utils/ics_exporter.dart';
+import '../../../core/utils/jobcenter_report.dart';
 
 import 'package:go_router/go_router.dart';
 import 'package:career_center/l10n/app_localizations.dart';
@@ -291,7 +292,11 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                       ) {
                         return DropdownMenuItem(
                           value: status,
-                          child: Text(status),
+                          child: Text(
+                            status == loc.appFilterAll
+                                ? status
+                                : JobcenterReport.statusLabel(status),
+                          ),
                         );
                       }).toList(),
                       onChanged: (value) => setState(

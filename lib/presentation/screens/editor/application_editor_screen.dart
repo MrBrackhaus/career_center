@@ -1711,13 +1711,19 @@ class _ApplicationEditorScreenState
   }
 
   void _insertBlock(TemplateEntity template) {
-    final text = _blockPlainText(template);
+    var text = _blockPlainText(template);
     if (text.isEmpty) return;
     final docLength = _controller.document.length;
     final selection = _controller.selection;
     final offset = selection.baseOffset < 0
         ? docLength - 1
         : selection.baseOffset.clamp(0, docLength - 1);
+    // Leerzeichen einfügen, wenn direkt an ein Wort/Satzzeichen angehängt wird.
+    final plain = _controller.document.toPlainText();
+    if (offset > 0 && !RegExp(r'\s').hasMatch(plain[offset - 1]) &&
+        !text.startsWith(RegExp(r'\s'))) {
+      text = ' $text';
+    }
     // replaceText benachrichtigt Listener (Autosave/Analyse) und setzt den
     // Cursor hinter den eingefügten Text.
     _controller.replaceText(

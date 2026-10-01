@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.2] - 2026-10-01
+
+### Fixed
+- Adding a contact crashed the UI (controllers disposed during dialog exit animation).
+- ICS follow-up exported as all-day event instead of a 00:00Z timed event.
+- Status filter shows German labels instead of raw values.
+- Text blocks get a separating space when inserted directly after a word.
+- CV dialogs: remaining English strings translated.
+- E-mail draft: no dangling "in den Bereichen: ." without skills; no claim of an attached CV.
+
 ## [0.9.1] - 2026-10-01
 
 ### Fixed (critical)

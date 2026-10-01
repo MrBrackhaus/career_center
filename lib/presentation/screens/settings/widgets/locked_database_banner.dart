@@ -64,7 +64,7 @@ class _LockedDatabaseBannerState extends ConsumerState<LockedDatabaseBanner> {
       backgroundColor: Colors.orange.withValues(alpha: 0.15),
       leading: const Icon(Icons.lock_outline, color: Colors.orange),
       content: Text(
-        'Eine vorhandene Datenbank konnte nicht geöffnet werden (Schlüssel fehlte, z.B. nach einer Neuinstallation). '
+        'Eine vorhandene Datenbank konnte nicht geöffnet werden (Schlüssel fehlte oder passte nicht, z.B. nach einer Neuinstallation). '
         'Sie wurde NICHT gelöscht, sondern gesichert: ${p.basename(file.path)}\n'
         'Wiederherstellen über "Backup wiederherstellen" mit deinem Wiederherstellungsschlüssel.',
       ),

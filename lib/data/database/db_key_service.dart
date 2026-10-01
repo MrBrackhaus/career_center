@@ -85,7 +85,18 @@ class DbKeyService {
   /// importiert werden.
   Future<String> obtainKeyForDatabase(File dbFile) async {
     final existing = await readKey();
-    if (existing != null) return existing;
+    if (existing != null) {
+      // Gespeicherter Schlüssel passt nicht zur vorhandenen Datei (z. B.
+      // andere Installation mit eigenem Secure Storage): Datei beiseitelegen
+      // statt mit "file is not a database" zu scheitern.
+      if (_isEncryptedDatabase(dbFile) && _isWrongKey(dbFile, existing)) {
+        final locked = lockDatabase(dbFile);
+        log('Datenbankschlüssel passt nicht – Datenbank wurde nach '
+            '${locked.path} verschoben.',
+            name: 'db_key_service', level: 1000);
+      }
+      return existing;
+    }
 
     if (_isEncryptedDatabase(dbFile)) {
       final locked = lockDatabase(dbFile);
@@ -97,6 +108,25 @@ class DbKeyService {
     final key = generateKey();
     await writeKey(key);
     return key;
+  }
+
+  /// `true` nur, wenn SQLCipher die Datei mit [key] eindeutig als
+  /// "not a database" ablehnt (SQLITE_NOTADB). Andere Fehler (z. B. eine
+  /// gesperrte Datei) führen nie dazu, dass die Datenbank verschoben wird.
+  static bool _isWrongKey(File file, String key) {
+    Database? db;
+    try {
+      db = sqlite3.open(file.path, mode: OpenMode.readOnly);
+      db.execute("PRAGMA key = '${escapeSqlString(key)}';");
+      db.select('SELECT count(*) FROM sqlite_master;');
+      return false;
+    } on SqliteException catch (e) {
+      return e.resultCode == 26 || e.extendedResultCode == 26;
+    } catch (_) {
+      return false;
+    } finally {
+      db?.close();
+    }
   }
 
   static bool _isEncryptedDatabase(File file) =>

@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.9.4] - 2026-10-01
+
+### Fixed
+- Stored DB key not matching the existing database (e.g. portable → installed build) no longer fails with "file is not a database"; the file is moved aside (`.locked-*`) and can be restored with the recovery key.
+
 ## [0.9.3] - 2026-10-01
 
 ### Fixed

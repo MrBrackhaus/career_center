@@ -11,6 +11,20 @@ class ChangelogScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           const Text(
+            'Version 0.9.4',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Release Notes - 1. Oktober 2026',
+            style: TextStyle(color: Colors.grey, fontSize: 16),
+          ),
+          const SizedBox(height: 24),
+          _buildSection('🐞 Fehlerbehebungen', [
+            'Passt der gespeicherte Schlüssel nicht zur Datenbank (z. B. nach einem Wechsel von einer portablen zur installierten Version), startet die App nicht mehr mit „file is not a database“. Die alte Datenbank wird unverändert gesichert und lässt sich über „Backup wiederherstellen“ mit dem Wiederherstellungsschlüssel zurückholen.',
+          ]),
+          const Divider(height: 48),
+          const Text(
             'Version 0.9.3',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),

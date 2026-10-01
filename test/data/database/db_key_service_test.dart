@@ -53,6 +53,19 @@ void main() {
       expect(DbKeyService.findLockedDatabases(dbFile), isEmpty);
     });
 
+    test('moves the database aside when the stored key does not match',
+        () async {
+      store.values[DbKeyService.storageKey] = 'neuer-schluessel';
+      _createDb(dbFile, key: 'alter-schluessel');
+
+      expect(await service.obtainKeyForDatabase(dbFile), 'neuer-schluessel');
+      expect(dbFile.existsSync(), isFalse);
+      final locked = DbKeyService.findLockedDatabases(dbFile);
+      expect(locked, hasLength(1));
+      expect(DbKeyService.opensWithKey(locked.single, 'alter-schluessel'),
+          isTrue);
+    });
+
     test('generates and stores a key when no database exists', () async {
       final key = await service.obtainKeyForDatabase(dbFile);
 

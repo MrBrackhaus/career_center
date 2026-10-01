@@ -58,9 +58,9 @@ class InterviewNotifier extends Notifier<InterviewState> {
       currentStreamedChunk: '',
     );
 
-    final _settingsRepo = ref.read(settingsRepositoryProvider);
-    final urlSetting = await _settingsRepo.getSettingByKey('aiServerUrl');
-    final modelSetting = await _settingsRepo.getSettingByKey('aiModelName');
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+    final urlSetting = await settingsRepo.getSettingByKey('aiServerUrl');
+    final modelSetting = await settingsRepo.getSettingByKey('aiModelName');
     
     final baseUrl = urlSetting?.value ?? 'http://localhost:11434';
     final modelName = modelSetting?.value ?? 'llama3.1';

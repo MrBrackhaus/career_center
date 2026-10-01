@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:developer' show log;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart';
 import '../../data/database/app_database.dart';
@@ -74,9 +74,7 @@ class CvNotifier {
         );
         ref.invalidate(cvProvider(applicationId));
     } catch (e, stack) {
-        
-        File('error_log.txt').writeAsStringSync('ERROR: $e\n$stack');
-        print("ERROR IN ADDWORKEXP: $e");
+      log('addWorkExperience failed: $e', name: 'cv_provider', error: e, stackTrace: stack);
     }
   }
   Future<void> updateWorkExperience(int? applicationId, CvWorkExperience exp) async {
@@ -241,7 +239,7 @@ class CvNotifier {
         );
         ref.invalidate(cvProvider(applicationId));
     } catch (e, stack) {
-        File('error_log.txt').writeAsStringSync('ERROR CUSTOM: $e\n$stack', mode: FileMode.append);
+        log('addCustomItem failed: $e', name: 'cv_provider', error: e, stackTrace: stack);
     }
   }
   Future<void> deleteCustomItem(int? applicationId, int id) async {

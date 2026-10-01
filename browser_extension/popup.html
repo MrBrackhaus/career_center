@@ -49,14 +49,61 @@
     #status {
       font-size: 12px;
       margin-top: 10px;
-      height: 16px;
+      min-height: 16px;
       color: #a6e3a1;
+    }
+    details {
+      text-align: left;
+      font-size: 12px;
+      margin-bottom: 12px;
+      background-color: #181825;
+      border-radius: 8px;
+      padding: 8px;
+    }
+    summary {
+      cursor: pointer;
+      color: #cdd6f4;
+    }
+    details label {
+      display: block;
+      margin: 8px 0 4px;
+      color: #a6adc8;
+    }
+    details input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #45475a;
+      background-color: #313244;
+      color: #cdd6f4;
+      font-family: monospace;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    details .hint {
+      margin: 0 0 8px;
+      font-size: 11px;
+      color: #7f849c;
+    }
+    details button {
+      padding: 6px 10px;
+      font-size: 12px;
+      margin-bottom: 0;
     }
   </style>
 </head>
 <body>
   <h2>JobTracker Companion</h2>
   <p>Lokal. Sicher. Privat.</p>
+
+  <details id="token-section">
+    <summary>🔑 Verbindung zur App</summary>
+    <label for="token-input">App-Token</label>
+    <input id="token-input" type="password" autocomplete="off" spellcheck="false" placeholder="Token aus der App einfügen">
+    <p class="hint">Zu finden in der App unter Einstellungen → KI &amp; Automatisierung → Browser-Erweiterung koppeln.</p>
+    <button id="btn-save-token" class="secondary">Token speichern</button>
+  </details>
   
   <button id="btn-import">📥 An App senden</button>
   <button id="btn-autofill" class="secondary">⚡ Profil einfügen</button>

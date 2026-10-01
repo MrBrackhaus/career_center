@@ -117,4 +117,39 @@ void main() {
       subGoal.close();
     });
   });
+
+  group('isoWeekKey', () {
+    test('Jahreswechsel mit 53 Wochen', () {
+      expect(isoWeekKey(DateTime(2020, 12, 31)), '2020-W53');
+      expect(isoWeekKey(DateTime(2021, 1, 1)), '2020-W53');
+      expect(isoWeekKey(DateTime(2021, 1, 3)), '2020-W53');
+      expect(isoWeekKey(DateTime(2021, 1, 4)), '2021-W01');
+    });
+
+    test('Jahreswechsel 2026/2027', () {
+      expect(isoWeekKey(DateTime(2026, 12, 31)), '2026-W53');
+      expect(isoWeekKey(DateTime(2027, 1, 1)), '2026-W53');
+      expect(isoWeekKey(DateTime(2027, 1, 4)), '2027-W01');
+    });
+
+    test('Jahreswechsel, an dem der 29.12. schon zur Woche 1 gehört', () {
+      expect(isoWeekKey(DateTime(2025, 12, 28)), '2025-W52');
+      expect(isoWeekKey(DateTime(2025, 12, 29)), '2026-W01');
+      expect(isoWeekKey(DateTime(2026, 1, 1)), '2026-W01');
+    });
+
+    test('Erster Tag des Jahres und Wochenanfang', () {
+      expect(isoWeekKey(DateTime(2024, 1, 1)), '2024-W01');
+      expect(isoWeekKey(DateTime(2023, 1, 1)), '2022-W52');
+      expect(isoWeekKey(DateTime(2026, 10, 1)), '2026-W40');
+    });
+
+    test('Uhrzeit und DST-Wechsel spielen keine Rolle', () {
+      // Sommerzeitbeginn (29.03.2026) und -ende (25.10.2026) in Mitteleuropa
+      expect(isoWeekKey(DateTime(2026, 3, 29, 23, 59)), '2026-W13');
+      expect(isoWeekKey(DateTime(2026, 3, 30, 0, 1)), '2026-W14');
+      expect(isoWeekKey(DateTime(2026, 10, 25, 23, 30)), '2026-W43');
+      expect(isoWeekKey(DateTime(2026, 10, 26)), '2026-W44');
+    });
+  });
 }

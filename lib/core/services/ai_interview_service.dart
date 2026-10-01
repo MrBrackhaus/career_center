@@ -2,6 +2,31 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../domain/entities/interview_message.dart';
 
+/// Wandelt den gespeicherten Anschreiben-Inhalt in Klartext um.
+///
+/// Der Inhalt kann als Quill-Delta-JSON (Liste von Operationen) gespeichert
+/// sein; dann wird der Text aller `insert`-Operationen zusammengefügt.
+/// Andernfalls wird der Inhalt unverändert zurückgegeben.
+String coverLetterPlainText(String content) {
+  final trimmed = content.trim();
+  if (trimmed.isEmpty) return '';
+  if (!trimmed.startsWith('[') && !trimmed.startsWith('{')) return trimmed;
+  try {
+    dynamic decoded = jsonDecode(trimmed);
+    if (decoded is Map && decoded['ops'] is List) decoded = decoded['ops'];
+    if (decoded is! List) return trimmed;
+    final buffer = StringBuffer();
+    for (final op in decoded) {
+      if (op is Map && op['insert'] is String) {
+        buffer.write(op['insert'] as String);
+      }
+    }
+    return buffer.toString().trim();
+  } catch (_) {
+    return trimmed;
+  }
+}
+
 class AiInterviewService {
   Stream<String> generateResponseStream({
     required String baseUrl,
@@ -13,6 +38,7 @@ class AiInterviewService {
     required String jobDescription,
     required List<InterviewMessage> history,
   }) async* {
+    final coverLetterText = coverLetterPlainText(coverLetterContent);
     final systemPrompt = '''Du bist ein strenger, aber fairer Personalvermittler (Recruiter) der Firma "$company".
 Du führst gerade ein Bewerbungsgespräch mit einem Kandidaten für die Position "$position".
 
@@ -20,7 +46,7 @@ Hier ist die Stellenbeschreibung (Job Description), auf die sich der Kandidat be
 $jobDescription
 
 Hier ist das Anschreiben des Kandidaten:
-
+${coverLetterText.isNotEmpty ? coverLetterText : '(Kein Anschreiben vorhanden)'}
 
 Hier ist der Lebenslauf (CV) des Kandidaten:
 $cvContent

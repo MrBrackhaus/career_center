@@ -1,6 +1,7 @@
 import 'dart:io';
 import '../database/app_database.dart';
 import '../../domain/entities/application_entity.dart';
+import '../../domain/enums/application_status.dart';
 import '../../domain/models/application_form_dto.dart';
 import '../mappers/drift_mappers.dart';
 import 'package:drift/drift.dart' as drift;
@@ -28,19 +29,41 @@ class ApplicationsRepository {
   }
 
   Future<int> addApplication(ApplicationFormDto app) async {
-    return await _db.applicationsDao.insertApplication(app.toCompanion(isUpdate: false));
+    return await _db.applicationsDao.insertApplication(
+      _withNormalizedStatus(app.toCompanion(isUpdate: false)),
+    );
   }
 
+  /// Aktualisiert nur die Spalten, die das Formular-DTO setzt.
+  ///
+  /// Bewusst kein `replace`: Spalten, die das DTO nicht kennt (z.B. Priorität,
+  /// Anschreiben-Inhalt), würden sonst auf ihre SQL-Defaults zurückgesetzt.
   Future<void> updateApplication(ApplicationFormDto app) async {
-    await _db.applicationsDao.updateApplication(app.toCompanion(isUpdate: true));
+    final id = app.id;
+    if (id == null) {
+      throw ArgumentError('updateApplication benötigt eine Bewerbungs-ID.');
+    }
+    final companion = _withNormalizedStatus(
+      app.toCompanion(isUpdate: true),
+    ).copyWith(id: const drift.Value.absent());
+    await _db.applicationsDao.partialUpdate(id, companion);
   }
 
   Future<void> updateApplicationStatus(int id, String status, {String? rejectionReason}) async {
     await _db.applicationsDao.partialUpdate(
       id,
       ApplicationsCompanion(
-        status: drift.Value(status),
+        status: drift.Value(normalizeApplicationStatus(status)),
         rejectionReason: rejectionReason != null ? drift.Value(rejectionReason) : const drift.Value.absent(),
+      ),
+    );
+  }
+
+  static ApplicationsCompanion _withNormalizedStatus(ApplicationsCompanion c) {
+    if (!c.status.present) return c;
+    return c.copyWith(
+      status: drift.Value(
+        normalizeApplicationStatus(c.status.value, fallback: ApplicationStatus.offen),
       ),
     );
   }

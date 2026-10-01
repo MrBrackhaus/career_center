@@ -1,21 +1,9 @@
 import '../../../l10n/app_localizations.dart';
 
 /*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Bewerbungszentrale (Career Center)
+ * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
+ * Siehe README.md.
  */
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -49,7 +37,6 @@ import 'application_form_state_bundle.dart';
 
 import '../../../domain/models/application_form_dto.dart';
 import '../../providers/database_provider.dart';
-import '../../providers/ai_settings_provider.dart';
 import '../../providers/applications_provider.dart';
 import 'dart:developer' show log;
 
@@ -83,7 +70,7 @@ class ApplicationFormScreen extends ConsumerStatefulWidget {
 class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers statt initialValue Ã¢â‚¬â€œ damit Auto-Fill das Widget sofort aktualisiert
+  // Controllers statt initialValue – damit Auto-Fill das Widget sofort aktualisiert
   final _companyController = TextEditingController();
   final _positionController = TextEditingController();
   final _notesController = TextEditingController();
@@ -91,9 +78,9 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
   final _commutCarController = TextEditingController();
   final _salaryWishController = TextEditingController();
   final _jobUrlController =
-      TextEditingController(); // Normales Formularfeld fÃƒÂ¼r Job-Link
+      TextEditingController(); // Normales Formularfeld für Job-Link
   final _autoFillUrlController =
-      TextEditingController(); // Nur fÃƒÂ¼r das Magic-Auto-Fill Feld
+      TextEditingController(); // Nur für das Magic-Auto-Fill Feld
   final _companyUrlController = TextEditingController();
   // Kontakt-Felder
   final _contactNameController = TextEditingController();
@@ -207,7 +194,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('? Daten direkt aus dem Browser Ã¼bernommen!'),
+            content: Text('✅ Daten direkt aus dem Browser übernommen!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -219,7 +206,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('? Fehler beim Auslesen: '),
+            content: Text('❌ Fehler beim Auslesen: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -512,39 +499,39 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
     if (!mounted) return;
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Confidence-basiertes UI-Feedback Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+    // ── Confidence-basiertes UI-Feedback ──────────────────────────────────
     final typeLabel = result.documentType.label;
     final confidence = (result.typeConfidence * 100).toInt();
     final fieldCount = result.fields.filledFieldCount;
 
     if (result.needsReview) {
-      // Unter 30% Ã¢â‚¬â€œ unsicher
+      // Unter 30% – unsicher
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ã¢Å¡Â Ã¯Â¸Â $typeLabel erkannt ($confidence% Sicherheit). $fieldCount Felder ausgefÃƒÂ¼llt Ã¢â‚¬â€œ bitte manuell prÃƒÂ¼fen!',
+            '⚠️ $typeLabel erkannt ($confidence% Sicherheit). $fieldCount Felder ausgefüllt – bitte manuell prüfen!',
           ),
           backgroundColor: Colors.orange,
           duration: const Duration(seconds: 5),
         ),
       );
     } else if (!result.isReliable) {
-      // 30-60% Ã¢â‚¬â€œ mittlere Sicherheit
+      // 30-60% – mittlere Sicherheit
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ã°Å¸Å¸Â¡ $typeLabel erkannt ($confidence%). $fieldCount Felder ausgefÃƒÂ¼llt Ã¢â‚¬â€œ einige Felder prÃƒÂ¼fen.',
+            '🟡 $typeLabel erkannt ($confidence%). $fieldCount Felder ausgefüllt – einige Felder prüfen.',
           ),
           backgroundColor: Colors.amber.shade700,
           duration: const Duration(seconds: 4),
         ),
       );
     } else {
-      // ÃƒÅ“ber 60% Ã¢â‚¬â€œ sicher
+      // Über 60% – sicher
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ã¢Å“â€¦ $typeLabel erkannt ($confidence%). $fieldCount Felder automatisch ausgefÃƒÂ¼llt.',
+            '✅ $typeLabel erkannt ($confidence%). $fieldCount Felder automatisch ausgefüllt.',
           ),
           backgroundColor: Colors.green,
         ),
@@ -570,7 +557,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          'KI hat gelernt: Neues Muster fÃƒÂ¼r "${newType.name}" gespeichert!',
+          'KI hat gelernt: Neues Muster für "${newType.name}" gespeichert!',
         ),
         backgroundColor: Colors.green,
       ),
@@ -581,8 +568,8 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Bewerbung lÃƒÂ¶schen?'),
-        content: const Text('Diese Bewerbung wirklich lÃƒÂ¶schen?'),
+        title: const Text('Bewerbung löschen?'),
+        content: const Text('Diese Bewerbung wirklich löschen?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -591,7 +578,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text(
-              'LÃƒÂ¶schen',
+              'Löschen',
               style: TextStyle(color: Colors.red),
             ),
           ),
@@ -936,7 +923,7 @@ class _ApplicationFormScreenState extends ConsumerState<ApplicationFormScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Ã¢Å“â€¦ "$field" wurde ÃƒÂ¼bernommen.'),
+        content: Text('✅ "$field" wurde übernommen.'),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
       ),

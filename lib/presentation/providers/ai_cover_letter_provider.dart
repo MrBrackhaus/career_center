@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/ai_cover_letter_service.dart';
+import '../../core/services/secure_settings_service.dart';
 import 'database_provider.dart';
 
 final aiCoverLetterServiceProvider = Provider<AiCoverLetterService>((ref) {
@@ -42,6 +43,7 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
       final baseUrl =
           aiUrlSetting?.value ?? 'http://localhost:11434/api/generate';
       final modelName = aiModelSetting?.value ?? 'llama3.2';
+      final apiKey = await SecureSettingsService.getAiApiKey();
 
       final service = ref.read(aiCoverLetterServiceProvider);
       final result = await service.generateCoverLetter(
@@ -51,6 +53,7 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
         company: company,
         position: position,
         jobDescription: jobDescription,
+        apiKey: apiKey,
       );
 
       state = state.copyWith(isLoading: false);

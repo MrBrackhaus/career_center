@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.9.0] - 2026-10-01
+
+### Security & Privacy
+- **Database encryption actually enabled**: SQLCipher is now bundled via the `sqlite3` build hook (`hooks: user_defines: sqlite3: source: sqlcipher`). Before, the EOL `sqlcipher_flutter_libs` package did nothing and `PRAGMA key` was ignored, so databases were stored unencrypted. Existing databases are migrated on first start with a verified backup.
+- **Companion token pairing**: `/api/status` no longer leaks the API token. The token is shown in the settings and entered once in the browser extension (v1.2.0). Token comparison is constant-time.
+- **AI API key in secure storage**: moved out of the settings table (automatic migration).
+- **AI endpoint selection by URL only**: keys starting with `sk-` no longer redirect requests (and the key) to api.openai.com.
+- **MCP**: `get_user_profile` returns only an allowlist of profile fields; proper JSON-RPC errors.
+- **Personal data removed** from editor defaults and the ML training data; legacy model files are deleted.
+- **Updater integrity**: downloads are verified against the SHA-256 digest of the GitHub release asset.
+
+### Fixed
+- Statuses are normalized (`bestaetigung` → `versendet`, `angebot` → `zusage`), so applications no longer disappear from the Kanban board.
+- Updating an application no longer resets its priority (partial update instead of `replace`).
+- IMAP: original-case mail bodies, Message-ID de-duplication, better Sent-folder detection, STARTTLS on port 143, no leaked connections.
+- Settings: "last sync" display, consistent backup export (`VACUUM INTO`), validated backup import.
+- Double-encoded umlauts in the job-posting extractor and application form (broken regexes and UI text).
+- ISO week calculation for the weekly streak (year boundaries, DST).
+- Mock interview now includes the cover letter; bold text in AI cover letters is kept.
+- Learned ML corrections are no longer deleted on every start.
+- Auto-updater uses a UTF-8 PowerShell script (paths with umlauts/apostrophes) and closes the database before exiting.
+- Browser extension autofill: textarea crash, password/company/username false matches, date fields, oversized payloads.
+
+### Changed
+- License headers updated to "All rights reserved" (consistent with README).
+- Added `lib/core/secrets.example.dart` and build instructions.
+
 ## [0.8.0] - 2026-09-18
 
 ### Added

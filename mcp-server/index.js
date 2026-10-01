@@ -17,6 +17,20 @@ const db = new sqlite3.Database(dbPath, (err) => {
     }
 });
 
+// Einstellungen, die get_user_profile herausgeben darf (Allowlist).
+const PROFILE_KEYS = [
+    "userName",
+    "userEmail",
+    "userPhone",
+    "userAddress",
+    "userCity",
+    "userZip",
+    "userBirthdate",
+    "userSkills",
+    "userLinkedin",
+    "userWebsite",
+];
+
 const server = new Server({
     name: "jobtracker-mcp",
     version: "1.0.0",
@@ -45,7 +59,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
                                     {
                 name: "get_user_profile",
-                description: "Holt das Profil und die Einstellungen des Nutzers (z.B. Name, Skills, Lebenslauf-Daten). Wichtig, um personalisierte Anschreiben zu verfassen.",
+                description: "Holt das Profil des Nutzers (Name, Kontaktdaten, Adresse, Geburtsdatum, Skills, LinkedIn, Website). Wichtig, um personalisierte Anschreiben zu verfassen.",
                 inputSchema: {
                     type: "object",
                     properties: {},
@@ -129,10 +143,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
     
     if (name === "get_user_profile") {
+        // Nur Profilfelder herausgeben – niemals Geheimnisse wie API-Keys oder
+        // Passwort-Marker aus der settings-Tabelle.
+        const placeholders = PROFILE_KEYS.map(() => "?").join(", ");
         return new Promise((resolve) => {
-            db.all("SELECT key, value FROM settings", [], (err, rows) => {
+            db.all(`SELECT key, value FROM settings WHERE key IN (${placeholders})`, PROFILE_KEYS, (err, rows) => {
                 if (err) resolve({ content: [{ type: "text", text: `Error: ${err.message}` }], isError: true });
-                else resolve({ content: [{ type: "text", text: JSON.stringify(rows, null, 2) }] });
+                else {
+                    const profile = {};
+                    for (const row of rows) {
+                        if (PROFILE_KEYS.includes(row.key)) profile[row.key] = row.value;
+                    }
+                    resolve({ content: [{ type: "text", text: JSON.stringify(profile, null, 2) }] });
+                }
             });
         });
     }

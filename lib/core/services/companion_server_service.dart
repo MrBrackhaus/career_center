@@ -44,9 +44,20 @@ class CompanionServerService {
 
   final int port = 47392;
 
-  /// The API token used to authenticate requests from the browser extension.
-  /// Generated on first start and persisted in app settings.
+  /// The API token used to authenticate requests from the browser extension
+  /// and MCP clients. Generated on first start and persisted in secure
+  /// storage. It is never handed out over HTTP: the user copies it from the
+  /// app's settings into the browser extension (pairing model).
   String? _apiToken;
+
+  /// Pending token initialization, so concurrent callers share one load.
+  Future<void>? _tokenInit;
+
+  static const _tokenStorageKey = 'companionApiToken';
+
+  /// The current API token, or `null` if it has not been loaded yet.
+  /// Use [loadApiToken] to make sure it is initialized.
+  String? get apiToken => _apiToken;
 
   /// Allowed CORS origins for the browser extension.
   static const _allowedOriginPrefixes = [
@@ -63,26 +74,77 @@ class CompanionServerService {
     return List.generate(48, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
-  /// Initializes or loads the API token from secure storage.
-  Future<void> _initToken() async {
+  /// Initializes or loads the API token from secure storage (once).
+  Future<void> _initToken() {
+    if (_apiToken != null) {
+      return Future.value();
+    }
+    return _tokenInit ??= _loadOrCreateToken().whenComplete(() {
+      _tokenInit = null;
+    });
+  }
+
+  Future<void> _loadOrCreateToken() async {
     const storage = FlutterSecureStorage();
     try {
-      _apiToken = await storage.read(key: 'companionApiToken');
-      if (_apiToken == null || _apiToken!.isEmpty) {
-        _apiToken = _generateToken();
-        await storage.write(key: 'companionApiToken', value: _apiToken!);
+      final stored = await storage
+          .read(key: _tokenStorageKey)
+          .timeout(const Duration(seconds: 10));
+      if (stored != null && stored.isNotEmpty) {
+        _apiToken = stored;
+        return;
       }
+      final token = _generateToken();
+      _apiToken = token;
+      await storage.write(key: _tokenStorageKey, value: token);
     } catch (e) {
-      log('Fehler beim Laden des Tokens aus SecureStorage: $e');
-      _apiToken = _generateToken();
+      log('Fehler beim Laden des Tokens aus SecureStorage: $e',
+          name: 'CompanionServer');
+      _apiToken ??= _generateToken();
     }
+  }
+
+  /// Returns the API token, loading or creating it if necessary.
+  Future<String> loadApiToken() async {
+    await _initToken();
+    return _apiToken!;
+  }
+
+  /// Creates a new API token, persists it in secure storage and activates it
+  /// immediately. Previously paired clients must be updated afterwards.
+  /// Throws if the token could not be persisted; the old token stays active.
+  Future<String> regenerateApiToken() async {
+    await _initToken();
+    final token = _generateToken();
+    const storage = FlutterSecureStorage();
+    await storage
+        .write(key: _tokenStorageKey, value: token)
+        .timeout(const Duration(seconds: 10));
+    _apiToken = token;
+    return token;
+  }
+
+  /// Compares two strings in constant time (relative to their length) to
+  /// avoid leaking the token via timing differences.
+  static bool _constantTimeEquals(String a, String b) {
+    final aBytes = utf8.encode(a);
+    final bBytes = utf8.encode(b);
+    var diff = aBytes.length ^ bBytes.length;
+    for (var i = 0; i < aBytes.length; i++) {
+      diff |= aBytes[i] ^ (i < bBytes.length ? bBytes[i] : 0);
+    }
+    return diff == 0;
   }
 
   /// Validates the API token from the request header.
   /// Returns true if the token is valid, false otherwise.
   bool _isAuthenticated(Request request) {
     final token = request.headers['x-api-token'];
-    return token != null && token == _apiToken;
+    final expected = _apiToken;
+    if (token == null || expected == null || expected.isEmpty) {
+      return false;
+    }
+    return _constantTimeEquals(token, expected);
   }
 
   /// Checks if the request origin is from an allowed browser extension.
@@ -102,14 +164,14 @@ class CompanionServerService {
 
     final router = Router();
 
-    // Health check / Handshake — returns token for authenticated extensions
+    // Health check. Deliberately unauthenticated and WITHOUT the token:
+    // the token is paired manually via the app settings.
     router.get('/api/status', (Request request) {
       return _corsResponse(
         request,
         jsonEncode({
           'status': 'ok',
           'app': 'JobTracker',
-          'token': _apiToken,
         }),
       );
     });
@@ -160,6 +222,13 @@ class CompanionServerService {
     });
 
     // MCP SSE Endpoint
+    //
+    // Note: this is a minimal implementation of the MCP "HTTP+SSE" transport.
+    // Responses are NOT routed per session: every JSON-RPC response is
+    // broadcast to all currently connected SSE clients (see [_sendToMcpClients]).
+    // In practice only one MCP client is connected at a time; clients ignore
+    // responses with ids they did not issue. Per-session routing would require
+    // a session id in the endpoint URL (`/mcp/message?sessionId=...`).
     router.get('/mcp/sse', (Request request) {
       if (!_isAuthenticated(request)) {
         return Response.forbidden(
@@ -194,7 +263,7 @@ class CompanionServerService {
           headers: _corsHeaders(request),
         );
       }
-      
+
       String payload;
       try {
         payload = await _readWithLimit(request, 5 * 1024 * 1024);
@@ -205,116 +274,33 @@ class CompanionServerService {
       if (payload.isEmpty) {
         return Response.ok('OK');
       }
+
+      Object? decoded;
       try {
-        final decoded = await compute(jsonDecode, payload);
-        if (decoded is! Map<String, dynamic>) {
-           throw const FormatException('Expected JSON object');
-        }
-        final req = decoded;
-        final method = req['method'];
-        final id = req['id'];
-
-        Map<String, dynamic>? response;
-        if (method == 'initialize') {
-          response = {
-            'jsonrpc': '2.0',
-            'id': id,
-            'result': {
-              'protocolVersion': '2024-11-05',
-              'capabilities': {'tools': {}},
-              'serverInfo': {'name': 'CareerCenterMCP', 'version': '1.0.0'},
-            },
-          };
-        } else if (method == 'tools/list') {
-          response = {
-            'jsonrpc': '2.0',
-            'id': id,
-            'result': {
-              'tools': [
-                {
-                  'name': 'get_applications',
-                  'description': 'Liest alle Bewerbungen aus der Datenbank',
-                  'inputSchema': {'type': 'object', 'properties': {}},
-                },
-                {
-                  'name': 'update_cover_letter',
-                  'description':
-                      'Aktualisiert das Anschreiben einer Bewerbung',
-                  'inputSchema': {
-                    'type': 'object',
-                    'properties': {
-                      'app_id': {'type': 'integer'},
-                      'content': {'type': 'string'},
-                    },
-                    'required': ['app_id', 'content'],
-                  },
-                },
-              ],
-            },
-          };
-        } else if (method == 'tools/call') {
-          final params = req['params'] as Map<String, dynamic>? ?? {};
-          final toolName = params['name'];
-          final args = params['arguments'] as Map<String, dynamic>? ?? {};
-
-          if (toolName == 'get_applications') {
-            final apps = await database?.applicationsDao.getAllApplications();
-            final mapped = apps?.map((a) => {'id': a.id, 'company': a.company, 'position': a.position}).toList();
-            response = {
-              'jsonrpc': '2.0',
-              'id': id,
-              'result': {
-                'content': [
-                  {'type': 'text', 'text': jsonEncode(mapped)}
-                ]
-              },
-            };
-          } else if (toolName == 'update_cover_letter' && database != null) {
-            final appId = args['app_id'] as int;
-            final content = args['content'] as String;
-            String finalContent = content;
-            if (!content.trim().startsWith('[')) {
-              finalContent = jsonEncode([
-                {'insert': '$content\n'},
-              ]);
-            }
-
-            final app = await database!.applicationsDao.getApplicationById(
-              appId,
-            );
-            if (app != null) {
-              await database!.applicationsDao.updateApplication(
-                app
-                    .toCompanion(true)
-                    .copyWith(coverLetterContent: drift.Value(finalContent)),
-              );
-            }
-            response = {
-              'jsonrpc': '2.0',
-              'id': id,
-              'result': {
-                'content': [
-                  {'type': 'text', 'text': app != null ? 'Erfolg' : 'Bewerbung nicht gefunden'},
-                ],
-              },
-            };
-          }
-        }
-
-        if (response != null) {
-          final respStr = jsonEncode(response);
-          for (final client in _mcpClients) {
-            client.add('event: message\ndata: $respStr\n\n');
-          }
-        }
+        decoded = await compute(jsonDecode, payload);
       } on FormatException catch (e) {
         log('Companion Server: Invalid JSON in /mcp/message: $e',
             name: 'CompanionServer');
-      } catch (e) {
-        log('Companion Server: MCP Error: $e',
-            name: 'CompanionServer');
+        return Response(
+          400,
+          body: jsonEncode(_rpcError(null, -32700, 'Parse error')),
+          headers: _corsHeaders(request),
+        );
       }
-      return _corsResponse(request, 'Accepted');
+
+      Map<String, dynamic>? response;
+      try {
+        response = await _handleMcpRequest(decoded);
+      } catch (e) {
+        log('Companion Server: MCP Error: $e', name: 'CompanionServer');
+        final id = decoded is Map<String, dynamic> ? decoded['id'] : null;
+        response = _rpcError(id, -32603, 'Internal error');
+      }
+
+      if (response != null) {
+        _sendToMcpClients(jsonEncode(response));
+      }
+      return Response(202, body: 'Accepted', headers: _corsHeaders(request));
     });
 
     // GET /api/profile — returns user profile as JSON for browser extension autofill
@@ -408,6 +394,166 @@ class CompanionServerService {
   Future<void> stop() async {
     await _server?.close(force: true);
     _server = null;
+  }
+
+  /// Sends an SSE message to all connected MCP clients (broadcast, see the
+  /// comment at the `/mcp/sse` route). Closed clients are skipped/removed.
+  void _sendToMcpClients(String json) {
+    for (final client in List.of(_mcpClients)) {
+      if (client.isClosed) {
+        _mcpClients.remove(client);
+        continue;
+      }
+      try {
+        client.add('event: message\ndata: $json\n\n');
+      } catch (e) {
+        log('Companion Server: Failed to send MCP message: $e',
+            name: 'CompanionServer');
+        _mcpClients.remove(client);
+      }
+    }
+  }
+
+  Map<String, dynamic> _rpcResult(Object? id, Map<String, dynamic> result) =>
+      {'jsonrpc': '2.0', 'id': id, 'result': result};
+
+  Map<String, dynamic> _rpcError(Object? id, int code, String message) => {
+        'jsonrpc': '2.0',
+        'id': id,
+        'error': {'code': code, 'message': message},
+      };
+
+  Map<String, dynamic> _toolText(Object? id, String text,
+          {bool isError = false}) =>
+      _rpcResult(id, {
+        'content': [
+          {'type': 'text', 'text': text},
+        ],
+        if (isError) 'isError': true,
+      });
+
+  /// Handles a single JSON-RPC message. Returns the response to send, or
+  /// `null` for notifications (messages without an `id`).
+  Future<Map<String, dynamic>?> _handleMcpRequest(Object? decoded) async {
+    if (decoded is! Map<String, dynamic>) {
+      // Batches are not supported.
+      return _rpcError(null, -32600, 'Invalid Request');
+    }
+    final req = decoded;
+    final id = req['id'];
+    final method = req['method'];
+    final isNotification = !req.containsKey('id');
+
+    if (method is! String) {
+      return isNotification ? null : _rpcError(id, -32600, 'Invalid Request');
+    }
+    if (id != null && id is! String && id is! num) {
+      return _rpcError(null, -32600, 'Invalid Request: id');
+    }
+    // Notifications (e.g. "notifications/initialized") never get a response.
+    if (isNotification) {
+      return null;
+    }
+
+    switch (method) {
+      case 'initialize':
+        return _rpcResult(id, {
+          'protocolVersion': '2024-11-05',
+          'capabilities': {'tools': {}},
+          'serverInfo': {'name': 'CareerCenterMCP', 'version': '1.0.0'},
+        });
+      case 'ping':
+        return _rpcResult(id, {});
+      case 'tools/list':
+        return _rpcResult(id, {
+          'tools': [
+            {
+              'name': 'get_applications',
+              'description': 'Liest alle Bewerbungen aus der Datenbank',
+              'inputSchema': {'type': 'object', 'properties': {}},
+            },
+            {
+              'name': 'update_cover_letter',
+              'description': 'Aktualisiert das Anschreiben einer Bewerbung',
+              'inputSchema': {
+                'type': 'object',
+                'properties': {
+                  'app_id': {'type': 'integer'},
+                  'content': {'type': 'string'},
+                },
+                'required': ['app_id', 'content'],
+              },
+            },
+          ],
+        });
+      case 'tools/call':
+        return _handleToolCall(id, req['params']);
+      default:
+        return _rpcError(id, -32601, 'Method not found: $method');
+    }
+  }
+
+  Future<Map<String, dynamic>> _handleToolCall(
+      Object? id, Object? rawParams) async {
+    if (rawParams != null && rawParams is! Map<String, dynamic>) {
+      return _rpcError(id, -32602, 'Invalid params');
+    }
+    final params = (rawParams as Map<String, dynamic>?) ?? const {};
+    final toolName = params['name'];
+    final rawArgs = params['arguments'];
+    if (toolName is! String) {
+      return _rpcError(id, -32602, 'Invalid params: name fehlt');
+    }
+    if (rawArgs != null && rawArgs is! Map<String, dynamic>) {
+      return _rpcError(id, -32602, 'Invalid params: arguments');
+    }
+    final args = (rawArgs as Map<String, dynamic>?) ?? const {};
+
+    final db = database;
+    switch (toolName) {
+      case 'get_applications':
+        if (db == null) {
+          return _rpcError(id, -32603, 'Datenbank nicht verfügbar');
+        }
+        final apps = await db.applicationsDao.getAllApplications();
+        final mapped = apps
+            .map((a) => {'id': a.id, 'company': a.company, 'position': a.position})
+            .toList();
+        return _toolText(id, jsonEncode(mapped));
+      case 'update_cover_letter':
+        final appId = args['app_id'];
+        final content = args['content'];
+        if (appId is! int) {
+          return _rpcError(
+              id, -32602, 'Invalid params: app_id muss eine Ganzzahl sein');
+        }
+        if (content is! String) {
+          return _rpcError(
+              id, -32602, 'Invalid params: content muss ein String sein');
+        }
+        if (db == null) {
+          return _rpcError(id, -32603, 'Datenbank nicht verfügbar');
+        }
+        String finalContent = content;
+        if (!content.trim().startsWith('[')) {
+          finalContent = jsonEncode([
+            {'insert': '$content\n'},
+          ]);
+        }
+
+        final app = await db.applicationsDao.getApplicationById(appId);
+        if (app == null) {
+          return _toolText(id, 'Bewerbung nicht gefunden', isError: true);
+        }
+        await db.applicationsDao.updateApplication(
+          app
+              .toCompanion(true)
+              .copyWith(coverLetterContent: drift.Value(finalContent)),
+        );
+        return _toolText(id, 'Erfolg');
+      default:
+        return _rpcError(id, -32602, 'Unknown tool: $toolName');
+    }
   }
 
   Future<String> _readWithLimit(Request request, int limitBytes) async {

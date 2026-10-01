@@ -4,20 +4,61 @@ import 'package:http/http.dart' as http;
 
 import 'package:flutter/foundation.dart';
 
+import 'ai_endpoint.dart';
+
+/// Typische KI-Einleitungen ("Hier ist Ihr Anschreiben:"), die nur am
+/// Anfang der Antwort (erste Zeile) entfernt werden.
+final List<RegExp> _preamblePatterns = [
+  RegExp(r'^\s*Hier ist[^\n]*?:[ \t]*', caseSensitive: false),
+  RegExp(r'^\s*Ich kann Ihnen[^\n]*?:[ \t]*', caseSensitive: false),
+  RegExp(r'^\s*Bitte beachten Sie[^\n]*?:[ \t]*', caseSensitive: false),
+];
+
+/// Bereinigt den reinen Antworttext der KI: entfernt Markdown-Fettdruck-Marker
+/// (der Text dazwischen bleibt erhalten) und Einleitungen am Anfang.
+String cleanCoverLetterText(String text) {
+  var result = text;
+
+  // Nur die **-Marker entfernen, nicht den fett gedruckten Text.
+  result = result.replaceAllMapped(
+    RegExp(r'\*\*(.*?)\*\*', dotAll: true),
+    (m) => m.group(1) ?? '',
+  );
+  result = result.replaceAll('**', '');
+
+  // Einleitungen nur am Anfang der Antwort entfernen.
+  bool changed = true;
+  while (changed) {
+    changed = false;
+    for (final pattern in _preamblePatterns) {
+      final stripped = result.replaceFirst(pattern, '');
+      if (stripped != result) {
+        result = stripped;
+        changed = true;
+      }
+    }
+  }
+
+  return result.trim();
+}
+
 String processAiResponse(List<int> bodyBytes) {
   try {
     final decodedString = utf8.decode(bodyBytes);
     final jsonResponse = jsonDecode(decodedString);
-    String result = jsonResponse['response'] ?? '';
+    String result = '';
+    if (jsonResponse is Map) {
+      final choices = jsonResponse['choices'];
+      if (choices is List && choices.isNotEmpty) {
+        // OpenAI-kompatible Antwort
+        result = choices.first['message']?['content']?.toString() ?? '';
+      } else {
+        // Ollama-Antwort
+        result = jsonResponse['response']?.toString() ?? '';
+      }
+    }
 
-    // Post-Processing um evtl. Markdown und Gesprächsfetzen zu entfernen
-    result = result.replaceAll(RegExp(r'\*\*.*?\*\*'), ''); 
-    result = result.replaceAll(RegExp(r'Hier ist.*?:', caseSensitive: false), '');
-    result = result.replaceAll(RegExp(r'Ich kann Ihnen.*?:', caseSensitive: false), '');
-    result = result.replaceAll(RegExp(r'Bitte beachten Sie.*?:', caseSensitive: false), '');
-    result = result.replaceAll(RegExp(r'Hier ist ein.*?:', caseSensitive: false), '');
-
-    return result.trim();
+    return cleanCoverLetterText(result);
   } catch (e) {
     return 'Fehler: Die KI hat eine ungültige Antwort gesendet.';
   }
@@ -31,6 +72,7 @@ class AiCoverLetterService {
     required String company,
     required String position,
     required String jobDescription,
+    String apiKey = '',
   }) async {
     final systemPrompt = """Du bist ein professioneller Karriereberater. Deine einzige Aufgabe ist es, ein Bewerbungsanschreiben zu generieren.
 REGELN:
@@ -56,17 +98,29 @@ $jobDescription
 Schreibe nun das Anschreiben basierend auf diesen Daten.
 """;
 
-    final uri = Uri.parse(baseUrl);
+    // Endpunkt ausschließlich aus der konfigurierten URL ableiten.
+    final endpoint = AiEndpoint.resolve(baseUrl);
+    final Map<String, dynamic> body = endpoint.isOpenAiCompatible
+        ? {
+            'model': modelName.isEmpty ? 'gpt-4o-mini' : modelName,
+            'messages': [
+              {'role': 'system', 'content': systemPrompt},
+              {'role': 'user', 'content': userPrompt},
+            ],
+            'temperature': 0.3,
+          }
+        : {
+            'model': modelName,
+            'prompt': userPrompt,
+            'system': systemPrompt,
+            'stream': false,
+            'options': {'temperature': 0.3},
+          };
+
     final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json; charset=utf-8'},
-      body: jsonEncode({
-        'model': modelName,
-        'prompt': userPrompt,
-        'system': systemPrompt,
-        'stream': false,
-        'options': {'temperature': 0.3},
-      }),
+      endpoint.uri,
+      headers: endpoint.headers(apiKey),
+      body: jsonEncode(body),
     ).timeout(const Duration(seconds: 30));
 
     if (response.statusCode == 200) {

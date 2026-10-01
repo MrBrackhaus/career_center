@@ -1,23 +1,12 @@
 /*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Bewerbungszentrale (Career Center)
+ * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
+ * Siehe README.md.
  */
 import 'dart:io';
-import 'dart:math';
+import 'dart:math' show Random;
 import 'dart:convert';
+import 'dart:developer';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'db_migrator.dart';
 
@@ -25,6 +14,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart' show Database;
 
 import 'daos/applications_dao.dart';
 import 'daos/templates_dao.dart';
@@ -213,7 +203,7 @@ class CvCustomItems extends Table {
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
-  AppDatabase.forTesting(QueryExecutor e) : super(e);
+  AppDatabase.forTesting(super.e);
 
   @override
   EmailsDao get emailsDao => EmailsDao(this);
@@ -241,7 +231,7 @@ class AppDatabase extends _$AppDatabase {
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
-          try { await m.addColumn(applications, applications.customFields); } catch (e) { print(e); }
+          try { await m.addColumn(applications, applications.customFields); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
         if (from < 3) {
           await m.createTable(emails);
@@ -256,14 +246,14 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(contacts);
         }
         if (from < 7) {
-          try { await m.addColumn(applications, applications.coverLetterContent); } catch (e) { print(e); }
-          try { await m.addColumn(applications, applications.jobDescriptionText); } catch (e) { print(e); }
+          try { await m.addColumn(applications, applications.coverLetterContent); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
+          try { await m.addColumn(applications, applications.jobDescriptionText); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
         if (from < 8) {
-          try { await m.addColumn(templates, templates.applicationId); } catch (e) { print(e); }
+          try { await m.addColumn(templates, templates.applicationId); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
         if (from < 9) {
-          try { await m.addColumn(templates, templates.filePath); } catch (e) { print(e); }
+          try { await m.addColumn(templates, templates.filePath); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
         if (from < 10) {
           await m.createTable(cvWorkExperiences);
@@ -272,18 +262,18 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(cvLanguages);
         }
         if (from < 11) {
-          try { await m.addColumn(applications, applications.cvContent); } catch (e) { print(e); }
+          try { await m.addColumn(applications, applications.cvContent); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
 
         if (from < 12) {
-          try { await m.addColumn(emails, emails.isSentByMe); } catch (e) { print('isSentByMe already exists'); }
+          try { await m.addColumn(emails, emails.isSentByMe); } catch (e) { log('isSentByMe already exists', name: 'app_database'); }
         }
         if (from < 14) {
-          try { await m.createTable(cvWorkExperiences); } catch (e) { print(e); }
-          try { await m.createTable(cvEducations); } catch (e) { print(e); }
-          try { await m.createTable(cvSkills); } catch (e) { print(e); }
-          try { await m.createTable(cvLanguages); } catch (e) { print(e); }
-          try { await m.createTable(cvCustomItems); } catch (e) { print(e); }
+          try { await m.createTable(cvWorkExperiences); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
+          try { await m.createTable(cvEducations); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
+          try { await m.createTable(cvSkills); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
+          try { await m.createTable(cvLanguages); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
+          try { await m.createTable(cvCustomItems); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
       },
     );
@@ -305,36 +295,48 @@ LazyDatabase _openConnection() {
     }
 
     try {
-      try {
-        migrateToEncryptedIfNecessary(file, encryptionKey!);
-      } catch (e, stack) {
-        print('Migration failed: $e\n$stack');
-      }
-      return NativeDatabase.createInBackground(
-        file,
-        setup: (db) {
-          db.execute("PRAGMA key = '$encryptionKey';");
-        },
-      );
-    } on Exception catch (_) {
-      // If the database file is corrupted, back it up and create a fresh one
-      final backupFile = File('${file.path}.backup');
-      if (file.existsSync()) {
-        file.copySync(backupFile.path);
-        file.deleteSync();
-      }
-      // Try again
-      return NativeDatabase.createInBackground(
-        file,
-        setup: (db) {
-          db.execute("PRAGMA key = '$encryptionKey';");
-        },
-      );
+      migrateToEncryptedIfNecessary(file, encryptionKey);
+    } catch (e, stack) {
+      log('Migration to encrypted database failed: $e',
+          name: 'app_database', level: 1000, error: e, stackTrace: stack);
     }
+
+    // If the file is still plaintext (migration failed), opening it with a
+    // key would make SQLCipher reject it as "not a database". Open it
+    // unencrypted instead so the user keeps access to their data.
+    final stillPlaintext = isPlaintextSqlite(file);
+    if (stillPlaintext) {
+      log('WARNUNG: Datenbank ist NICHT verschlüsselt (Migration fehlgeschlagen). '
+          'Sie wird unverschlüsselt geöffnet.',
+          name: 'app_database', level: 1000);
+    }
+
+    final escapedKey = escapeSqlString(encryptionKey);
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) {
+        if (!stillPlaintext) {
+          db.execute("PRAGMA key = '$escapedKey';");
+        }
+        _checkSqlCipher(db);
+      },
+    );
   });
 }
 
-
-
-
-
+/// Logs loudly if the bundled native library is not SQLCipher, in which case
+/// `PRAGMA key` is silently ignored and the database is stored unencrypted.
+void _checkSqlCipher(Database db) {
+  try {
+    final rows = db.select('PRAGMA cipher_version;');
+    final version = rows.isEmpty ? null : rows.first.values.first?.toString();
+    if (version == null || version.isEmpty) {
+      log('FEHLER: SQLCipher ist NICHT aktiv – die Datenbank wird '
+          'unverschlüsselt gespeichert! (PRAGMA cipher_version ist leer)',
+          name: 'app_database', level: 1000);
+    }
+  } catch (e) {
+    log('FEHLER: SQLCipher-Prüfung fehlgeschlagen: $e',
+        name: 'app_database', level: 1000);
+  }
+}

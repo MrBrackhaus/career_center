@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'ai_endpoint.dart';
+
 class AiCorrectionService {
   Future<String?> correctText(
     String text,
@@ -32,20 +34,16 @@ class AiCorrectionService {
     }
 
     try {
-      final isOpenAI = baseUrl.contains('openai.com') || apiKey.startsWith('sk-');
+      // Endpunkt ausschließlich aus der konfigurierten URL ableiten – nie
+      // anhand des API-Keys den Host wechseln.
+      final endpoint = AiEndpoint.resolve(baseUrl);
+      final isOpenAI = endpoint.isOpenAiCompatible;
       http.Response response;
-      
+
       if (isOpenAI) {
-        final openAiUrl = baseUrl.contains('openai.com') 
-            ? '$baseUrl/v1/chat/completions'
-            : 'https://api.openai.com/v1/chat/completions';
-            
         response = await http.post(
-          Uri.parse(openAiUrl),
-          headers: {
-            'Content-Type': 'application/json',
-            if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
-          },
+          endpoint.uri,
+          headers: endpoint.headers(apiKey),
           body: jsonEncode({
             'model': modelName.isEmpty ? 'gpt-4o-mini' : modelName,
             'messages': [
@@ -56,8 +54,8 @@ class AiCorrectionService {
         ).timeout(const Duration(seconds: 30));
       } else {
         response = await http.post(
-          Uri.parse(baseUrl),
-          headers: {'Content-Type': 'application/json'},
+          endpoint.uri,
+          headers: endpoint.headers(apiKey),
           body: jsonEncode({
             'model': modelName,
             'prompt': prompt,

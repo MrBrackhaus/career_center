@@ -49,6 +49,17 @@ Da die Erweiterung noch in der Alpha-Phase ist, wird sie manuell installiert:
 * **Jobcenter-Berichte:** Automatische Generierung von tabellarischen PDFs für das Amt ("Nachweis von Eigenbemühungen").
 * **Lokale Datenbank:** Deine Daten gehören dir und verlassen deinen Computer nicht.
 
+## 🛠️ Selbst bauen
+
+1. `lib/core/secrets.dart` ist nicht im Repository (gitignored). Vor dem ersten Build die Vorlage kopieren:
+   ```sh
+   cp lib/core/secrets.example.dart lib/core/secrets.dart
+   ```
+   und in der Kopie den Klassennamen `SecretsExample` in `Secrets` ändern (optional eigene Werte eintragen; leere Werte deaktivieren die jeweilige Funktion).
+2. `flutter pub get` und anschließend z. B. `flutter build windows`.
+
+Die Datenbank wird mit SQLCipher verschlüsselt. Die passende native Bibliothek lädt `package:sqlite3` beim Build automatisch herunter (`hooks: user_defines: sqlite3: source: sqlcipher` in `pubspec.yaml`).
+
 ## AI Transparency Notice / KI-Transparenzhinweis
 
 **KI-assistierte Entwicklung & Haftungsausschluss**

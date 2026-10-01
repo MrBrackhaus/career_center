@@ -9,10 +9,12 @@ import 'package:file_selector/file_selector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:intl/intl.dart';
 
 import '../../providers/theme_provider.dart';
 import '../../providers/auto_updater_provider.dart';
 import 'widgets/update_banner.dart';
+import 'widgets/companion_token_card.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/database_provider.dart';
@@ -24,6 +26,7 @@ import '../../../core/utils/csv_generator.dart';
 import '../../../data/database/app_database.dart';
 import '../../../core/services/imap_service.dart';
 import '../../../core/utils/spell_checker.dart';
+import '../../../core/services/secure_settings_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -86,8 +89,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _loadSettings();
   }
 
+  /// Formatiert den gespeicherten ISO-Zeitstempel des letzten IMAP-Syncs.
+  static String _formatLastSync(String? raw) {
+    if (raw == null || raw.isEmpty) return 'Nie';
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return 'Nie';
+    return DateFormat('dd.MM.yyyy HH:mm').format(parsed.toLocal());
+  }
+
+  /// Zeitlimit für Secure-Storage-Zugriffe (z.B. gesperrter Schlüsselbund).
+  static const _secureStorageTimeout = Duration(seconds: 5);
+
+  Future<String> _loadAiApiKey(AppDatabase db) async {
+    try {
+      await SecureSettingsService.migrateLegacyAiApiKey(db).timeout(_secureStorageTimeout);
+      return await SecureSettingsService.getAiApiKey().timeout(_secureStorageTimeout);
+    } catch (e) {
+      debugPrint('API-Key konnte nicht aus dem Secure Storage geladen werden: $e');
+      return '';
+    }
+  }
+
   Future<void> _loadSettings() async {
-    final dao = ref.read(databaseProvider).settingsDao;
+    final db = ref.read(databaseProvider);
+    final dao = db.settingsDao;
     final nameSetting = await dao.getSettingByKey('userName');
     final addressSetting = await dao.getSettingByKey('userAddress');
     final emailSetting = await dao.getSettingByKey('userEmail');
@@ -104,14 +129,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final spellLangSetting = await dao.getSettingByKey('spellCheckLanguage');
     final aiCvSetting = await dao.getSettingByKey('aiCvAssistantEnabled');
     final cloudAiSetting = await dao.getSettingByKey('cloudAiEnabled');
-    final apiKeySetting = await dao.getSettingByKey('aiApiKey');
+    final apiKey = await _loadAiApiKey(db);
 
     final imapProviderSetting = await dao.getSettingByKey('imapProvider');
     final imapServerSetting = await dao.getSettingByKey('imapServer');
     final imapPortSetting = await dao.getSettingByKey('imapPort');
     final smtpServerSetting = await dao.getSettingByKey('smtpServer');
     final smtpPortSetting = await dao.getSettingByKey('smtpPort');
-    final lastSyncSetting = await dao.getSettingByKey('lastImapSyncDate');
+    final lastSyncSetting = await dao.getSettingByKey('imapLastSync');
     final weeklyGoalSetting = await dao.getSettingByKey('weeklyApplicationGoal');
     
     _weeklyGoalController.text = weeklyGoalSetting?.value ?? '5';
@@ -121,7 +146,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final aiModelSetting = await dao.getSettingByKey('aiModelName');
     _aiModelController.text = aiModelSetting?.value ?? 'llama3.2';
     
-    _apiKeyController.text = apiKeySetting?.value ?? '';
+    _apiKeyController.text = apiKey;
     
     final imapEmailSetting = await dao.getSettingByKey('imapEmail');
     final packageInfo = await PackageInfo.fromPlatform();
@@ -155,7 +180,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _smtpPortController.text = smtpPortSetting?.value ?? '465';
         _imapEmailController.text = imapEmailSetting?.value ?? '';
         _imapPasswordController.text = '********'; 
-        _lastSyncDate = lastSyncSetting?.value ?? 'Nie';
+        _lastSyncDate = _formatLastSync(lastSyncSetting?.value);
 
         _isLoading = false;
       });
@@ -177,7 +202,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await dao.insertOrUpdateSetting(Setting(key: 'weeklyApplicationGoal', value: _weeklyGoalController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'aiServerUrl', value: _aiUrlController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'aiModelName', value: _aiModelController.text));
-    await dao.insertOrUpdateSetting(Setting(key: 'aiApiKey', value: _apiKeyController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'aiCvAssistantEnabled', value: _aiCvAssistantEnabled.toString()));
     await dao.insertOrUpdateSetting(Setting(key: 'cloudAiEnabled', value: _cloudAiEnabled.toString()));
     await dao.insertOrUpdateSetting(Setting(key: 'profilePreset', value: _selectedPreset));
@@ -189,6 +213,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await dao.insertOrUpdateSetting(Setting(key: 'smtpPort', value: _smtpPortController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'imapEmail', value: _imapEmailController.text));
 
+    String? apiKeyError;
+    try {
+      await SecureSettingsService.setAiApiKey(_apiKeyController.text.trim()).timeout(_secureStorageTimeout);
+    } catch (e) {
+      apiKeyError = e.toString();
+    }
+
     if (_imapPasswordController.text != '********' && _imapPasswordController.text.isNotEmpty) {
       await ImapService.savePassword(_imapPasswordController.text);
       await dao.insertOrUpdateSetting(const Setting(key: 'imapPassword', value: 'SECURE_STORAGE'));
@@ -197,9 +228,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.invalidate(customColumnsProvider);
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Einstellungen gespeichert'), backgroundColor: Colors.green),
-      );
+      if (apiKeyError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ Einstellungen gespeichert, aber der API-Key konnte nicht sicher gespeichert werden: $apiKeyError'), backgroundColor: Colors.orange),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Einstellungen gespeichert'), backgroundColor: Colors.green),
+        );
+      }
     }
   }
 
@@ -219,7 +256,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       );
 
       if (saveLocation == null) return;
-      await dbFile.copy(saveLocation.path);
+      final target = File(saveLocation.path);
+      if (p.equals(p.absolute(target.path), p.absolute(dbFile.path))) {
+        throw Exception('Das Backup kann nicht über die laufende Datenbank gespeichert werden.');
+      }
+      // VACUUM INTO und File.copy schlagen fehl bzw. überschreiben – der Nutzer
+      // hat das Überschreiben im Speichern-Dialog bereits bestätigt.
+      if (await target.exists()) {
+        await target.delete();
+      }
+
+      // Konsistente Kopie der geöffneten Datenbank (inkl. WAL-Inhalt) erzeugen.
+      // Fallback: Rohkopie der Datei, falls VACUUM INTO nicht unterstützt wird.
+      try {
+        final escapedPath = target.path.replaceAll("'", "''");
+        await ref.read(databaseProvider).customStatement("VACUUM INTO '$escapedPath'");
+      } catch (e) {
+        debugPrint('VACUUM INTO fehlgeschlagen, kopiere Datei direkt: $e');
+        if (await target.exists()) {
+          await target.delete();
+        }
+        await dbFile.copy(target.path);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -231,38 +289,119 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  /// Maximale Größe einer importierten Datenbank (Plausibilitätsprüfung).
+  static const _maxBackupBytes = 2 * 1024 * 1024 * 1024;
+
+  /// Prüft, ob [file] plausibel eine SQLite- bzw. SQLCipher-Datenbank ist.
+  /// Gibt eine Fehlermeldung zurück oder `null`, wenn die Datei gültig ist.
+  static Future<String?> _validateBackupFile(File file) async {
+    if (!await file.exists()) {
+      return 'Die ausgewählte Datei existiert nicht.';
+    }
+    final length = await file.length();
+    if (length == 0) {
+      return 'Die ausgewählte Datei ist leer.';
+    }
+    if (length > _maxBackupBytes) {
+      return 'Die ausgewählte Datei ist zu groß für ein Backup.';
+    }
+    // SQLite-/SQLCipher-Dateien bestehen aus ganzen Seiten (mind. 512 Byte,
+    // immer eine Zweierpotenz) – die Dateigröße ist daher ein Vielfaches von 512.
+    if (length < 512 || length % 512 != 0) {
+      return 'Die ausgewählte Datei ist keine gültige Datenbank-Datei.';
+    }
+    // Unverschlüsselte SQLite-Dateien beginnen mit "SQLite format 3\0".
+    // SQLCipher-Dateien sind vollständig verschlüsselt (zufälliger Header)
+    // und lassen sich ohne Schlüssel nicht weiter prüfen.
+    final raf = await file.open();
+    try {
+      final header = await raf.read(16);
+      final isPlainSqlite = String.fromCharCodes(header) == 'SQLite format 3\u0000';
+      if (!isPlainSqlite && header.every((b) => b == 0)) {
+        return 'Die ausgewählte Datei ist keine gültige Datenbank-Datei.';
+      }
+    } finally {
+      await raf.close();
+    }
+    return null;
+  }
+
   Future<void> _importBackup() async {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.settingsExportRestart), duration: const Duration(seconds: 4)),
       );
     }
+    var dbClosed = false;
     try {
       final file = await openFile(acceptedTypeGroups: [const XTypeGroup(label: 'SQLite Database', extensions: ['sqlite', 'db'])]);
       if (file == null) return;
 
+      final source = File(file.path);
+      final validationError = await _validateBackupFile(source);
+      if (validationError != null) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(validationError), backgroundColor: Colors.red));
+        return;
+      }
+
       final dbFolder = await getApplicationDocumentsDirectory();
       final dbFile = File(p.join(dbFolder.path, 'career_center.sqlite'));
+      if (p.equals(p.absolute(source.path), p.absolute(dbFile.path))) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Diese Datei ist bereits die aktive Datenbank.'), backgroundColor: Colors.red));
+        return;
+      }
 
-        await ref.read(databaseProvider).close();
-        await File(file.path).copy(dbFile.path);
+      // Ab hier keine Datenbankzugriffe mehr – die App muss danach beendet werden.
+      await ref.read(databaseProvider).close();
+      dbClosed = true;
+
+      // Veraltete Journal-/WAL-Dateien der alten Datenbank entfernen, sonst
+      // würden sie beim nächsten Start auf die neue Datei angewendet.
+      for (final suffix in ['-journal', '-wal', '-shm']) {
+        final sidecar = File('${dbFile.path}$suffix');
+        if (await sidecar.exists()) {
+          await sidecar.delete();
+        }
+      }
+
+      await source.copy(dbFile.path);
 
       if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Text('✅ Import erfolgreich'),
-            content: const Text('Die Datenbank wurde ersetzt. Bitte schließe die App komplett und starte sie neu, um die Änderungen zu laden.'),
-            actions: [
-              TextButton(onPressed: () => exit(0), child: Text(AppLocalizations.of(context)!.settingsAppQuit)),
-            ],
-          ),
+        await _showQuitDialog(
+          title: '✅ Import erfolgreich',
+          message: 'Die Datenbank wurde ersetzt. Bitte schließe die App komplett und starte sie neu, um die Änderungen zu laden.',
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
+      if (!mounted) return;
+      if (dbClosed) {
+        // Die Datenbank ist bereits geschlossen – die App kann nicht sicher
+        // weiterlaufen, daher ebenfalls zum Beenden zwingen.
+        await _showQuitDialog(
+          title: '❌ Import fehlgeschlagen',
+          message: 'Beim Ersetzen der Datenbank ist ein Fehler aufgetreten:\n$e\n\nBitte beende die App und starte sie neu.',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
+      }
     }
+  }
+
+  Future<void> _showQuitDialog({required String title, required String message}) {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(onPressed: () => exit(0), child: Text(AppLocalizations.of(ctx)!.settingsAppQuit)),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -472,6 +611,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const Divider(),
         const SizedBox(height: 16),
 
+        // BROWSER-ERWEITERUNG / COMPANION
+        Text('Browser-Erweiterung & MCP', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 16),
+        const CompanionTokenCard(),
+
+        const SizedBox(height: 32),
+        const Divider(),
+        const SizedBox(height: 16),
+
         // SONSTIGES
         Text('Sonstiges', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
@@ -554,7 +702,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: const Icon(Icons.delete, color: Colors.red),
             tooltip: 'Letzten Sync-Zeitpunkt löschen',
             onPressed: () async {
-              await ref.read(databaseProvider).settingsDao.insertOrUpdateSetting(const Setting(key: 'lastImapSyncDate', value: 'Nie'));
+              await ref.read(databaseProvider).settingsDao.insertOrUpdateSetting(const Setting(key: 'imapLastSync', value: ''));
+              ref.invalidate(imapLastSyncProvider);
               setState(() => _lastSyncDate = 'Nie');
               if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sync-Zeitpunkt gelöscht.')));
             },
@@ -652,8 +801,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
               onChanged: (val) {
                 if (val == null) return;
-                if (val.isEmpty) ref.read(localeProvider.notifier).clearLocale();
-                else ref.read(localeProvider.notifier).setLocale(val);
+                if (val.isEmpty) {
+                  ref.read(localeProvider.notifier).clearLocale();
+                } else {
+                  ref.read(localeProvider.notifier).setLocale(val);
+                }
               },
             );
           },
@@ -754,9 +906,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await ref.read(autoUpdaterProvider.notifier).checkForUpdates(isManual: true);
                 if (context.mounted) {
                   final status = ref.read(autoUpdaterProvider).status;
-                  if (status == UpdaterStatus.upToDate) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Die App ist auf dem neuesten Stand.')));
-                  else if (status == UpdaterStatus.error) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: ${ref.read(autoUpdaterProvider).errorMessage}')));
-                  else if (status == UpdaterStatus.available) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Neues Update verfügbar!')));
+                  if (status == UpdaterStatus.upToDate) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Die App ist auf dem neuesten Stand.')));
+                  } else if (status == UpdaterStatus.error) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: ${ref.read(autoUpdaterProvider).errorMessage}')));
+                  } else if (status == UpdaterStatus.available) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Neues Update verfügbar!')));
+                  }
                 }
               },
             );

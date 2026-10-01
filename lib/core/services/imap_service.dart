@@ -1,19 +1,7 @@
 /*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Bewerbungszentrale (Career Center)
+ * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
+ * Siehe README.md.
  */
 import 'package:enough_mail/enough_mail.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -22,6 +10,7 @@ import 'dart:developer' show log;
 import 'package:drift/drift.dart' as drift;
 
 import '../../data/database/app_database.dart';
+import '../../domain/enums/application_status.dart';
 import 'extractors/email_response_extractor.dart';
 
 // ── ScannableEmail model ──────────────────────────────────────────────────────
@@ -130,21 +119,103 @@ class ImapService {
 
   // ── IMAP connection ───────────────────────────────────────────────────────
 
+  /// Verbindet sich mit dem IMAP-Server und meldet sich an.
+  ///
+  /// [useSsl] erzwingt (true) bzw. verbietet (false) implizites TLS. Ohne
+  /// Angabe wird für Port 143 STARTTLS verwendet, sonst implizites TLS.
+  /// Liefert null bei Fehlern; die Verbindung wird dann wieder geschlossen.
   Future<ImapClient?> connect(
     String server,
     int port,
     String email,
     String password, {
-    bool useSsl = true,
+    bool? useSsl,
   }) async {
     final client = ImapClient(isLogEnabled: false);
     try {
-      await client.connectToServer(server, port, isSecure: useSsl);
-      await client.login(email, password);
+      await _connectAndLogin(
+        client,
+        server,
+        port,
+        email,
+        password,
+        isSecure: useSsl,
+      );
       return client;
     } catch (e) {
+      log('IMAP-Verbindung fehlgeschlagen: $e', name: 'ImapService');
+      try {
+        await client.disconnect();
+      } catch (_) {}
       return null;
     }
+  }
+
+  /// Port 143 ist der Klartext-Port: dort wird per STARTTLS auf TLS
+  /// umgeschaltet, bevor das Passwort gesendet wird. Alle anderen Ports
+  /// (typisch 993) verwenden implizites TLS.
+  static Future<void> _connectAndLogin(
+    ImapClient client,
+    String host,
+    int port,
+    String userName,
+    String password, {
+    bool? isSecure,
+  }) async {
+    final secure = isSecure ?? port != 143;
+    await client.connectToServer(host, port, isSecure: secure);
+    if (!secure) {
+      // Kein Fallback auf Klartext-Login: schlägt STARTTLS fehl, wird
+      // abgebrochen, damit das Passwort nie unverschlüsselt übertragen wird.
+      await client.startTls();
+    }
+    await client.login(userName, password);
+  }
+
+  static const _sentFolderNames = {
+    'sent',
+    'sent items',
+    'sent mail',
+    'sent messages',
+    'gesendet',
+    'gesendete objekte',
+    'gesendete elemente',
+    'gesendete nachrichten',
+  };
+
+  /// Findet den Gesendet-Ordner: zuerst über das IMAP-Flag `\Sent`, danach
+  /// über bekannte Ordnernamen (exakter Vergleich des letzten Pfadsegments).
+  static Mailbox? findSentMailbox(List<Mailbox> mailboxes) {
+    for (final b in mailboxes) {
+      if (b.isSent) return b;
+    }
+    for (final b in mailboxes) {
+      final name = b.name.trim().toLowerCase();
+      if (_sentFolderNames.contains(name)) return b;
+      final path = b.path.trim().toLowerCase();
+      final sep = b.pathSeparator.toLowerCase();
+      if (sep.isNotEmpty &&
+          _sentFolderNames.any((n) => path.endsWith('$sep$n'))) {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  static String _messageId(MimeMessage msg) =>
+      msg.decodeHeaderValue('Message-ID') ??
+      (msg.uid?.toString() ??
+          'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
+
+  static Map<int, RegExp> _buildCompanyRegexes(List<Application> apps) {
+    final regexes = <int, RegExp>{};
+    for (final app in apps) {
+      final appCompany = app.company.toLowerCase();
+      if (appCompany.isNotEmpty && appCompany.length > 2) {
+        regexes[app.id] = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
+      }
+    }
+    return regexes;
   }
 
   // ── Auto-sync (background) ────────────────────────────────────────────────
@@ -163,12 +234,15 @@ class ImapService {
     int newlyImported = 0;
     try {
       onProgress?.call('Verbinde mit $host...');
-      await client.connectToServer(host, port, isSecure: true);
-      await client.login(userName, password);
+      await _connectAndLogin(client, host, port, userName, password);
 
       onProgress?.call('Lade Bewerbungen aus der Datenbank...');
-      final applications = await db.applicationsDao.getAllApplications();
-      final companyRegexes = <int, RegExp>{};
+      // Veränderbare Kopie: neu importierte Bewerbungen werden ergänzt, damit
+      // eine zweite Mail an denselben Empfänger im selben Lauf kein Duplikat
+      // erzeugt.
+      final applications = List<Application>.of(
+        await db.applicationsDao.getAllApplications(),
+      );
       // Check if this is the first sync
       final lastSyncSetting = await db.settingsDao.getSettingByKey(
         'last_imap_sync',
@@ -181,17 +255,7 @@ class ImapService {
 
       // ── 1. SENT FOLDER ──────────────────────────────────────────────────────────
       final mailboxes = await client.listMailboxes(recursive: true);
-      Mailbox? sentBox;
-      try {
-        sentBox = mailboxes.firstWhere(
-          (b) =>
-              b.isSent ||
-              b.name.toLowerCase().contains('sent') ||
-              b.name.toLowerCase().contains('gesendet') ||
-              b.name.toLowerCase().contains('postausgang') ||
-              b.name.toLowerCase().contains('outbox'),
-        );
-      } catch (_) {}
+      final sentBox = findSentMailbox(mailboxes);
 
       if (sentBox != null) {
         await client.selectMailbox(sentBox);
@@ -203,13 +267,7 @@ class ImapService {
         
         onProgress?.call('Durchsuche Postausgang (${sentMessages.length} Mails)...');
 
-        final companyRegexes = <int, RegExp>{};
-        for (final app in applications) {
-          final appCompany = app.company.toLowerCase();
-          if (appCompany.isNotEmpty && appCompany.length > 2) {
-            companyRegexes[app.id] = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
-          }
-        }
+        final companyRegexes = _buildCompanyRegexes(applications);
 
         for (final msg in sentMessages) {
           final sentDate = msg.decodeDate() ?? DateTime.now();
@@ -224,10 +282,12 @@ class ImapService {
           final body = msg.decodeTextPlainPart() ?? '';
           final subjectLower = subject.toLowerCase();
           final bodyLower = body.toLowerCase();
+          final msgId = _messageId(msg);
 
           // a) Update existing "offen" → "versendet"
-          for (final app in applications) {
-            if (app.status == 'offen') {
+          for (var i = 0; i < applications.length; i++) {
+            final app = applications[i];
+            if (app.status == ApplicationStatus.offen) {
               final appEmail = app.contactEmail?.toLowerCase() ?? '';
               final appCompany = app.company.toLowerCase();
               bool matched = false;
@@ -245,14 +305,12 @@ class ImapService {
                 }
               }
               if (matched) {
-                await db.applicationsDao.updateApplication(
-                  app.copyWith(
-                    status: 'versendet',
-                    appliedDate: drift.Value(sentDate),
-                  ),
+                final updated = app.copyWith(
+                  status: ApplicationStatus.versendet,
+                  appliedDate: drift.Value(sentDate),
                 );
-                final msgId =
-                    msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
+                await db.applicationsDao.updateApplication(updated);
+                applications[i] = updated;
                 final existingEmail = await db.emailsDao.getEmailByMessageId(
                   msgId,
                 );
@@ -275,10 +333,13 @@ class ImapService {
             }
           }
 
+          // Bereits gespeicherte Mails (früherer Lauf oder Schritt a) nicht
+          // erneut importieren.
+          if (await db.emailsDao.getEmailByMessageId(msgId) != null) continue;
+
           // b) Auto-import new applications
-          final msgId = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
           if (aiExtractor != null) {
-            final isRelevant = subject.toLowerCase().contains('bewerbung') || body.toLowerCase().contains('bewerbung') || subject.toLowerCase().contains('application');
+            final isRelevant = subjectLower.contains('bewerbung') || bodyLower.contains('bewerbung') || subjectLower.contains('application');
             if (isRelevant) {
               onProgress?.call('KI analysiert gesendete Mail...');
               final aiResult = await aiExtractor.analyzeEmail(subject, body);
@@ -301,7 +362,7 @@ class ImapService {
                     ApplicationsCompanion.insert(
                       company: finalCompany,
                       position: finalPosition,
-                      status: drift.Value(aiResult.status ?? 'versendet'),
+                      status: drift.Value(normalizeApplicationStatus(aiResult.status)),
                       appliedDate: drift.Value(sentDate),
                       contactEmail: drift.Value(recipientEmail),
                       createdAt: drift.Value(DateTime.now()),
@@ -320,6 +381,7 @@ class ImapService {
                       isRead: drift.Value(true),
                     ),
                   );
+                  await _rememberApplication(db, appId, applications);
                   newlyImported++;
                   continue; // Skip the regex fallback
                 }
@@ -365,7 +427,7 @@ class ImapService {
             ApplicationsCompanion.insert(
               company: company,
               position: position,
-              status: drift.Value(detectedStatus),
+              status: drift.Value(normalizeApplicationStatus(detectedStatus)),
               appliedDate: drift.Value(sentDate),
               contactName: drift.Value(
                 contactName.isNotEmpty ? contactName : null,
@@ -384,8 +446,7 @@ class ImapService {
           await db.emailsDao.insertEmail(
             EmailsCompanion.insert(
               applicationId: appId,
-              messageId:
-                  msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}'),
+              messageId: msgId,
               subject: subject.isNotEmpty ? subject : 'Kein Betreff',
               sender: recipientEmail.isNotEmpty
                   ? 'An: $recipientEmail'
@@ -395,13 +456,16 @@ class ImapService {
               isRead: drift.Value(true),
             ),
           );
+          await _rememberApplication(db, appId, applications);
 
           newlyImported++;
         }
       }
 
       // ── 2. INBOX ──────────────────────────────────────────────────────────
-      final updatedApps = await db.applicationsDao.getAllApplications();
+      final updatedApps = List<Application>.of(
+        await db.applicationsDao.getAllApplications(),
+      );
       await client.selectInbox();
       final inboxResult = await client.fetchRecentMessages(
         messageCount: fetchCount,
@@ -410,22 +474,19 @@ class ImapService {
       
       onProgress?.call('Durchsuche Posteingang (${inboxResult.messages.length} Mails)...');
 
-      companyRegexes.clear();
-      for (final app in updatedApps) {
-        final appCompany = app.company.toLowerCase();
-        if (appCompany.isNotEmpty && appCompany.length > 2) {
-          companyRegexes[app.id] = RegExp(r'\b' + RegExp.escape(appCompany) + r'\b');
-        }
-      }
+      final companyRegexes = _buildCompanyRegexes(updatedApps);
 
       for (final msg in inboxResult.messages) {
         final rDate = msg.decodeDate() ?? DateTime.now();
         if (rDate.isBefore(cutoffDate)) continue;
 
         final fromAddress = msg.from?.firstOrNull?.email.toLowerCase() ?? '';
-        final subject = msg.decodeSubject()?.toLowerCase() ?? '';
-        final body = msg.decodeTextPlainPart()?.toLowerCase() ?? '';
-        final msgId = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
+        final subjectRaw = msg.decodeSubject() ?? '';
+        final bodyRaw = msg.decodeTextPlainPart() ?? '';
+        // Kleingeschriebene Kopien nur für das Matching.
+        final subject = subjectRaw.toLowerCase();
+        final body = bodyRaw.toLowerCase();
+        final msgId = _messageId(msg);
 
         final existing = await db.emailsDao.getEmailByMessageId(msgId);
         if (existing != null) continue;
@@ -464,31 +525,33 @@ class ImapService {
               EmailsCompanion.insert(
                 applicationId: app.id,
                 messageId: msgId,
-                subject: msg.decodeSubject() ?? 'Kein Betreff',
+                subject: subjectRaw.isNotEmpty ? subjectRaw : 'Kein Betreff',
                 sender: msg.from?.firstOrNull?.toString() ?? 'Unbekannt',
-                bodySnippet: body,
-                receivedAt: msg.decodeDate() ?? DateTime.now(),
+                bodySnippet: bodyRaw,
+                receivedAt: rDate,
               ),
             );
 
             String newStatus = app.status;
             final extracted = EmailResponseExtractor.detectStatus(
-              msg.decodeSubject() ?? '',
-              msg.decodeTextPlainPart() ?? '',
+              subjectRaw,
+              bodyRaw,
             );
 
             if (extracted == 'absage' || extracted == 'interview') {
               newStatus = extracted!;
-            } else if (extracted == 'bestaetigung' && app.status == 'offen') {
-              newStatus = 'versendet';
+            } else if (extracted == 'bestaetigung' &&
+                app.status == ApplicationStatus.offen) {
+              newStatus = ApplicationStatus.versendet;
             }
+            newStatus = normalizeApplicationStatus(newStatus);
 
             if (newStatus != app.status) {
               await db.applicationsDao.updateApplication(
                 app.copyWith(
                   status: newStatus,
                   responseDate: drift.Value(msg.decodeDate()),
-                  rejectionReason: newStatus == 'absage'
+                  rejectionReason: newStatus == ApplicationStatus.absage
                       ? drift.Value('Automatisch aus E-Mail erkannt')
                       : const drift.Value.absent(),
                 ),
@@ -523,8 +586,8 @@ class ImapService {
           if (isConfirmation) {
             onProgress?.call('KI analysiert Bestätigungsmail...');
             final aiResult = await aiExtractor.analyzeEmail(
-              msg.decodeSubject() ?? '', 
-              msg.decodeTextPlainPart() ?? '',
+              subjectRaw,
+              bodyRaw,
             );
             if (aiResult != null && aiResult.isApplicationRelated) {
               String finalCompany = (aiResult.companyName != null && aiResult.companyName!.isNotEmpty)
@@ -545,8 +608,8 @@ class ImapService {
                   ApplicationsCompanion.insert(
                     company: finalCompany,
                     position: finalPosition,
-                    status: drift.Value(aiResult.status ?? 'versendet'),
-                    appliedDate: drift.Value(msg.decodeDate() ?? DateTime.now()),
+                    status: drift.Value(normalizeApplicationStatus(aiResult.status)),
+                    appliedDate: drift.Value(rDate),
                     contactEmail: drift.Value(msg.from?.firstOrNull?.email ?? ''),
                     createdAt: drift.Value(DateTime.now()),
                     updatedAt: drift.Value(DateTime.now()),
@@ -556,12 +619,13 @@ class ImapService {
                   EmailsCompanion.insert(
                     applicationId: newAppId,
                     messageId: msgId,
-                    subject: msg.decodeSubject() ?? 'Kein Betreff',
+                    subject: subjectRaw.isNotEmpty ? subjectRaw : 'Kein Betreff',
                     sender: msg.from?.firstOrNull?.toString() ?? 'Unbekannt',
-                    bodySnippet: (msg.decodeTextPlainPart() ?? '').trim(),
-                    receivedAt: msg.decodeDate() ?? DateTime.now(),
+                    bodySnippet: bodyRaw.trim(),
+                    receivedAt: rDate,
                   ),
                 );
+                await _rememberApplication(db, newAppId, updatedApps);
                 newlyImported++;
               }
             }
@@ -590,7 +654,11 @@ class ImapService {
     String password,
   ) async {
     final client = await connect(server, port, email, password);
-    if (client == null) return [];
+    if (client == null) {
+      throw Exception(
+        'Verbindung zum IMAP-Server fehlgeschlagen. Bitte Zugangsdaten prüfen.',
+      );
+    }
 
     final result = <ScannableEmail>[];
     final existingApps = await db.applicationsDao.getAllApplications();
@@ -603,17 +671,7 @@ class ImapService {
     try {
       // ── Sent folder ──────────────────────────────────────────────────────
       final mailboxes = await client.listMailboxes(recursive: true);
-      Mailbox? sentBox;
-      try {
-        sentBox = mailboxes.firstWhere(
-          (b) =>
-              b.isSent ||
-              b.name.toLowerCase().contains('sent') ||
-              b.name.toLowerCase().contains('gesendet') ||
-              b.name.toLowerCase().contains('postausgang') ||
-              b.name.toLowerCase().contains('outbox'),
-        );
-      } catch (_) {}
+      final sentBox = findSentMailbox(mailboxes);
 
       if (sentBox != null) {
         await client.selectMailbox(sentBox);
@@ -631,7 +689,7 @@ class ImapService {
           final subject = msg.decodeSubject() ?? '';
           final body = msg.decodeTextPlainPart() ?? '';
           final date = msg.decodeDate() ?? DateTime.now();
-          final uid = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
+          final uid = _messageId(msg);
           final recipientEmail = toAddresses.isNotEmpty
               ? toAddresses.first
               : '';
@@ -679,7 +737,7 @@ class ImapService {
         final subject = msg.decodeSubject() ?? '';
         final body = msg.decodeTextPlainPart() ?? '';
         final date = msg.decodeDate() ?? DateTime.now();
-        final uid = msg.decodeHeaderValue('Message-ID') ?? (msg.uid?.toString() ?? 'fallback_${DateTime.now().microsecondsSinceEpoch}_${msg.hashCode}');
+        final uid = _messageId(msg);
 
         final detectedStatus = _detectApplicationStatus(subject, body);
 
@@ -719,10 +777,16 @@ class ImapService {
     AppDatabase db,
     List<ScannableEmail> emails,
   ) async {
-    final applications = await db.applicationsDao.getAllApplications();
+    final applications = List<Application>.of(
+      await db.applicationsDao.getAllApplications(),
+    );
     int count = 0;
     for (final scanMail in emails) {
-      final status = scanMail.detectedStatus ?? 'versendet';
+      final status = normalizeApplicationStatus(scanMail.detectedStatus);
+
+      if (await db.emailsDao.getEmailByMessageId(scanMail.uid) != null) {
+        continue;
+      }
 
       final recipientEmail = scanMail.folder == 'sent'
           ? (scanMail.fromTo.startsWith('An: ')
@@ -772,8 +836,20 @@ class ImapService {
           isRead: drift.Value(true),
         ),
       );
+      await _rememberApplication(db, appId, applications);
       count++;
     }
     return count;
+  }
+
+  /// Lädt eine frisch eingefügte Bewerbung und ergänzt sie in [apps], damit
+  /// spätere Duplikat-Prüfungen im selben Lauf sie berücksichtigen.
+  static Future<void> _rememberApplication(
+    AppDatabase db,
+    int id,
+    List<Application> apps,
+  ) async {
+    final inserted = await db.applicationsDao.getApplicationById(id);
+    if (inserted != null) apps.add(inserted);
   }
 }

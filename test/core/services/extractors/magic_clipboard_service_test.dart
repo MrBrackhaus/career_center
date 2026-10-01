@@ -63,6 +63,18 @@ Das HR-Team von TechCorp
       expect(result.matchedApplication?.id, 2);
     });
 
+    test('Normalisiert Eingangsbestätigung auf Board-Status versendet', () {
+      final text = '''
+Sehr geehrte(r) Bewerber(in),
+wir bestätigen den Eingang Ihrer Unterlagen für die Position Flutter Developer bei TechCorp.
+''';
+
+      final result = service.analyzeText(text, existingApps);
+
+      expect(result, isNotNull);
+      expect(result!.detectedStatus, 'versendet');
+    });
+
     test('Returns null for empty text', () {
       final result = service.analyzeText('   ', existingApps);
       expect(result, isNull);

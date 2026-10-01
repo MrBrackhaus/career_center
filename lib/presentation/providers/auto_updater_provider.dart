@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/services/auto_updater_service.dart';
+import 'database_provider.dart';
 
 enum UpdaterStatus {
   idle,
@@ -32,13 +33,14 @@ class AutoUpdaterState {
     UpdateInfo? updateInfo,
     double? downloadProgress,
     String? errorMessage,
+    bool clearError = false,
     File? installerFile,
   }) {
     return AutoUpdaterState(
       status: status ?? this.status,
       updateInfo: updateInfo ?? this.updateInfo,
       downloadProgress: downloadProgress ?? this.downloadProgress,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       installerFile: installerFile ?? this.installerFile,
     );
   }
@@ -57,7 +59,7 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
   Future<void> checkForUpdates({bool isManual = false}) async {
     if (state.status == UpdaterStatus.checking || state.status == UpdaterStatus.downloading) return;
     
-    state = state.copyWith(status: UpdaterStatus.checking, errorMessage: null);
+    state = state.copyWith(status: UpdaterStatus.checking, clearError: true);
     
     try {
       final info = await _service.checkForUpdates();
@@ -68,7 +70,7 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
         if (!isManual) {
           // Reset to idle after a while if it was an automatic check
           Future.delayed(const Duration(seconds: 5), () {
-            if (true && state.status == UpdaterStatus.upToDate) {
+            if (ref.mounted && state.status == UpdaterStatus.upToDate) {
               state = state.copyWith(status: UpdaterStatus.idle);
             }
           });
@@ -80,30 +82,51 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
   }
 
   Future<void> downloadUpdate() async {
-    if (state.updateInfo == null) return;
+    final info = state.updateInfo;
+    if (info == null) return;
 
-    state = state.copyWith(status: UpdaterStatus.downloading, downloadProgress: 0.0);
-    
-    final file = await _service.downloadUpdate(
-      state.updateInfo!.downloadUrl,
-      (progress) {
-        state = state.copyWith(downloadProgress: progress);
-      },
+    state = state.copyWith(
+      status: UpdaterStatus.downloading,
+      downloadProgress: 0.0,
+      clearError: true,
     );
 
-    if (file != null) {
-      state = state.copyWith(status: UpdaterStatus.readyToInstall, installerFile: file);
-    } else {
-      state = state.copyWith(status: UpdaterStatus.error, errorMessage: 'Download fehlgeschlagen');
+    try {
+      final file = await _service.downloadUpdate(
+        info.downloadUrl,
+        (progress) {
+          state = state.copyWith(downloadProgress: progress);
+        },
+        expectedSha256: info.sha256,
+      );
+
+      if (file != null) {
+        state = state.copyWith(status: UpdaterStatus.readyToInstall, installerFile: file);
+      } else {
+        state = state.copyWith(status: UpdaterStatus.error, errorMessage: 'Download fehlgeschlagen');
+      }
+    } on UpdateIntegrityException catch (e) {
+      state = state.copyWith(status: UpdaterStatus.error, errorMessage: e.toString());
     }
   }
 
   Future<void> installUpdate() async {
-    if (state.installerFile != null) {
-      await _service.installAndRestart(state.installerFile!);
+    final file = state.installerFile;
+    if (file == null) return;
+    try {
+      await _service.installAndRestart(
+        file,
+        // Datenbank sauber schließen, bevor der Prozess mit exit(0) endet.
+        beforeExit: () => ref.read(databaseProvider).close(),
+      );
+    } catch (e) {
+      state = state.copyWith(
+        status: UpdaterStatus.error,
+        errorMessage: 'Installation fehlgeschlagen: $e',
+      );
     }
   }
-  
+
   void dismissUpdate() {
     state = const AutoUpdaterState(status: UpdaterStatus.idle);
   }

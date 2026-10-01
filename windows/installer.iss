@@ -1,5 +1,5 @@
 ﻿#define MyAppName "Bewerbungszentrale"
-#define MyAppVersion "0.8.1"
+#define MyAppVersion "0.9.0"
 #define MyAppPublisher "MrBrackhaus"
 #define MyAppExeName "career_center.exe"
 

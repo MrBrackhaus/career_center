@@ -4,14 +4,36 @@ import 'package:career_center/core/services/ai_cover_letter_service.dart';
 
 void main() {
   group('AiCoverLetterService - Post-Processing', () {
-    test('Entfernt Markdown (fett) aus der Antwort', () {
+    test('Entfernt nur Markdown-Fettdruck-Marker, nicht den Text', () {
       final jsonStr = jsonEncode({
         'response': '**Betreff:** Bewerbung als Entwickler\n\nSehr geehrte Damen und Herren,'
       });
       final bytes = utf8.encode(jsonStr);
       final result = processAiResponse(bytes);
       
-      expect(result, 'Bewerbung als Entwickler\n\nSehr geehrte Damen und Herren,');
+      expect(result, 'Betreff: Bewerbung als Entwickler\n\nSehr geehrte Damen und Herren,');
+    });
+
+    test('Entfernt Einleitungen nur am Anfang, nicht im Text', () {
+      final jsonStr = jsonEncode({
+        'response': 'Hier ist Ihr Anschreiben:\nSehr geehrte Damen und Herren,\nhier ist meine Motivation: Ich liebe Code.'
+      });
+      final result = processAiResponse(utf8.encode(jsonStr));
+
+      expect(result, 'Sehr geehrte Damen und Herren,\nhier ist meine Motivation: Ich liebe Code.');
+    });
+
+    test('Verarbeitet OpenAI-kompatible Antworten', () {
+      final jsonStr = jsonEncode({
+        'choices': [
+          {
+            'message': {'role': 'assistant', 'content': 'Sehr geehrte **Frau** Müller,'}
+          }
+        ]
+      });
+      final result = processAiResponse(utf8.encode(jsonStr));
+
+      expect(result, 'Sehr geehrte Frau Müller,');
     });
 
     test('Entfernt typische KI-Gesprächsfetzen (Einleitungen)', () {

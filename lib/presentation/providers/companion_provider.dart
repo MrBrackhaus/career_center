@@ -1,3 +1,5 @@
+import 'dart:developer' show log;
+
 import 'database_provider.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +31,10 @@ class CompanionNotifier extends Notifier<CompanionEvent?> {
       final setting = await ref.read(settingsRepositoryProvider).getSettingByKey(key);
       return setting?.value;
     };
-    _service.start();
+    _service.start().catchError((Object e) {
+      log('Companion Server konnte nicht gestartet werden: $e',
+          name: 'CompanionServer');
+    });
   }
 
   void clearEvent() {

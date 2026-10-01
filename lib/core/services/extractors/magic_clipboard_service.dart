@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/entities/application_entity.dart';
+import '../../../domain/enums/application_status.dart';
 import 'email_response_extractor.dart';
 
 class MagicClipboardResult {
@@ -43,6 +44,9 @@ class MagicClipboardService {
       }
     }
     
+    // Auf kanonische Board-Status abbilden (z.B. 'bestaetigung' -> 'versendet').
+    if (status != null) status = normalizeApplicationStatus(status);
+
     // 2. Firma/Position suchen
     // Wir gleichen den Text mit den bestehenden Bewerbungen ab.
     ApplicationEntity? bestMatch;

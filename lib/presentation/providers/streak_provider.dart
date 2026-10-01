@@ -45,13 +45,13 @@ final streakProvider = Provider<AsyncValue<StreakData>>((ref) {
 
   for (final app in applications) {
     if (app.appliedDate != null) {
-      final weekKey = _getIsoWeekKey(app.appliedDate!);
+      final weekKey = isoWeekKey(app.appliedDate!);
       appsPerWeek[weekKey] = (appsPerWeek[weekKey] ?? 0) + 1;
     }
   }
 
   final now = DateTime.now();
-  int currentWeekCount = appsPerWeek[_getIsoWeekKey(now)] ?? 0;
+  int currentWeekCount = appsPerWeek[isoWeekKey(now)] ?? 0;
   bool isGoalMetThisWeek = currentWeekCount >= goal;
 
   int streak = 0;
@@ -62,15 +62,16 @@ final streakProvider = Provider<AsyncValue<StreakData>>((ref) {
   }
 
   // Count backwards from LAST week
-  DateTime checkDate = now.subtract(const Duration(days: 7));
+  // Kalenderarithmetik statt Duration, damit DST-Wechsel keinen Tag verschieben.
+  DateTime checkDate = DateTime(now.year, now.month, now.day - 7);
 
   while (true) {
-    final checkWeekKey = _getIsoWeekKey(checkDate);
+    final checkWeekKey = isoWeekKey(checkDate);
     final count = appsPerWeek[checkWeekKey] ?? 0;
 
     if (count >= goal) {
       streak++;
-      checkDate = checkDate.subtract(const Duration(days: 7));
+      checkDate = DateTime(checkDate.year, checkDate.month, checkDate.day - 7);
     } else {
       break;
     }
@@ -86,35 +87,17 @@ final streakProvider = Provider<AsyncValue<StreakData>>((ref) {
   );
 });
 
-String _getIsoWeekKey(DateTime date) {
-  // ISO-8601 week calculation
-  // Thursday in current week decides the year.
-  final int dayOfYear = int.parse(
-    date.difference(DateTime(date.year, 1, 1)).inDays.toString(),
-  );
-  final int woy = ((dayOfYear - date.weekday + 10) / 7).floor();
-
-  int year = date.year;
-  int week = woy;
-
-  if (week < 1) {
-    year--;
-    week = 52; // Simplification, could be 53 depending on the year
-  } else if (week > 52) {
-    // Determine if the year has 53 weeks
-    DateTime dec31 = DateTime(date.year, 12, 31);
-    if (dec31.weekday == DateTime.thursday ||
-        (dec31.weekday == DateTime.friday && _isLeapYear(date.year))) {
-      week = 53;
-    } else {
-      year++;
-      week = 1;
-    }
-  }
-
+/// Liefert den ISO-8601-Wochenschlüssel (z.B. "2026-W36") für [date].
+///
+/// Es zählt nur das Kalenderdatum (Jahr/Monat/Tag); gerechnet wird in UTC,
+/// damit Sommerzeitwechsel keine Off-by-one-Fehler verursachen.
+String isoWeekKey(DateTime date) {
+  final day = DateTime.utc(date.year, date.month, date.day);
+  // Donnerstag derselben ISO-Woche bestimmt das Wochenjahr.
+  final thursday = day.add(Duration(days: DateTime.thursday - day.weekday));
+  final year = thursday.year;
+  final ordinalDay =
+      thursday.difference(DateTime.utc(year, 1, 1)).inDays + 1; // 1-basiert
+  final week = ((ordinalDay - 1) ~/ 7) + 1;
   return "$year-W${week.toString().padLeft(2, '0')}";
-}
-
-bool _isLeapYear(int year) {
-  return (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
 }

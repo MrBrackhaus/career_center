@@ -1,23 +1,12 @@
 /*
- * JobTracker
- * Copyright (C) 2026 
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ * Bewerbungszentrale (Career Center)
+ * Copyright (C) 2026. Alle Rechte vorbehalten / All rights reserved.
+ * Siehe README.md.
  */
 import 'dart:developer' show log;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/enums/application_status.dart';
 import 'applications_provider.dart';
 
 class ApplicationStats {
@@ -49,18 +38,18 @@ final statsProvider = Provider<ApplicationStats>((ref) {
   int interview = 0;
 
   for (var app in applications) {
-    switch (app.status.toLowerCase()) {
-      case 'absage':
+    switch (normalizeApplicationStatus(app.status, fallback: ApplicationStatus.offen)) {
+      case ApplicationStatus.absage:
         rejected++;
         break;
-      case 'zusage':
+      case ApplicationStatus.zusage:
         accepted++;
         break;
-      case 'interview':
+      case ApplicationStatus.interview:
         interview++;
         break;
       default:
-        open++; // 'offen', 'versendet', 'in prüfung'
+        open++; // 'offen', 'versendet' und unbekannte Werte
     }
   }
 

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:career_center/data/database/app_database.dart';
-import 'package:career_center/domain/entities/setting_entity.dart';
 import 'dart:io';
 
 void main() {
@@ -17,8 +16,8 @@ void main() {
       print('$deleted Bewerbungen gelöscht.');
 
       print('Setze Sprache auf Deutsch (de)...');
-      await db.settingsDao.saveSetting(
-        const SettingEntity(key: 'language', value: 'de'),
+      await db.settingsDao.insertOrUpdateSetting(
+        const Setting(key: 'app_language', value: 'de'),
       );
       print('Sprache erfolgreich zurückgesetzt.');
       

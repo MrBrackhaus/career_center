@@ -1,14 +1,20 @@
 import 'dart:convert';
+import 'dart:developer' show log;
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../domain/enums/application_status.dart';
 import '../../../presentation/providers/database_provider.dart';
+import '../ai_endpoint.dart';
+import '../secure_settings_service.dart';
 
 class AiEmailExtractionResult {
   final bool isApplicationRelated;
   final String? companyName;
   final String? positionTitle;
-  final String? status; // 'versendet', 'absage', 'interview', 'angebot', etc.
+  /// Bereits normalisierter Status (siehe [normalizeApplicationStatus]) oder
+  /// null, wenn die KI keinen Status erkannt hat.
+  final String? status;
   final String? rejectionReason;
 
   AiEmailExtractionResult({
@@ -36,12 +42,8 @@ class AiEmailExtractorService {
 
     // Lade Server-URL und Modellname aus den korrekten Settings
     final urlSetting = await settings.getSettingByKey('aiServerUrl');
-    String baseUrl = 'http://localhost:11434';
-    if (urlSetting != null && urlSetting.value.isNotEmpty) {
-      baseUrl = urlSetting.value;
-      // Entferne /api/generate falls es schon dran hängt, wir fügen es selbst hinzu
-      baseUrl = baseUrl.replaceAll('/api/generate', '').replaceAll(RegExp(r'/+$'), '');
-    }
+    // Endpunkt wird ausschließlich aus der konfigurierten URL abgeleitet.
+    final endpoint = AiEndpoint.resolve(urlSetting?.value);
     
     final modelSetting = await settings.getSettingByKey('aiModelName');
     final modelName = (modelSetting != null && modelSetting.value.isNotEmpty) 
@@ -116,24 +118,15 @@ Text:
     };
 
     try {
-      final apiKeySetting = await settings.getSettingByKey('aiApiKey');
-      final apiKey = apiKeySetting?.value ?? '';
-      
-      final isOpenAI = baseUrl.contains('openai.com') || apiKey.startsWith('sk-');
-      
+      final apiKey = await SecureSettingsService.getAiApiKey();
+      final isOpenAI = endpoint.isOpenAiCompatible;
+
       http.Response response;
-      
+
       if (isOpenAI) {
-        final openAiUrl = baseUrl.contains('openai.com') 
-            ? '$baseUrl/v1/chat/completions'
-            : 'https://api.openai.com/v1/chat/completions';
-            
         response = await http.post(
-          Uri.parse(openAiUrl),
-          headers: {
-            'Content-Type': 'application/json',
-            if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
-          },
+          endpoint.uri,
+          headers: endpoint.headers(apiKey),
           body: jsonEncode({
             'model': modelName.isEmpty ? 'gpt-4o-mini' : modelName,
             'messages': [
@@ -146,8 +139,8 @@ Text:
         ).timeout(const Duration(seconds: 30));
       } else {
         response = await http.post(
-          Uri.parse('$baseUrl/api/generate'),
-          headers: {'Content-Type': 'application/json'},
+          endpoint.uri,
+          headers: endpoint.headers(apiKey),
           body: jsonEncode({
             'model': modelName,
             'prompt': prompt,
@@ -190,7 +183,10 @@ Text:
         
         if (company != null && badWords.any((w) => company!.toLowerCase().contains(w))) company = null;
         if (position != null && badWords.any((w) => position!.toLowerCase().contains(w))) position = null;
-        if (parsed['status'] == 'unbekannt') parsed['status'] = null;
+        final rawStatus = parsed['status']?.toString().trim().toLowerCase();
+        final status = (rawStatus == null || rawStatus.isEmpty || rawStatus == 'unbekannt')
+            ? null
+            : normalizeApplicationStatus(rawStatus);
         
         // Verhindere, dass der eigene Name (aus dem Profil) als Firmenname genommen wird
         final ownName = (await settings.getSettingByKey('userName'))?.value.trim().toLowerCase() ?? '';
@@ -200,12 +196,12 @@ Text:
           isApplicationRelated: parsed['is_application_related'] == true,
           companyName: company,
           positionTitle: position,
-          status: parsed['status']?.toString().toLowerCase(),
+          status: status,
           rejectionReason: parsed['rejection_reason']?.toString(),
         );
       }
     } catch (e) {
-      print('AiEmailExtractorService error: $e');
+      log('AiEmailExtractorService error: $e', name: 'AiEmailExtractorService');
     }
     return null;
   }

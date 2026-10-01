@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/services/ai_correction_service.dart';
+import '../../core/services/secure_settings_service.dart';
 import '../../presentation/providers/database_provider.dart';
 
 final aiCorrectionServiceProvider = Provider<AiCorrectionService>((ref) {
@@ -37,11 +38,10 @@ class AiCorrectionNotifier extends Notifier<AiCorrectionState> {
     try {
       final urlSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiServerUrl');
       final modelSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiModelName');
-      final apiKeySetting = await ref.read(settingsRepositoryProvider).getSettingByKey('aiApiKey');
       
       final baseUrl = urlSetting?.value ?? 'http://localhost:11434/api/generate';
       final modelName = modelSetting?.value ?? 'llama3.2';
-      final apiKey = apiKeySetting?.value ?? '';
+      final apiKey = await SecureSettingsService.getAiApiKey();
 
       final corrected = await service.correctText(
         text,

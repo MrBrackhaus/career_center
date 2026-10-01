@@ -104,5 +104,6 @@ class RulerPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant RulerPainter oldDelegate) =>
+      oldDelegate.offset != offset || oldDelegate.isHorizontal != isHorizontal;
 }

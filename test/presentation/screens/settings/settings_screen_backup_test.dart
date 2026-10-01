@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:path/path.dart' as p;
-import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 

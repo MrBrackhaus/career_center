@@ -68,6 +68,7 @@ class ModernSidebarDesign extends DocumentDesign {
     final isLight = primaryColor.computeLuminance() > 0.5;
     final sidebarTextColor = isLight ? Colors.black87 : Colors.white;
     final sidebarTextDim = isLight ? Colors.black54 : Colors.white70;
+    final profileImage = cvData.profileImage;
     
     return IntrinsicHeight(
       child: Row(
@@ -86,6 +87,16 @@ class ModernSidebarDesign extends DocumentDesign {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (profileImage != null) ...[
+                Container(
+                  width: 110,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(image: profileImage, fit: BoxFit.cover),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
               Text(cvData.name, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: sidebarTextColor, height: 1.1)),
               const SizedBox(height: 6),
               Text(cvData.title, style: TextStyle(fontSize: 10, color: sidebarTextDim, fontWeight: FontWeight.w500)),
@@ -95,8 +106,8 @@ class ModernSidebarDesign extends DocumentDesign {
               _buildSidebarContactItem(Icons.email, cvData.email, sidebarTextDim),
               _buildSidebarContactItem(Icons.phone, cvData.phone, sidebarTextDim),
               _buildSidebarContactItem(Icons.location_on, cvData.address, sidebarTextDim),
-              if (cvData.birthdate.isNotEmpty)
-                _buildSidebarContactItem(Icons.cake, '${cvData.birthdate} in ${cvData.birthplace}', sidebarTextDim),
+              if (cvData.birthLine.isNotEmpty)
+                _buildSidebarContactItem(Icons.cake, cvData.birthLine, sidebarTextDim),
               if (cvData.maritalStatus.isNotEmpty)
                 _buildSidebarContactItem(Icons.people, cvData.maritalStatus, sidebarTextDim),
               

@@ -65,7 +65,7 @@ class KeywordExtractor {
     final frequencies = <String, int>{};
 
     for (final word in words) {
-      if (!_stopWords.contains(word) && word.length > 2) {
+      if (!_stopWords.contains(word) && _isRelevant(word)) {
         frequencies[word] = (frequencies[word] ?? 0) + 1;
       }
     }
@@ -86,8 +86,9 @@ class KeywordExtractor {
     final words = _tokenize(text);
     final found = <String>{};
 
+    final wordSet = words.toSet();
     for (final keyword in requiredKeywords) {
-      if (words.contains(keyword)) {
+      if (wordSet.contains(keyword.toLowerCase())) {
         found.add(keyword);
       }
     }
@@ -95,12 +96,38 @@ class KeywordExtractor {
     return found;
   }
 
+  /// Kurze Tokens sind nur relevant, wenn sie Technologie-Zeichen enthalten
+  /// (z.B. "c#", "c++", ".net").
+  static bool _isRelevant(String word) =>
+      word.length > 2 || (word.length == 2 && RegExp(r'[#+]').hasMatch(word));
+
   /// Tokenizes text into lowercase words, stripping punctuation.
+  ///
+  /// `#` und `+` sowie Punkte innerhalb eines Wortes bleiben erhalten, damit
+  /// Technologien wie "C#", "C++", ".NET" oder "Node.js" ganze Tokens bleiben.
   static List<String> _tokenize(String text) {
     final cleanText = text.toLowerCase().replaceAll(
-      RegExp(r'[^\w\säöüß]'),
+      RegExp(r'[^\w\säöüß#+.]'),
       ' ',
     );
-    return cleanText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    final tokens = <String>[];
+    for (var token in cleanText.split(RegExp(r'\s+'))) {
+      // Satzzeichen-Punkte am Ende entfernen ("Node.js." → "node.js")
+      token = token.replaceAll(RegExp(r'\.+$'), '');
+      // Führende Punkte nur behalten, wenn es ein einzelner vor einem
+      // Buchstaben ist (".net"), sonst entfernen ("...weiter" → "weiter")
+      if (!RegExp(r'^\.[a-zäöüß]').hasMatch(token)) {
+        token = token.replaceAll(RegExp(r'^\.+'), '');
+      }
+      // Reine Symbol-Tokens ("+", "#") verwerfen
+      if (token.isEmpty || !RegExp(r'[\wäöüß]').hasMatch(token)) continue;
+      // Abkürzungen ("z.b", "d.h") und Zahlen mit Punkt ("60.000") verwerfen
+      if (RegExp(r'^(?:[a-zäöü]\.)+[a-zäöü]$').hasMatch(token) ||
+          RegExp(r'^[\d.]*\.[\d.]*$').hasMatch(token)) {
+        continue;
+      }
+      tokens.add(token);
+    }
+    return tokens;
   }
 }

@@ -97,5 +97,101 @@ void main() {
       // Clean up
       await driftDb.close();
     });
+
+    test('Migration von V14 auf V15 entfernt doppelte E-Mails und legt eindeutigen Index an', () async {
+      final sqliteDb = sqlite3.openInMemory();
+
+      // 1. Aktuelles Schema anlegen lassen
+      final setupDb = AppDatabase.forTesting(
+        NativeDatabase.opened(sqliteDb, closeUnderlyingOnClose: false),
+      );
+      await setupDb.applicationsDao.getAllApplications();
+      await setupDb.close();
+
+      // 2. Zustand von V14 simulieren: kein Index, Duplikate vorhanden
+      sqliteDb.execute('DROP INDEX IF EXISTS idx_emails_application_message;');
+      sqliteDb.execute('PRAGMA user_version = 14;');
+      sqliteDb.execute('''
+        INSERT INTO applications (id, company, position, status, priority)
+        VALUES (1, 'Nordlicht Energie AG', 'Sachbearbeiterin', 'offen', 2),
+               (2, 'Muster GmbH', 'Buchhalter', 'offen', 2);
+      ''');
+      final ts = DateTime(2026, 9, 1).millisecondsSinceEpoch ~/ 1000;
+      sqliteDb.execute('''
+        INSERT INTO emails (id, application_id, message_id, subject, sender, body_snippet, received_at, is_read, is_sent_by_me)
+        VALUES (10, 1, '<abc@mail>', 'Eingangsbestätigung', 'hr@nordlicht.de', 'Danke', $ts, 0, 0),
+               (11, 1, '<abc@mail>', 'Eingangsbestätigung (Kopie)', 'hr@nordlicht.de', 'Danke', $ts, 0, 0),
+               (12, 1, '<abc@mail>', 'Eingangsbestätigung (Kopie 2)', 'hr@nordlicht.de', 'Danke', $ts, 0, 0),
+               (13, 2, '<abc@mail>', 'Gleiche ID, andere Bewerbung', 'hr@muster.de', 'Hallo', $ts, 0, 0),
+               (14, 1, '<def@mail>', 'Einladung', 'hr@nordlicht.de', 'Gespräch', $ts, 0, 0);
+      ''');
+
+      // 3. Migration 14 → 15 auslösen
+      final driftDb = AppDatabase.forTesting(NativeDatabase.opened(sqliteDb));
+      final emails = await driftDb.emailsDao.getAllEmails();
+      expect(emails.map((e) => e.id).toList()..sort(), [10, 13, 14]);
+
+      // getEmailByMessageId wirft nicht, obwohl die ID mehrfach vorkommt
+      final byId = await driftDb.emailsDao.getEmailByMessageId('<abc@mail>');
+      expect(byId?.id, 10);
+
+      // Index existiert und verhindert neue Duplikate
+      final index = await driftDb.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_emails_application_message'",
+      ).get();
+      expect(index, hasLength(1));
+
+      await driftDb.emailsDao.insertEmail(EmailsCompanion.insert(
+        applicationId: 1,
+        messageId: '<abc@mail>',
+        subject: 'Nochmal',
+        sender: 'hr@nordlicht.de',
+        bodySnippet: '',
+        receivedAt: DateTime(2026, 9, 2),
+      ));
+      expect(await driftDb.emailsDao.getEmailsForApplication(1), hasLength(2));
+
+      await driftDb.close();
+    });
+
+    test('Migration von V14 auf V15 vereinheitlicht alte Statuswerte', () async {
+      final sqliteDb = sqlite3.openInMemory();
+      final setupDb = AppDatabase.forTesting(
+        NativeDatabase.opened(sqliteDb, closeUnderlyingOnClose: false),
+      );
+      await setupDb.applicationsDao.getAllApplications();
+      await setupDb.close();
+
+      sqliteDb.execute('PRAGMA user_version = 14;');
+      sqliteDb.execute('''
+        INSERT INTO applications (id, company, position, status, priority)
+        VALUES (1, 'A GmbH', 'X', 'bestaetigung', 2),
+               (2, 'B GmbH', 'X', 'angebot', 2),
+               (3, 'C GmbH', 'X', 'Absage', 2),
+               (4, 'D GmbH', 'X', 'Vorstellungsgespräch', 2),
+               (5, 'E GmbH', 'X', 'offen', 2);
+      ''');
+
+      final driftDb = AppDatabase.forTesting(NativeDatabase.opened(sqliteDb));
+      final apps = await driftDb.applicationsDao.getAllApplications();
+      final byId = {for (final a in apps) a.id: a.status};
+      expect(byId, {
+        1: 'versendet',
+        2: 'zusage',
+        3: 'absage',
+        4: 'interview',
+        5: 'offen',
+      });
+      await driftDb.close();
+    });
+
+    test('Neue Datenbank hat den eindeutigen E-Mail-Index', () async {
+      final driftDb = AppDatabase.forTesting(NativeDatabase.memory());
+      final index = await driftDb.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_emails_application_message'",
+      ).get();
+      expect(index, hasLength(1));
+      await driftDb.close();
+    });
   });
 }

@@ -10,15 +10,19 @@ import 'package:file_selector/file_selector.dart';
 import '../../domain/entities/application_entity.dart';
 
 class CsvGenerator {
+  static const _formulaTriggers = {'=', '+', '-', '@', '\t', '\r'};
+
   /// Escapes a CSV cell value to prevent CSV injection attacks.
-  /// Prefixes cells starting with =, +, -, @ with an apostrophe to prevent
-  /// Excel from interpreting them as formulas.
-  static String _escapeCsvCell(String value) {
+  /// Prefixes cells whose first (non-whitespace) character is =, +, -, @
+  /// or that start with a tab / carriage return with an apostrophe to
+  /// prevent Excel from interpreting them as formulas.
+  static String escapeCsvCell(String value) {
     final escaped = value.replaceAll('"', '""');
-    if (escaped.startsWith('=') ||
-        escaped.startsWith('+') ||
-        escaped.startsWith('-') ||
-        escaped.startsWith('@')) {
+    final trimmed = escaped.trimLeft();
+    final isDangerous = (escaped.isNotEmpty &&
+            _formulaTriggers.contains(escaped[0])) ||
+        (trimmed.isNotEmpty && _formulaTriggers.contains(trimmed[0]));
+    if (isDangerous) {
       return '"\'$escaped"';
     }
     return '"$escaped"';
@@ -43,7 +47,7 @@ class CsvGenerator {
 
     String csv = rows
         .map(
-          (r) => r.map((e) => _escapeCsvCell(e.toString())).join(';'),
+          (r) => r.map((e) => escapeCsvCell(e.toString())).join(';'),
         )
         .join('\n');
 

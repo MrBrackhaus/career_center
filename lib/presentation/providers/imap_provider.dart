@@ -100,9 +100,11 @@ final imapSyncProvider = NotifierProvider<ImapSyncNotifier, AsyncValue<void>>(
   ImapSyncNotifier.new,
 );
 
-final applicationEmailsProvider = FutureProvider.family.autoDispose((
+/// Live-Liste der E-Mails einer Bewerbung (aktualisiert sich automatisch
+/// nach Sync/Import).
+final applicationEmailsProvider = StreamProvider.family.autoDispose((
   ref,
   int applicationId,
-) async {
-  return ref.read(emailsRepositoryProvider).getEmailsForApplication(applicationId);
+) {
+  return ref.watch(emailsRepositoryProvider).watchEmailsForApplication(applicationId);
 });

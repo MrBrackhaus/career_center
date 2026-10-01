@@ -34,6 +34,9 @@ class NaiveBayesClassifier {
   // Laplace smoothing parameter
   static const double _alpha = 1.0;
 
+  /// Ab dieser Vokabulargröße wird beim Online-Learning gepruned.
+  static const int maxVocabularySize = 50000;
+
   NaiveBayesClassifier();
 
   /// Classify a text and return result with confidence
@@ -145,15 +148,20 @@ class NaiveBayesClassifier {
     _classCounts[typeStr] = (_classCounts[typeStr] ?? 0) + 1;
     _totalDocuments++;
     
-    if (!isBatch && _vocabulary.length > 10000) {
-      pruneModel(minFreq: 2);
+    // Nur bei sehr großem Vokabular prunen und dabei niemals die Tokens der
+    // aktuellen Korrektur entfernen – sonst wäre das gerade Gelernte sofort
+    // wieder vergessen (neue Tokens haben immer docFreq 1).
+    if (!isBatch && _vocabulary.length > maxVocabularySize) {
+      pruneModel(minFreq: 2, protectedTokens: uniqueTokens);
     }
   }
 
-  /// Prune vocabulary to save memory by removing rare tokens/bigrams
-  void pruneModel({int minFreq = 2}) {
+  /// Prune vocabulary to save memory by removing rare tokens/bigrams.
+  ///
+  /// Tokens in [protectedTokens] werden nie entfernt.
+  void pruneModel({int minFreq = 2, Set<String> protectedTokens = const {}}) {
     final toRemove = _docFreq.entries
-        .where((e) => e.value < minFreq)
+        .where((e) => e.value < minFreq && !protectedTokens.contains(e.key))
         .map((e) => e.key)
         .toList();
 

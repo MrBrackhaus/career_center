@@ -1,80 +1,78 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
-import 'package:career_center/main.dart' as app;
+import 'package:career_center/data/database/app_database.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+
+import '../helpers/test_app.dart';
+
+String _documentText(WidgetTester tester) => tester
+    .widget<quill.QuillEditor>(find.byType(quill.QuillEditor))
+    .controller
+    .document
+    .toPlainText();
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Editor extended functional tests', (WidgetTester tester) async {
-    // Start app
-    app.main();
-    await tester.pumpAndSettle();
-    await Future.delayed(const Duration(seconds: 2));
+  testWidgets('free editor opens with an empty document and the margin '
+      'slider updates its mm label', (tester) async {
+    await pumpTestApp(tester);
+    await tapVisible(tester, find.byIcon(Icons.edit_document));
+    await pumpUntilFound(tester, find.byType(quill.QuillEditor));
 
-    // 1. Open editor via navigation icon
-    final editorNav = find.byIcon(Icons.edit_document);
-    expect(editorNav, findsWidgets);
-    await tester.tap(editorNav.first);
-    await tester.pumpAndSettle();
-    await Future.delayed(const Duration(seconds: 1));
+    expect(_documentText(tester).trim(), isEmpty);
 
-    // 2. Verify QuillEditor is present (the big free‑text area)
-    final quillEditor = find.byType(quill.QuillEditor);
-    expect(quillEditor, findsOneWidget);
-
-    // 3. Enter sample text into the editor
-    await tester.enterText(quillEditor, 'Dies ist ein Testtext für den freien Editor');
-    await tester.pumpAndSettle();
-    print('  [x] Freier Text erfolgreich eingegeben');
-
-    // 4. Test margin sliders (left sidebar)
-    final sliders = find.byType(Slider);
-    expect(sliders, findsWidgets);
-    // Move each slider a bit to trigger setState
-    for (var i = 0; i < sliders.evaluate().length; i++) {
-      await tester.drag(sliders.at(i), const Offset(20, 0));
+    // Margin sliders live on the "Design" tab of the side panel.
+    if (find.text('Seitenränder').evaluate().isEmpty) {
+      await tapVisible(tester, find.widgetWithText(Tab, 'Design'));
     }
-    await tester.pumpAndSettle();
-    print('  [x] Alle Rand‑Slider verschoben');
+    final topLabel = find.textContaining(RegExp(r'^Oben: \d+ mm$'));
+    expect(topLabel, findsOneWidget);
+    final before = tester.widget<Text>(topLabel).data;
 
-    // 5. Switch design templates (Klassisch, Modern)
-    final klassisch = find.text('Klassisch');
-    if (klassisch.evaluate().isNotEmpty) {
-      await tester.tap(klassisch.first);
-      await tester.pumpAndSettle();
-      print('  [x] Design "Klassisch" aktiviert');
-    }
-    final modern = find.text('Modern');
-    if (modern.evaluate().isNotEmpty) {
-      await tester.tap(modern.first);
-      await tester.pumpAndSettle();
-      print('  [x] Design "Modern" aktiviert');
-    }
+    final topSlider = find
+        .descendant(
+            of: find.ancestor(of: topLabel, matching: find.byType(Column)).first,
+            matching: find.byType(Slider))
+        .first;
+    await tester.ensureVisible(topSlider);
+    await tester.drag(topSlider, const Offset(60, 0));
+    await settle(tester);
 
-    // 6. Insert Header via toolbar button (Icon(Icons.article) – placeholder)
-    final insertHeaderBtn = find.byIcon(Icons.article);
-    if (insertHeaderBtn.evaluate().isNotEmpty) {
-      await tester.tap(insertHeaderBtn.first);
-      await tester.pumpAndSettle();
-      print('  [x] Header über Toolbar eingefügt');
-    }
+    final after = tester.widget<Text>(topLabel).data;
+    expect(after, isNot(before), reason: 'dragging changes the top margin');
+  });
 
-    // 7. Trigger AI‑Korrektur (Button with AI icon)
-    final aiButton = find.byIcon(Icons.auto_fix_high);
-    if (aiButton.evaluate().isNotEmpty) {
-      await tester.tap(aiButton.first);
-      await tester.pumpAndSettle();
-      print('  [x] AI‑Korrektur‑Button gedrückt');
-    }
+  testWidgets('application editor loads the stored cover letter (Quill JSON '
+      'and legacy plain text)', (tester) async {
+    late int jsonId;
+    late int plainId;
+    await pumpTestApp(tester, seed: (db) async {
+      jsonId = await db.into(db.applications).insert(ApplicationsCompanion.insert(
+            company: 'Json AG',
+            position: 'Dev',
+            coverLetterContent:
+                const Value('[{"insert":"Sehr geehrte Damen und Herren,\\n"}]'),
+          ));
+      plainId = await db.into(db.applications).insert(ApplicationsCompanion.insert(
+            company: 'Plain AG',
+            position: 'Dev',
+            coverLetterContent: const Value('Alter Klartext-Brief'),
+          ));
+    });
 
-    // 8. Export PDF (Icon(Icons.picture_as_pdf)) – just ensure button exists
-    final pdfExport = find.byIcon(Icons.picture_as_pdf);
-    expect(pdfExport, findsWidgets);
-    print('  [x] PDF‑Export‑Button gefunden');
+    await goTo(tester, '/applications/$jsonId/editor');
+    await pumpUntilFound(tester, find.byType(quill.QuillEditor));
+    await settle(tester);
+    expect(_documentText(tester), contains('Sehr geehrte Damen und Herren,'));
 
-    // End of extended workflow
-    print('✅ Alle erweiterten Editor‑Funktionstests erfolgreich durchlaufen');
+    // Leave the editor first: the editor state is not rebuilt when only the
+    // :id path parameter changes.
+    await goTo(tester, '/applications');
+    await goTo(tester, '/applications/$plainId/editor');
+    await pumpUntilFound(tester, find.byType(quill.QuillEditor));
+    expect(_documentText(tester), contains('Alter Klartext-Brief'));
   });
 }

@@ -2,6 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:career_center/domain/models/extraction_result.dart';
 import 'package:career_center/domain/enums/document_type.dart';
 
+/// Schlüssel der Formularfelder, die per "Aus Dokument markieren" befüllt
+/// werden können. Von Grunddaten-Tab und Formular gemeinsam genutzt.
+class FormMarkerField {
+  FormMarkerField._();
+
+  static const String company = 'Firma';
+  static const String position = 'Position';
+  static const String address = 'Adresse';
+  static const String contactName = 'Ansprechpartner';
+  static const String contactEmail = 'E-Mail';
+  static const String contactPhone = 'Telefon';
+  static const String companyUrl = 'Firmen-URL';
+  static const String jobUrl = 'Job-URL';
+}
+
 class ApplicationFormStateBundle {
   final GlobalKey<FormState> formKey;
 

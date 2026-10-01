@@ -24,6 +24,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void initState() {
     super.initState();
     Future.microtask(() {
+      if (!mounted) return;
+      // Läuft dank Sitzungs-Flag im Notifier nur einmal pro App-Start.
       ref.read(autoUpdaterProvider.notifier).checkForUpdates();
       showTutorialIfNeeded(context, ref);
     });
@@ -78,13 +80,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
-    final startOfLastWeek = startOfWeek.subtract(const Duration(days: 7));
+    // Kalenderarithmetik statt Duration, damit DST-Wechsel keinen Tag verschieben.
+    final startOfWeek =
+        DateTime(today.year, today.month, today.day - (today.weekday - 1));
+    final startOfNextWeek =
+        DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day + 7);
+    final startOfLastWeek =
+        DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day - 7);
 
     final thisWeekApps = applications.where((app) {
       if (app.appliedDate == null) return false;
       return !app.appliedDate!.isBefore(startOfWeek) &&
-          app.appliedDate!.isBefore(startOfWeek.add(const Duration(days: 7)));
+          app.appliedDate!.isBefore(startOfNextWeek);
     }).toList();
 
     final lastWeekApps = applications.where((app) {
@@ -112,7 +119,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           (app) =>
               app.followupDate != null &&
               !app.followupDate!.isBefore(today) &&
-              app.followupDate!.isBefore(today.add(const Duration(days: 7))) &&
+              app.followupDate!.isBefore(
+                  DateTime(today.year, today.month, today.day + 7)) &&
               app.status != 'absage' &&
               app.status != 'zusage',
         )
@@ -264,7 +272,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
 
           const SizedBox(height: 24),
-          _buildGoalProgress(context, thisWeekApps.length),
+          _buildGoalProgress(
+            context,
+            thisWeekApps.length,
+            streakAsync.value?.weeklyGoal ??
+                ref.watch(weeklyGoalProvider).value ??
+                defaultWeeklyGoal,
+          ),
           const SizedBox(height: 24),
           _buildComparison(context, thisWeekApps.length, lastWeekApps.length),
           const SizedBox(height: 32),
@@ -568,8 +582,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildGoalProgress(BuildContext context, int current) {
-    const int goal = 5;
+  Widget _buildGoalProgress(BuildContext context, int current, int goalValue) {
+    final int goal = sanitizeWeeklyGoal(goalValue);
     final double progress = (current / goal).clamp(0.0, 1.0);
     return Card(
       elevation: 2,
@@ -580,7 +594,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${AppLocalizations.of(context)!.weeklyGoal} $current ${AppLocalizations.of(context)!.weeklyGoalSuffix}',
+              // weeklyGoalSuffix enthält ein fest übersetztes "von 5", daher
+              // wird das konfigurierte Ziel hier sprachneutral angezeigt.
+              '${AppLocalizations.of(context)!.weeklyGoal} $current / $goal',
               style: Theme.of(context).textTheme.titleMedium
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../domain/entities/application_entity.dart';
+import 'company_avatar.dart';
 
 class ApplicationCard extends StatefulWidget {
   final ApplicationEntity application;
@@ -29,34 +30,8 @@ class _ApplicationCardState extends State<ApplicationCard> {
   Widget build(BuildContext context) {
     final app = widget.application;
     final colorScheme = Theme.of(context).colorScheme;
-    final hasLogoUrl = app.companyUrl != null && app.companyUrl!.isNotEmpty;
-    // Extrahiere Domain für Clearbit Logo
-    String? logoUrl;
-    if (hasLogoUrl) {
-      try {
-        final uri = Uri.parse(app.companyUrl!);
-        logoUrl = 'https://logo.clearbit.com/${uri.host}';
-      } catch (_) {}
-    }
-
-    final avatar = logoUrl != null
-        ? CircleAvatar(
-            backgroundColor: Colors.white,
-            backgroundImage: NetworkImage(logoUrl),
-            onBackgroundImageError: (_, _) {},
-            radius: 20,
-          )
-        : CircleAvatar(
-            backgroundColor: colorScheme.primaryContainer,
-            radius: 20,
-            child: Text(
-              app.company.isNotEmpty ? app.company[0].toUpperCase() : '?',
-              style: TextStyle(
-                color: colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          );
+    // Lokaler Initialen-Avatar (keine externen Logo-Dienste).
+    final avatar = CompanyAvatar(company: app.company);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),

@@ -37,10 +37,18 @@ class EmailsDao extends DatabaseAccessor<AppDatabase> with _$EmailsDaoMixin {
     return into(emails).insert(email, mode: InsertMode.insertOrIgnore);
   }
 
-  Future<Email?> getEmailByMessageId(String messageId) {
-    return (select(
-      emails,
-    )..where((e) => e.messageId.equals(messageId))).getSingleOrNull();
+  /// Liefert die (älteste) E-Mail mit dieser Message-ID.
+  ///
+  /// Bewusst `get()` statt `getSingleOrNull()`: Dieselbe Message-ID kann
+  /// mehreren Bewerbungen zugeordnet sein (oder in Altbeständen doppelt
+  /// vorkommen) - das darf nicht zu einer Exception führen.
+  Future<Email?> getEmailByMessageId(String messageId) async {
+    final rows = await (select(emails)
+          ..where((e) => e.messageId.equals(messageId))
+          ..orderBy([(e) => OrderingTerm(expression: e.id)])
+          ..limit(1))
+        .get();
+    return rows.firstOrNull;
   }
 
   Future<List<Email>> getAllEmails() {

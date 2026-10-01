@@ -29,10 +29,16 @@ class EmailResponseExtractor {
 
     // ── Position ─────────────────────────────────────────────────────────────
     FieldResult<String>? foundPosition;
+    // multiLine: `$` muss auch am Zeilenende greifen (Body ist mehrzeilig);
+    // [ \t] statt \s, damit die Position nicht über Zeilen hinweg läuft.
     final posRegex1 = RegExp(
-      r'[Bb]ewerbung\s+als\s+(.+?)(?:\s*[-–—]|\s*\(m|$)',
+      r'[Bb]ewerbung[ \t]+als[ \t]+(.+?)(?:[ \t]+[-–—]|[ \t]*\(m|[ \t]+bei\b|[ \t]*[.,;!?]?[ \t]*$)',
+      multiLine: true,
     );
-    final posRegex2 = RegExp(r'[Bb]ewerbung\s*[-–—]\s*(.+?)(?:\s*\(m|$)');
+    final posRegex2 = RegExp(
+      r'[Bb]ewerbung[ \t]*[-–—][ \t]*(.+?)(?:[ \t]*\(m|[ \t]*[.,;!?]?[ \t]*$)',
+      multiLine: true,
+    );
 
     final subjMatch =
         posRegex1.firstMatch(cleanSubject) ??
@@ -63,38 +69,13 @@ class EmailResponseExtractor {
 
     // ── Firma ────────────────────────────────────────────────────────────────
     FieldResult<String>? foundCompany;
-    final entityRegex = RegExp(
-      r'([A-ZÄÖÜ][A-Za-zÄÖÜäöüß0-9\s\-\&.]{2,50}(?:GmbH(?:\s*\&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG))\b',
-      caseSensitive: false,
-    );
-    final matches = entityRegex.allMatches(body);
-    if (matches.isNotEmpty) {
-      final name = matches.last.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
-      if (name.isNotEmpty && name.length < 60) {
-        foundCompany = FieldResult(
-          value: name,
-          confidence: 0.9,
-          source: 'body_legal_footer',
-        );
-      }
-    }
-
-    if (foundCompany == null) {
-      final companyRegex = RegExp(
-        r'bei\s+(?:der\s+|dem\s+|Ihrem\s+Unternehmen\s+|Ihnen\s+als\s+)?([\w\s\-&.,ÄÖÜäöüß]{1,40}?(?:GmbH|AG|KG|SE|mbH|e\.V\.|GbR|OHG))',
+    final company = findCompanyWithLegalForm(body);
+    if (company != null) {
+      foundCompany = FieldResult(
+        value: company.name,
+        confidence: company.isFooterLine ? 0.9 : 0.85,
+        source: company.isFooterLine ? 'body_legal_footer' : 'body_legal_form',
       );
-      final companyMatch = companyRegex.firstMatch(body);
-      if (companyMatch != null) {
-        final name =
-            companyMatch.group(1)?.trim().replaceAll(RegExp(r'\s+'), ' ') ?? '';
-        if (name.isNotEmpty && name.length < 60) {
-          foundCompany = FieldResult(
-            value: name,
-            confidence: 0.85,
-            source: 'body_legal_form',
-          );
-        }
-      }
     }
     if (foundCompany == null && senderEmail.isNotEmpty) {
       final domainCompany = extractCompanyFromDomain(senderEmail);
@@ -142,6 +123,59 @@ class EmailResponseExtractor {
     );
   }
 
+  // ── Firmenname mit Rechtsform ──────────────────────────────────────────────
+
+  /// Firmenname: 1-6 großgeschriebene Wörter (optional mit "&") direkt vor
+  /// einer Rechtsform. Groß-/Kleinschreibung wird beachtet und die Suche ist
+  /// auf eine Zeile beschränkt, damit keine Satzfragmente entstehen.
+  static final _companyEntity = RegExp(
+    r'((?:[A-ZÄÖÜ0-9][A-Za-zÄÖÜäöüß0-9&.\-]*[ \t]+(?:&[ \t]+)?){1,6})'
+    r'(GmbH(?:[ \t]*&[ \t]*Co\.[ \t]*KG)?|AG|KGaA|KG|SE|mbH|e\.[ \t]?V\.|GbR|OHG|eG|UG)'
+    r'(?![A-Za-zÄÖÜäöüß0-9])',
+  );
+
+  /// Satzanfangs-/Füllwörter, die nicht zum Firmennamen gehören.
+  static const _leadingNonNameWords = {
+    'Die', 'Der', 'Das', 'Den', 'Dem', 'Des', 'Bei', 'Von', 'Vom', 'Für',
+    'Mit', 'Und', 'Ihr', 'Ihre', 'Ihrer', 'Ihres', 'Unser', 'Unsere', 'Wir',
+    'Sie', 'Im', 'In', 'An', 'Am', 'Auf', 'Zur', 'Zum', 'Liebe', 'Lieber',
+  };
+
+  /// Sucht einen Firmennamen mit Rechtsform im Text.
+  ///
+  /// Bevorzugt Zeilen, die (fast) nur aus dem Firmennamen bestehen (Footer/
+  /// Signatur), sonst den letzten Treffer im Fließtext.
+  static ({String name, bool isFooterLine})? findCompanyWithLegalForm(
+    String text,
+  ) {
+    ({String name, bool isFooterLine})? lastInText;
+    ({String name, bool isFooterLine})? lastFooter;
+
+    for (final rawLine in text.split('\n')) {
+      final line = rawLine.trim();
+      if (line.isEmpty || line.length > 300) continue;
+      for (final match in _companyEntity.allMatches(line)) {
+        final words = match.group(1)!.trim().split(RegExp(r'[ \t]+'));
+        while (words.isNotEmpty && _leadingNonNameWords.contains(words.first)) {
+          words.removeAt(0);
+        }
+        if (words.isEmpty || words.first == '&') continue;
+        final name = '${words.join(' ')} ${match.group(2)!}'
+            .replaceAll(RegExp(r'[ \t]+'), ' ')
+            .trim();
+        if (name.length >= 60) continue;
+        final isFooter = name.length >= line.length * 0.8;
+        final candidate = (name: name, isFooterLine: isFooter);
+        if (isFooter) {
+          lastFooter = candidate;
+        } else {
+          lastInText = candidate;
+        }
+      }
+    }
+    return lastFooter ?? lastInText;
+  }
+
   // ── Status-Erkennung ───────────────────────────────────────────────────────
 
   /// Erkennt den Bewerbungsstatus aus einer E-Mail.
@@ -167,7 +201,10 @@ class EmailResponseExtractor {
         cleanSubject.contains('vorstellungsgespräch') ||
         cleanSubject.contains('interview') ||
         cleanSubject.contains('absage') ||
-        cleanSubject.contains('zusage');
+        cleanSubject.contains('zusage') ||
+        cleanSubject.contains('einladung') ||
+        cleanSubject.contains('gespräch') ||
+        cleanSubject.contains('termin');
 
     if (isRep || subjectIsApplication) {
       if (_isRejection(lowerBody) || lowerSubject.contains('absage')) {
@@ -292,21 +329,35 @@ class EmailResponseExtractor {
         lowerBody.contains('konnten wir ihre bewerbung nicht berücksichtigen');
   }
 
+  /// Typische Formulierung aus dem eigenen Anschreiben
+  /// ("Über eine Einladung zu einem Gespräch freue ich mich").
+  static final _outgoingInvitationPhrase = RegExp(
+    r'(?<![a-zäöüß])(?:über|auf)[ \t]+(?:eine|ihre)[ \t]+(?:positive[ \t]+)?(?:rückmeldung[ \t]+und[ \t]+(?:eine[ \t]+)?)?einladung\b',
+  );
+
+  /// Einladungs-Verben/-Nomen mit Wortgrenzen (nicht "herunterladen",
+  /// "hochladen" usw.), inklusive trennbarem "laden … ein".
+  static final _invitationPhrase = RegExp(
+    r'\b(?:einladung(?:en)?|einladen|einzuladen|eingeladen)\b'
+    r'|\blade(?:n)?\b[^.!?\n]{0,80}?\bein\b',
+  );
+
+  static final _meetingNoun = RegExp(
+    r'gespräch|interview|kennenlernen|kennen[ \t]+zu[ \t]+lernen|kennenzulernen|vorstellungstermin|\btermin',
+  );
+
   static bool _isInterview(String lowerBody) {
-    // Verhindere False-Positives aus dem eigenen Anschreiben
-    if (lowerBody.contains('über eine einladung') || lowerBody.contains('freue ich mich')) {
+    // Verhindere False-Positives aus dem eigenen Anschreiben – aber nur bei
+    // eindeutig ausgehender Formulierung, nicht bei jedem "freue ich mich".
+    if (_outgoingInvitationPhrase.hasMatch(lowerBody)) {
       return false;
     }
 
-    return (lowerBody.contains('einladung') &&
-            (lowerBody.contains('gespräch') ||
-                lowerBody.contains('interview') ||
-                lowerBody.contains('kennenlernen'))) ||
+    return (_invitationPhrase.hasMatch(lowerBody) &&
+            _meetingNoun.hasMatch(lowerBody)) ||
         lowerBody.contains('möchten sie gerne kennenlernen') ||
         lowerBody.contains('zu einem vorstellungsgespräch') ||
-        lowerBody.contains('zu einem interview') ||
-        (lowerBody.contains('laden') && lowerBody.contains('interview')) ||
-        (lowerBody.contains('laden') && lowerBody.contains('gespräch'));
+        lowerBody.contains('zu einem interview');
   }
 
   static bool _isConfirmation(String lowerBody) {

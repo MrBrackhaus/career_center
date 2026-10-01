@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,13 @@ class KiWorkspaceChat extends ConsumerStatefulWidget {
   ConsumerState<KiWorkspaceChat> createState() => _KiWorkspaceChatState();
 }
 
+/// Lokale Rolle für Fehlermeldungen. Diese Nachrichten werden nur angezeigt
+/// und nie an das LLM gesendet.
+const String _errorRole = 'error';
+
+/// Maximale Wartezeit auf eine Antwort des LLM.
+const Duration _requestTimeout = Duration(seconds: 120);
+
 class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
   final List<Map<String, String>> _messages = [];
   final _textController = TextEditingController();
@@ -27,16 +35,25 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent + 100,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOut,
       );
-    }
+    });
+  }
+
+  void _addError(String text) {
+    if (!mounted) return;
+    setState(() {
+      _messages.add({'role': _errorRole, 'content': text});
+    });
   }
 
   Future<void> _sendMessage() async {
+    if (_isLoading) return;
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
@@ -65,41 +82,53 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
       }
 
       final uri = Uri.parse(baseUrl);
-      final response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
-        body: jsonEncode({
-          'model': modelName,
-          'messages': _messages,
-          'stream': false,
-        }),
-      );
+      // Nur echte Chat-Nachrichten senden, lokale Fehlermeldungen nicht.
+      final history = _messages
+          .where((m) => m['role'] == 'user' || m['role'] == 'assistant')
+          .toList();
+      final response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json; charset=utf-8'},
+            body: jsonEncode({
+              'model': modelName,
+              'messages': history,
+              'stream': false,
+            }),
+          )
+          .timeout(_requestTimeout);
 
+      if (!mounted) return;
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(utf8.decode(response.bodyBytes));
-        final msg = jsonResponse['message'];
-        if (msg != null && msg['content'] != null) {
+        final msg = jsonResponse is Map ? jsonResponse['message'] : null;
+        final content = msg is Map ? msg['content'] : null;
+        if (content is String) {
           setState(() {
-            _messages.add({'role': 'assistant', 'content': msg['content']});
+            _messages.add({'role': 'assistant', 'content': content});
           });
+        } else {
+          _addError('Unerwartete Antwort vom KI-Server.');
         }
       } else {
-        setState(() {
-          _messages.add({
-            'role': 'system',
-            'content': 'Fehler ${response.statusCode}: ${response.body}',
-          });
-        });
+        var body = utf8.decode(response.bodyBytes, allowMalformed: true);
+        if (body.length > 500) body = '${body.substring(0, 500)}…';
+        _addError('Fehler ${response.statusCode}: $body');
       }
+    } on TimeoutException {
+      _addError(
+        'Zeitüberschreitung: Der KI-Server hat nicht innerhalb von '
+        '${_requestTimeout.inSeconds} Sekunden geantwortet.',
+      );
     } catch (e) {
-      setState(() {
-        _messages.add({'role': 'system', 'content': 'Verbindungsfehler: $e'});
-      });
+      _addError('Verbindungsfehler: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
-      _scrollToBottom();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _scrollToBottom();
+      }
     }
   }
 
@@ -144,7 +173,7 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
                   itemBuilder: (context, index) {
                     final msg = _messages[index];
                     final isUser = msg['role'] == 'user';
-                    final isSystem = msg['role'] == 'system';
+                    final isSystem = msg['role'] == _errorRole;
 
                     return Align(
                       alignment: isSystem
@@ -210,7 +239,9 @@ class _KiWorkspaceChatState extends ConsumerState<KiWorkspaceChat> {
                       vertical: 12.0,
                     ),
                   ),
-                  onSubmitted: (_) => _sendMessage(),
+                  onSubmitted: (_) {
+                    if (!_isLoading) _sendMessage();
+                  },
                 ),
               ),
               const SizedBox(width: 8),

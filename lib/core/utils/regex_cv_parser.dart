@@ -3,12 +3,15 @@ import 'package:pdfrx/pdfrx.dart';
 class RegexCvParser {
   static Future<Map<String, dynamic>> parsePdf(String filePath) async {
     final document = await PdfDocument.openFile(filePath);
-    StringBuffer buffer = StringBuffer();
-    for (int i = 1; i <= document.pages.length; i++) {
-      final page = document.pages[i - 1];
-      final text = await page.loadText();
-      if (text != null) { buffer.write(text.fullText); }
-      buffer.write('\n');
+    final buffer = StringBuffer();
+    try {
+      for (final page in document.pages) {
+        final text = await page.loadText();
+        if (text != null) { buffer.write(text.fullText); }
+        buffer.write('\n');
+      }
+    } finally {
+      await document.dispose();
     }
     
     final fullText = buffer.toString();

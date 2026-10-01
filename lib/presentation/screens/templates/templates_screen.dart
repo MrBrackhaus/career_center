@@ -223,13 +223,16 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
           final bytes = await file.readAsBytes();
           final doc = await PdfDocument.openData(bytes);
           final StringBuffer textBuf = StringBuffer();
-          for (var page in doc.pages) {
-            final pageText = await page.loadText();
-            if (pageText != null) {
-              textBuf.writeln(pageText.fullText);
+          try {
+            for (var page in doc.pages) {
+              final pageText = await page.loadText();
+              if (pageText != null) {
+                textBuf.writeln(pageText.fullText);
+              }
             }
+          } finally {
+            doc.dispose();
           }
-          doc.dispose();
 
           final resultText = textBuf.toString().replaceAll('\u00A0', ' ');
 
@@ -238,7 +241,8 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
             appDir.path,
             'JobTracker',
             'Templates',
-            file.name,
+            // Zeitstempel verhindert, dass gleichnamige PDFs sich überschreiben.
+            '${DateTime.now().millisecondsSinceEpoch}_${file.name}',
           );
           await File(savedPdfPath).create(recursive: true);
           await File(file.path).copy(savedPdfPath);
@@ -297,9 +301,44 @@ class _TemplatesScreenState extends ConsumerState<TemplatesScreen>
     ).then((_) {});
   }
 
-  void _deleteTemplate(TemplateEntity template) async {
-    
+  Future<void> _deleteTemplate(TemplateEntity template) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Vorlage löschen?'),
+        content: Text('„${template.name}“ wird endgültig gelöscht.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     await ref.read(templatesRepositoryProvider).deleteTemplate(template.id);
+
+    // Die beim PDF-Import kopierte Originaldatei mit entfernen – aber nur,
+    // wenn sie im Vorlagen-Ordner der App liegt.
+    final filePath = template.filePath;
+    if (filePath != null && filePath.isNotEmpty) {
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        final templatesDir = p.join(appDir.path, 'JobTracker', 'Templates');
+        if (p.isWithin(templatesDir, filePath)) {
+          final file = File(filePath);
+          if (await file.exists()) await file.delete();
+        }
+      } catch (e, st) {
+        log('Vorlagen-Datei konnte nicht gelöscht werden: $e',
+            error: e, stackTrace: st);
+      }
+    }
   }
 
   Widget _buildPromptGeneratorTab() {

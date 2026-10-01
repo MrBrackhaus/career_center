@@ -26,8 +26,20 @@ class TemplatesDao extends DatabaseAccessor<AppDatabase>
     return into(templates).insert(template);
   }
 
-  Future<bool> updateTemplate(TemplatesCompanion template) {
-    return update(templates).replace(template);
+  /// Teil-Update: schreibt nur die im Companion gesetzten Felder.
+  /// Nicht gesetzte Spalten (z. B. applicationId, filePath, createdAt)
+  /// bleiben unverändert – im Gegensatz zu `replace`, das sie überschreibt.
+  Future<bool> updateTemplate(TemplatesCompanion template) async {
+    assert(template.id.present, 'updateTemplate benötigt eine id');
+    final id = template.id.value;
+    final rows = await (update(templates)..where((tbl) => tbl.id.equals(id)))
+        .write(template.copyWith(id: const Value.absent()));
+    return rows > 0;
+  }
+
+  Future<Template?> getTemplateById(int id) {
+    return (select(templates)..where((tbl) => tbl.id.equals(id)))
+        .getSingleOrNull();
   }
 
   Future<int> deleteTemplate(Template template) {

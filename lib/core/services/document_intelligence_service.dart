@@ -19,6 +19,7 @@ import 'ml/pretrained_model.dart';
 import 'extractors/cover_letter_extractor.dart';
 import 'extractors/job_posting_extractor.dart';
 import 'extractors/email_response_extractor.dart';
+import 'document_sanitizer_service.dart';
 
 ExtractedFields _runEmailExtractor(Map<String, String> data) {
   return EmailResponseExtractor.extract(
@@ -56,18 +57,17 @@ class DocumentIntelligenceService {
   Future<void> initialize() async {
     if (_initialized) return;
 
+    NaiveBayesClassifier? userModel;
     try {
-      final userModel = await _loadUserModel();
-      if (userModel != null) {
-        _classifier = userModel;
-      } else {
-        _classifier = PretrainedModel.create();
-      }
-    } on Exception catch (_) {
-      // Fallback auf vortrainiertes Modell bei Fehler
-      _classifier = PretrainedModel.create();
+      userModel = await _loadUserModel();
+    } catch (e, st) {
+      // Auch Errors (z.B. TypeError bei beschädigtem Modell) abfangen
+      log('Fehler beim Laden des ML-Modells', error: e, stackTrace: st, name: 'DocumentIntelligenceService');
     }
+    // Fallback auf vortrainiertes Modell, falls kein (gültiges) User-Modell
+    _classifier = userModel ?? PretrainedModel.create();
 
+    // Erst nach erfolgreicher Initialisierung setzen
     _initialized = true;
   }
 
@@ -93,10 +93,23 @@ class DocumentIntelligenceService {
   }) async {
     await _ensureInitialized();
 
-    // Phase 1: Klassifikation
-    final classification = _classifier!.classify(text);
+    // Phase 1: Klassifikation – bei HTML auf dem sichtbaren Text, sonst
+    // dominieren Tags, CSS-Klassen und Skripte die Wortstatistik.
+    final isHtml = looksLikeHtml(text);
+    final visibleText =
+        isHtml ? DocumentSanitizerService.sanitizeHtml(text) : text;
+    final classification = _classifier!.classify(visibleText);
     DocumentType detectedType = classification.type;
     double typeConfidence = classification.confidence;
+
+    // Webseiten (URL-Import, Browser-Erweiterung) sind in dieser App immer
+    // Stellenanzeigen. Ohne diese Regel landeten bei Fehlklassifikation
+    // HTML-Fragmente wie "<title>…" in Firma und Position.
+    if (source == DocumentSource.url &&
+        detectedType != DocumentType.stellenanzeige) {
+      detectedType = DocumentType.stellenanzeige;
+      typeConfidence = 0.6;
+    }
 
     // Phase 2: Kontext-basierte Korrektur
     // E-Mails mit RE:/AW: Prefix sind wahrscheinlich Antworten, keine Anschreiben
@@ -125,7 +138,7 @@ class DocumentIntelligenceService {
     final ExtractedFields fields;
     switch (detectedType) {
       case DocumentType.anschreiben:
-        fields = await compute(CoverLetterExtractor.extract, text);
+        fields = await compute(CoverLetterExtractor.extract, visibleText);
         break;
       case DocumentType.stellenanzeige:
         fields = await compute(JobPostingExtractor.extractFromHtml, text);
@@ -136,7 +149,7 @@ class DocumentIntelligenceService {
         fields = await compute(
           _runEmailExtractor, 
           {
-            'text': text, 
+            'text': visibleText,
             'subject': metadata['subject'] ?? '', 
             'senderEmail': metadata['senderEmail'] ?? ''
           }
@@ -146,7 +159,7 @@ class DocumentIntelligenceService {
       case DocumentType.zertifikat:
       case DocumentType.unknown:
         // Generische Extraktion für unbekannte/andere Typen
-        fields = _extractGeneric(text);
+        fields = extractGeneric(visibleText);
         break;
     }
 
@@ -213,6 +226,17 @@ class DocumentIntelligenceService {
     );
   }
 
+  /// Erkennt, ob [text] ein HTML-Dokument ist (statt Klartext).
+  @visibleForTesting
+  static bool looksLikeHtml(String text) {
+    final head = text.length > 2000 ? text.substring(0, 2000) : text;
+    final lower = head.toLowerCase();
+    return lower.contains('<html') ||
+        lower.contains('<!doctype html') ||
+        lower.contains('<body') ||
+        RegExp(r'<(div|p|span|script|head)[\s>]').allMatches(lower).length >= 3;
+  }
+
   // ── Online-Learning: User korrigiert den Dokumenttyp ───────────────────────
 
   /// Aktualisiert das ML-Modell mit einer User-Korrektur.
@@ -258,12 +282,25 @@ class DocumentIntelligenceService {
       final file = File(await _modelPath);
       if (await file.exists()) {
         final jsonStr = await file.readAsString();
-        final jsonData = await compute(jsonDecode, jsonStr) as Map<String, dynamic>;
-        _initialized = true;
-        return NaiveBayesClassifier.fromJson(jsonData);
+        final jsonData = await compute(jsonDecode, jsonStr);
+        return parseUserModel(jsonData);
       }
       return null;
-    } on Exception catch (_) {
+    } catch (e, st) {
+      log('Gespeichertes ML-Modell konnte nicht gelesen werden', error: e, stackTrace: st, name: 'DocumentIntelligenceService');
+      return null;
+    }
+  }
+
+  /// Baut aus dekodiertem JSON ein Modell. Liefert `null` bei beschädigten
+  /// oder unerwartet strukturierten Daten (fängt auch TypeErrors ab).
+  @visibleForTesting
+  static NaiveBayesClassifier? parseUserModel(dynamic jsonData) {
+    if (jsonData is! Map<String, dynamic>) return null;
+    try {
+      final classifier = NaiveBayesClassifier.fromJson(jsonData);
+      return classifier.isTrained ? classifier : null;
+    } catch (_) {
       return null;
     }
   }
@@ -299,7 +336,8 @@ class DocumentIntelligenceService {
 
   // ── Generische Extraktion für unbekannte Dokumenttypen ─────────────────────
 
-  ExtractedFields _extractGeneric(String text) {
+  @visibleForTesting
+  ExtractedFields extractGeneric(String text) {
     final lines = text
         .split('\n')
         .map((l) => l.trim())
@@ -313,16 +351,11 @@ class DocumentIntelligenceService {
     String? foundUrl;
 
     // E-Mail suchen
-    final emailRegex = RegExp(
-      r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
-    );
-    final emailMatch = emailRegex.firstMatch(text);
+    final emailMatch = JobPostingExtractor.emailRegex.firstMatch(text);
     if (emailMatch != null) foundEmail = emailMatch.group(0);
 
-    // Telefon suchen
-    final phoneRegex = RegExp(r'(\+49|0)[0-9\s/.-]{7,20}');
-    final phoneMatch = phoneRegex.firstMatch(text);
-    if (phoneMatch != null) foundPhone = phoneMatch.group(0)?.trim();
+    // Telefon suchen (zeilengebunden, keine Datumsangaben)
+    foundPhone = JobPostingExtractor.findPhoneNumber(text);
 
     // Kontaktperson suchen – erweiterte Erkennung
     // 1. Klassisch: Frau/Herr + Name
@@ -332,35 +365,11 @@ class DocumentIntelligenceService {
     final contactMatch = contactRegex.firstMatch(text);
     if (contactMatch != null) foundContact = contactMatch.group(0);
 
-    // 2. Informell: "Dein/Ihr Ansprechpartner: Name"
-    if (foundContact == null) {
-      final informalRegex = RegExp(
-        r'(?:Dein|Ihr|Ihre|Your|Unser)[ \t]+(?:Ansprechpartner(?:in)?|Kontakt|Contact|Ansprechperson)[: \t]+(?:(?:Frau|Herr|Mr\.|Mrs\.|Ms\.)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
-        caseSensitive: false,
-      );
-      final match = informalRegex.firstMatch(text);
-      if (match != null) foundContact = match.group(1);
-    }
-
-    // 3. Englisch: "Contact:", "Hiring Manager:", "Recruiter:"
-    if (foundContact == null) {
-      final englishRegex = RegExp(
-        r'(?:Contact|Hiring[ \t]+Manager|Point[ \t]+of[ \t]+Contact|Recruiter|HR[ \t]+Contact)[: \t]+(?:(?:Mr\.|Mrs\.|Ms\.|Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
-        caseSensitive: false,
-      );
-      final match = englishRegex.firstMatch(text);
-      if (match != null) foundContact = match.group(1);
-    }
-
-    // 4. Tabular: "Ansprechpartner:   Max Mustermann"
-    if (foundContact == null) {
-      final tabRegex = RegExp(
-        r'(?:Ansprechpartner(?:in)?|Ansprechperson|Kontaktperson)[:\t\s]{2,}(?:(?:Frau|Herr)[ \t]+)?(?:(?:Dr\.|Prof\.)[ \t]+)?([A-ZÄÖÜ][a-zA-Zäöüß]{1,200}[ \t]+[A-ZÄÖÜ][a-zA-Zäöüß]{1,200})',
-        caseSensitive: false,
-      );
-      final match = tabRegex.firstMatch(text);
-      if (match != null) foundContact = match.group(1);
-    }
+    // 2.-4. Informell ("Ihr Ansprechpartner: Name"), englisch
+    // ("Hiring Manager: Name") und tabellarisch ("Ansprechpartner:   Name").
+    // Schlüsselwörter ohne Beachtung der Groß-/Kleinschreibung, Namen nur
+    // als großgeschriebene Wörter.
+    foundContact ??= JobPostingExtractor.findLabeledContact(text)?.name;
 
     // URL suchen
     final urlRegex = RegExp(

@@ -34,7 +34,10 @@ class _SignatureDialogState extends State<SignatureDialog> {
         return;
       }
     }
-    Navigator.pop(context, null);
+    // Leere Fläche (z.B. nach "Löschen") speichern = Unterschrift entfernen.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_signature');
+    if (mounted) Navigator.pop(context, '');
   }
 
   @override

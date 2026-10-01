@@ -6,6 +6,7 @@ import '../../domain/entities/note_entity.dart';
 import '../../domain/entities/template_entity.dart';
 import '../database/app_database.dart';
 import '../../domain/models/application_form_dto.dart';
+import '../../domain/enums/application_status.dart';
 
 extension ApplicationMapper on Application {
   ApplicationEntity toEntity() {
@@ -18,7 +19,9 @@ extension ApplicationMapper on Application {
       contactName: contactName,
       contactEmail: contactEmail,
       contactPhone: contactPhone,
-      status: status,
+      // Unbekannte Altwerte (z. B. 'bestaetigung') würden sonst in keiner
+      // Kanban-Spalte und keinem Filter auftauchen.
+      status: normalizeApplicationStatus(status, fallback: 'offen'),
       priority: priority,
       appliedDate: appliedDate,
       responseDate: responseDate,
@@ -126,19 +129,35 @@ extension TemplateMapper on Template {
       type: type,
       content: content ?? '',
       filePath: filePath,
+      applicationId: applicationId,
+      // Entity verlangt non-null; der Fallback wird bei Updates nie
+      // zurückgeschrieben (siehe TemplateEntityMapper.toCompanion).
       createdAt: createdAt ?? DateTime.now(),
     );
   }
 }
 
 extension TemplateEntityMapper on TemplateEntity {
+  /// Bei [update] == true entsteht ein Teil-Update: `createdAt` wird nie
+  /// geschrieben, `filePath`/`applicationId` nur, wenn sie gesetzt sind –
+  /// so gehen Verknüpfung und Originaldatei bei Updates nicht verloren.
   TemplatesCompanion toCompanion(bool update) {
+    if (update) {
+      return TemplatesCompanion(
+        id: drift.Value(id),
+        name: drift.Value(name),
+        type: drift.Value(type),
+        content: drift.Value(content),
+        filePath: drift.Value.absentIfNull(filePath),
+        applicationId: drift.Value.absentIfNull(applicationId),
+      );
+    }
     return TemplatesCompanion(
-      id: update ? drift.Value(id) : const drift.Value.absent(),
       name: drift.Value(name),
       type: drift.Value(type),
       content: drift.Value(content),
       filePath: drift.Value(filePath),
+      applicationId: drift.Value(applicationId),
       createdAt: drift.Value(createdAt),
     );
   }

@@ -19,8 +19,21 @@ class StreakData {
 
 final weeklyGoalProvider = FutureProvider<int>((ref) async {
   final setting = await ref.read(settingsRepositoryProvider).getSettingByKey('weeklyApplicationGoal');
-  return int.tryParse(setting?.value ?? '5') ?? 5;
+  return sanitizeWeeklyGoal(int.tryParse(setting?.value ?? '') ?? defaultWeeklyGoal);
 });
+
+/// Standard-Wochenziel, falls nichts (Gültiges) gespeichert ist.
+const int defaultWeeklyGoal = 5;
+
+/// Maximale Anzahl Wochen, die bei der Streak-Berechnung zurückgezählt wird
+/// (ca. 10 Jahre). Schützt zusätzlich vor Endlosschleifen.
+const int maxStreakWeeks = 520;
+
+/// Klemmt ein Wochenziel auf einen gültigen Wert (mindestens 1).
+int sanitizeWeeklyGoal(int? goal) {
+  if (goal == null) return defaultWeeklyGoal;
+  return goal < 1 ? 1 : goal;
+}
 
 final streakProvider = Provider<AsyncValue<StreakData>>((ref) {
   final applicationsAsync = ref.watch(applicationsProvider);
@@ -38,7 +51,7 @@ final streakProvider = Provider<AsyncValue<StreakData>>((ref) {
   }
 
   final applications = applicationsAsync.value ?? [];
-  final goal = goalAsync.value ?? 5;
+  final goal = sanitizeWeeklyGoal(goalAsync.value);
 
   // Group applications by ISO week year-week (e.g., "2026-W36")
   final Map<String, int> appsPerWeek = {};
@@ -65,7 +78,7 @@ final streakProvider = Provider<AsyncValue<StreakData>>((ref) {
   // Kalenderarithmetik statt Duration, damit DST-Wechsel keinen Tag verschieben.
   DateTime checkDate = DateTime(now.year, now.month, now.day - 7);
 
-  while (true) {
+  for (var i = 0; i < maxStreakWeeks; i++) {
     final checkWeekKey = isoWeekKey(checkDate);
     final count = appsPerWeek[checkWeekKey] ?? 0;
 

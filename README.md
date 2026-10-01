@@ -79,3 +79,11 @@ Die Nutzung dieser Software erfolgt auf eigene Gefahr ("as-is"). Der menschliche
 
 Dieser Quellcode und die Software werden ausschließlich zu Demonstrationszwecken (z.B. als Portfolio) veröffentlicht. 
 Jegliche Vervielfältigung, Modifikation, Verbreitung oder kommerzielle Nutzung ist ohne ausdrückliche schriftliche Erlaubnis strengstens untersagt.
+
+## Drittanbieter-Lizenzen
+
+Die oben genannten Rechte gelten nur für den eigenen Code dieses Projekts. Mitgelieferte Komponenten von Drittanbietern stehen unter ihren eigenen Lizenzen:
+
+| Komponente | Verwendung | Lizenz |
+|---|---|---|
+| [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) – Copyright 2022 The Noto Project Authors | Schrift für erzeugte PDFs (`assets/fonts/`) | [SIL Open Font License 1.1](assets/fonts/OFL.txt) |

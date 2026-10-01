@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import 'document_design.dart';
@@ -19,15 +17,7 @@ class MonogramDesign extends DocumentDesign {
     BuildContext context,
     CoverLetterDesignContext dc,
   ) {
-    final name = dc.userNameCtrl.text.trim().isNotEmpty
-        ? dc.userNameCtrl.text.trim()
-        : 'Max Mustermann';
-    final initials = name
-        .split(' ')
-        .where((e) => e.isNotEmpty)
-        .map((e) => e[0].toUpperCase())
-        .take(2)
-        .join('');
+    final initials = initialsFromName(dc.userNameCtrl.text);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,6 +204,7 @@ class MonogramDesign extends DocumentDesign {
     final primaryColor = accentColor == Colors.transparent
         ? const Color(0xFF1E3A8A)
         : accentColor;
+    final profileImage = cvData.profileImage;
 
     return Padding(
       padding: cvData.pageMargins,
@@ -238,7 +229,9 @@ class MonogramDesign extends DocumentDesign {
                   top: 4,
                 ),
                 child: Text(
-                  cvData.initials.isNotEmpty ? cvData.initials : 'MK',
+                  cvData.initials.isNotEmpty
+                      ? cvData.initials
+                      : initialsFromName(cvData.name),
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.w900,
@@ -254,7 +247,7 @@ class MonogramDesign extends DocumentDesign {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      cvData.name.isNotEmpty ? cvData.name : 'Max Mustermann',
+                      cvData.name,
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -263,9 +256,7 @@ class MonogramDesign extends DocumentDesign {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      cvData.title.isNotEmpty
-                          ? cvData.title.toUpperCase()
-                          : 'BERUFSBEZEICHNUNG',
+                      cvData.title.toUpperCase(),
                       style: const TextStyle(
                         fontSize: 12,
                         letterSpacing: 1.0,
@@ -280,20 +271,11 @@ class MonogramDesign extends DocumentDesign {
                 height: 120,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
-                  image:
-                      cvData.profileImagePath != null &&
-                          cvData.profileImagePath!.isNotEmpty &&
-                          File(cvData.profileImagePath!).existsSync()
-                      ? DecorationImage(
-                          image: FileImage(File(cvData.profileImagePath!)),
-                          fit: BoxFit.cover,
-                        )
+                  image: profileImage != null
+                      ? DecorationImage(image: profileImage, fit: BoxFit.cover)
                       : null,
                 ),
-                child:
-                    cvData.profileImagePath == null ||
-                        cvData.profileImagePath!.isEmpty ||
-                        !File(cvData.profileImagePath!).existsSync()
+                child: profileImage == null
                     ? const Center(
                         child: Icon(Icons.person, size: 50, color: Colors.grey),
                       )
@@ -304,17 +286,17 @@ class MonogramDesign extends DocumentDesign {
           const SizedBox(height: 24),
 
           // INTRO TEXT
-          Text(
-            cvData.introText.isNotEmpty
-                ? cvData.introText
-                : 'Dein Kurzprofil oder Intro-Text erscheint hier...',
-            style: const TextStyle(
-              fontSize: 10,
-              height: 1.5,
-              color: Colors.black87,
+          if (cvData.introText.isNotEmpty) ...[
+            Text(
+              cvData.introText,
+              style: const TextStyle(
+                fontSize: 10,
+                height: 1.5,
+                color: Colors.black87,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
+          ],
 
           // PERSÖNLICHE DATEN
           _buildSectionHeader('PERSÖNLICHE DATEN', primaryColor),

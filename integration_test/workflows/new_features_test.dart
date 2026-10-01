@@ -1,110 +1,123 @@
+import 'package:career_center/data/database/app_database.dart';
+import 'package:career_center/data/repositories/interview_repository.dart';
+import 'package:career_center/domain/entities/interview_message.dart';
+import 'package:career_center/presentation/screens/applications/widgets/application_card.dart';
+import 'package:career_center/presentation/screens/applications/widgets/mock_interview_screen.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:career_center/main.dart' as app;
-import 'package:career_center/presentation/screens/applications/widgets/mock_interview_screen.dart';
+
+import '../helpers/test_app.dart';
+
+/// Offline stand-in for the LLM: answers deterministically and records the
+/// conversation history it received.
+class FakeInterviewRepository extends InterviewRepository {
+  final calls = <List<InterviewMessage>>[];
+
+  @override
+  Stream<String> getNextRecruiterResponse({
+    required String baseUrl,
+    required String modelName,
+    required String company,
+    required String position,
+    required String cvContent,
+    required String coverLetterContent,
+    required String jobDescription,
+    required List<InterviewMessage> history,
+  }) async* {
+    calls.add(List.of(history));
+    yield 'Willkommen bei $company! ';
+    yield 'Antwort ${calls.length}.';
+  }
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Test New Features (Mock Interview & Calendar Export)', (WidgetTester tester) async {
-    app.main();
-    await tester.pumpAndSettle();
-    
-    // Handle tutorial if it appears (using Icons instead of exact texts where possible, or just the keys)
-    if (find.text('Willkommen in der Bewerbungszentrale!').evaluate().isNotEmpty) {
-      final weiterBtn = find.text('Weiter');
-      while (weiterBtn.evaluate().isNotEmpty) {
-        await tester.tap(weiterBtn.first);
-        await tester.pumpAndSettle();
-      }
-      final startBtn = find.text('Loslegen');
-      if (startBtn.evaluate().isNotEmpty) {
-        await tester.tap(startBtn.first);
-        await tester.pumpAndSettle();
-      }
-    }
+  testWidgets('selecting an application opens the dossier with follow-up '
+      'date, .ics export and mock interview', (tester) async {
+    final followup = DateTime(2030, 3, 4, 14, 30);
+    await pumpTestApp(tester, seed: (db) async {
+      await db.into(db.applications).insert(ApplicationsCompanion.insert(
+            company: 'Testcorp Inc.',
+            position: 'Senior Flutter Dev',
+            notes: const Value('Remote möglich'),
+            followupDate: Value(followup),
+          ));
+      await db.into(db.applications).insert(ApplicationsCompanion.insert(
+          company: 'Ohne Termin AG', position: 'Dev'));
+    });
 
-    // 1. Bewerbung erstellen
-    // In applications_screen.dart it is a FilledButton.icon with Icons.add
-    final newBtn = find.byIcon(Icons.add);
-    expect(newBtn, findsWidgets);
-    await tester.tap(newBtn.first);
-    await tester.pumpAndSettle();
+    await tapVisible(
+      tester,
+      find.descendant(
+          of: find.byType(ApplicationCard),
+          matching: find.text('Testcorp Inc.')),
+    );
 
-    // Felder ausfüllen
-    // Since labels are translated, we just fill the text fields by index.
-    // Index 0: Company
-    // Index 1: Company URL
-    // Index 2: Job URL
-    // Index 3: Position
-    final textFields = find.byType(TextFormField);
-    expect(textFields.evaluate().length, greaterThanOrEqualTo(4));
-    await tester.enterText(textFields.at(0), 'Testcorp Inc.'); // Company
-    await tester.enterText(textFields.at(3), 'Senior Flutter Dev'); // Position
-    
-    // Follow-up Datum setzen (damit der ICS Button erscheint)
-    // The text 'Nachhaken am... (optional)' is hardcoded in basic_data_tab.dart
-    final dateField = find.textContaining('Nachhaken am');
-    if (dateField.evaluate().isNotEmpty) {
-      await tester.ensureVisible(dateField.first);
-      await tester.tap(dateField.first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('OK')); // DatePicker OK
-      await tester.pumpAndSettle();
-    }
+    expect(find.text('Remote möglich'), findsOneWidget);
+    expect(find.text('04.03.2030 14:30'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, '.ics Export'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'Mock-Interview starten'),
+        findsOneWidget);
 
-    // Speichern
-    // The save button has Icons.save
-    final saveButton = find.byIcon(Icons.save);
-    await tester.ensureVisible(saveButton.first);
-    await tester.tap(saveButton.first);
-    await tester.pumpAndSettle();
-    
-    // Wait for the database stream to update the UI
-    await Future.delayed(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
+    // Without a follow-up date there is no .ics export.
+    await tapVisible(
+      tester,
+      find.descendant(
+          of: find.byType(ApplicationCard),
+          matching: find.text('Ohne Termin AG')),
+    );
+    expect(find.widgetWithText(OutlinedButton, '.ics Export'), findsNothing);
+    expect(find.text('Keine Stellenbeschreibung oder Notizen hinterlegt.'),
+        findsOneWidget);
+  });
 
-    // 2. Zurück im Dashboard, klicke auf die neue Bewerbung um Details aufzuklappen
-    final applicationCard = find.textContaining('Testcorp Inc.').first;
-    expect(applicationCard, findsOneWidget);
-    await tester.tap(applicationCard);
-    await tester.pumpAndSettle();
+  testWidgets('mock interview: greeting is sent automatically, user messages '
+      'and AI answers appear in order', (tester) async {
+    final fakeAi = FakeInterviewRepository();
+    await pumpTestApp(
+      tester,
+      overrides: [interviewRepositoryProvider.overrideWithValue(fakeAi)],
+      seed: (db) async {
+        await db.into(db.applications).insert(ApplicationsCompanion.insert(
+            company: 'Testcorp Inc.', position: 'Senior Flutter Dev'));
+      },
+    );
 
-    // 3. Prüfe ob der ICS-Export Button existiert
-    // Der Button heißt '.ics Export' (hardcoded)
-    final icsButton = find.widgetWithText(OutlinedButton, '.ics Export');
-    // Hinweis: Wir klicken ihn im Test nicht an, da der native Windows-Dialog den Test blockieren würde.
-    expect(icsButton, findsWidgets, reason: 'Der .ics Export Button sollte bei vorhandenem Follow-Up Datum sichtbar sein.');
-
-    // 4. Prüfe ob der Mock-Interview Button existiert und klicke ihn
-    // The button has Icons.mic or 'Mock-Interview starten' text
-    final mockInterviewButton = find.widgetWithText(ElevatedButton, 'Mock-Interview starten');
-    expect(mockInterviewButton, findsOneWidget, reason: 'Der Mock-Interview Button sollte sichtbar sein.');
-    
-    // Scrollen falls nötig
-    await tester.ensureVisible(mockInterviewButton);
-    await tester.tap(mockInterviewButton);
-    await tester.pumpAndSettle();
-
-    // 5. Verifiziere, dass wir im Mock-Interview-Screen sind
+    await tapVisible(
+      tester,
+      find.descendant(
+          of: find.byType(ApplicationCard),
+          matching: find.text('Testcorp Inc.')),
+    );
+    await tapVisible(
+        tester, find.widgetWithText(ElevatedButton, 'Mock-Interview starten'));
     expect(find.byType(MockInterviewScreen), findsOneWidget);
-    
-    // 6. Teste die Chat-Eingabe
-    final chatInput = find.byType(TextField);
-    expect(chatInput, findsOneWidget);
-    await tester.enterText(chatInput, 'Guten Tag, danke für die Einladung!');
-    await tester.testTextInput.receiveAction(TextInputAction.done);
-    await tester.pumpAndSettle();
+    expect(find.text('Interview: Testcorp Inc.'), findsOneWidget);
 
-    // Das Senden-Icon klicken
-    final sendButton = find.byIcon(Icons.send);
-    await tester.tap(sendButton);
-    await tester.pumpAndSettle();
+    // Auto greeting + first AI answer.
+    await pumpUntilFound(tester, find.text('Willkommen bei Testcorp Inc.! Antwort 1.'));
+    expect(find.text('Hallo, ich bin zu meinem Vorstellungsgespräch hier.'),
+        findsOneWidget);
 
-    // Die gesendete Nachricht sollte im Chat auftauchen
+    final input = find.descendant(
+        of: find.byType(MockInterviewScreen), matching: find.byType(TextField));
+    await tester.enterText(input, 'Guten Tag, danke für die Einladung!');
+    await tapVisible(tester, find.byIcon(Icons.send));
+
+    await pumpUntilFound(tester, find.text('Willkommen bei Testcorp Inc.! Antwort 2.'));
     expect(find.text('Guten Tag, danke für die Einladung!'), findsOneWidget);
+    // Input is cleared after sending.
+    expect(tester.widget<TextField>(input).controller!.text, isEmpty);
 
-    print('✅ New Features Test erfolgreich!');
+    // The AI received the full history (greeting, answer 1, new message).
+    expect(fakeAi.calls, hasLength(2));
+    expect(fakeAi.calls.last.map((m) => m.content).toList(), [
+      'Hallo, ich bin zu meinem Vorstellungsgespräch hier.',
+      'Willkommen bei Testcorp Inc.! Antwort 1.',
+      'Guten Tag, danke für die Einladung!',
+    ]);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 /// Hilfsklasse, um alle benötigten Text-Controller und Farben an das Design zu übergeben.
@@ -84,6 +86,37 @@ class CvData {
     this.pageMargins = const EdgeInsets.only(left: 94, top: 170, right: 32, bottom: 32),
   });
 }
+
+extension CvDataFormatting on CvData {
+  /// Geburtsangabe für die Anzeige, z. B. "01.01.1990 in Berlin".
+  /// Leere Teile werden weggelassen (kein hängendes " in ").
+  String get birthLine {
+    final date = birthdate.trim();
+    final place = birthplace.trim();
+    if (date.isNotEmpty && place.isNotEmpty) return '$date in $place';
+    if (date.isNotEmpty) return date;
+    if (place.isNotEmpty) return 'geboren in $place';
+    return '';
+  }
+
+  /// Bild des Bewerbungsfotos oder null, wenn keines gesetzt/vorhanden ist.
+  /// Prüft das Dateisystem nur einmal pro Aufruf.
+  ImageProvider? get profileImage {
+    final path = profileImagePath;
+    if (path == null || path.isEmpty) return null;
+    final file = File(path);
+    return file.existsSync() ? FileImage(file) : null;
+  }
+}
+
+/// Initialen (max. 2 Buchstaben) aus einem Namen, leer bei leerem Namen.
+String initialsFromName(String name) => name
+    .trim()
+    .split(RegExp(r'\s+'))
+    .where((e) => e.isNotEmpty)
+    .map((e) => e[0].toUpperCase())
+    .take(2)
+    .join();
 
 /// Abstrakte Basisklasse für alle Designs in der Bewerbungszentrale
 abstract class DocumentDesign {

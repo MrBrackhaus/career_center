@@ -9,7 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../core/utils/jobcenter_report.dart';
 import '../../../core/utils/pdf_generator.dart';
+import '../../../domain/entities/application_entity.dart';
 
 class JobcenterReportScreen extends ConsumerStatefulWidget {
   const JobcenterReportScreen({super.key});
@@ -21,19 +23,28 @@ class JobcenterReportScreen extends ConsumerStatefulWidget {
 
 class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
   String _userName = '';
+  late DateTimeRange _range;
+  bool _isExporting = false;
 
   @override
   void initState() {
     super.initState();
+    final month = JobcenterReport.currentMonth();
+    _range = DateTimeRange(start: month.from, end: month.to);
     _loadUserName();
   }
 
   Future<void> _loadUserName() async {
-    final setting = await ref.read(settingsRepositoryProvider).getSettingByKey('userName');
-    if (setting != null && mounted) {
-      setState(() {
-        _userName = setting.value;
-      });
+    try {
+      final setting =
+          await ref.read(settingsRepositoryProvider).getSettingByKey('userName');
+      if (setting != null && mounted) {
+        setState(() {
+          _userName = setting.value;
+        });
+      }
+    } catch (_) {
+      // Name ist optional – Bericht funktioniert auch ohne.
     }
   }
 
@@ -41,14 +52,53 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
     return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
-  String _formatDateYMD(DateTime date) {
-    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 1, 12, 31),
+      initialDateRange: _range,
+      helpText: 'Zeitraum für den Nachweis',
+      saveText: 'Übernehmen',
+      cancelText: 'Abbrechen',
+    );
+    if (picked != null && mounted) {
+      setState(() => _range = picked);
+    }
+  }
+
+  Future<void> _exportPdf(List<ApplicationEntity> applications) async {
+    if (_isExporting) return;
+    setState(() => _isExporting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final saved = await PdfGenerator.generateAndSharePdf(
+        applications,
+        ref.read(settingsRepositoryProvider),
+        from: _range.start,
+        to: _range.end,
+      );
+      if (saved) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('PDF-Nachweis wurde gespeichert.')),
+        );
+      }
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('PDF konnte nicht erstellt werden: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final applicationsAsync = ref.watch(applicationsProvider);
     final nowString = _formatDate(DateTime.now());
+    final rangeLabel =
+        '${JobcenterReport.formatDate(_range.start)} – ${JobcenterReport.formatDate(_range.end)}';
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -65,14 +115,38 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
               ),
               const SizedBox(width: 8),
               ElevatedButton.icon(
-                onPressed: () {
-                  applicationsAsync.whenData((applications) {
-                    final settingsDao = ref.read(settingsRepositoryProvider);
-                    PdfGenerator.generateAndSharePdf(applications, settingsDao);
-                  });
-                },
-                icon: const Icon(Icons.picture_as_pdf),
+                onPressed: _isExporting || !applicationsAsync.hasValue
+                    ? null
+                    : () => _exportPdf(applicationsAsync.value!),
+                icon: _isExporting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.picture_as_pdf),
                 label: Text(AppLocalizations.of(context)!.reportSavePdf),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: _pickRange,
+                icon: const Icon(Icons.date_range),
+                label: Text('Zeitraum: $rangeLabel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  final month = JobcenterReport.currentMonth();
+                  setState(() => _range =
+                      DateTimeRange(start: month.from, end: month.to));
+                },
+                child: const Text('Aktueller Monat'),
               ),
             ],
           ),
@@ -84,73 +158,35 @@ class _JobcenterReportScreenState extends ConsumerState<JobcenterReportScreen> {
           const SizedBox(height: 16),
           Expanded(
             child: applicationsAsync.when(
-              data: (applications) {
+              data: (allApplications) {
+                final applications = JobcenterReport.filter(
+                  allApplications,
+                  from: _range.start,
+                  to: _range.end,
+                );
                 if (applications.isEmpty) {
                   return Center(
-                    child: Text(AppLocalizations.of(context)!.reportNoApps),
+                    child: Text(
+                      allApplications.isEmpty
+                          ? AppLocalizations.of(context)!.reportNoApps
+                          : 'Im gewählten Zeitraum wurden keine Bewerbungen versendet.',
+                    ),
                   );
                 }
+                final now = DateTime.now();
                 return SingleChildScrollView(
                   scrollDirection: Axis.vertical,
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
                       columns: [
-                        DataColumn(label: Text('BEWERBUNGSDATUM')),
-                        DataColumn(label: Text('FIRMA / ADRESSE')),
-                        DataColumn(label: Text('ANSPRECHPARTNER')),
-                        DataColumn(label: Text('POSITION')),
-                        DataColumn(label: Text('BEWERBUNGSART')),
-                        DataColumn(label: Text('AKTIVITÄTEN')),
-                        DataColumn(label: Text('STATUS / ERGEBNIS')),
+                        for (final h in JobcenterReport.headers)
+                          DataColumn(label: Text(h.toUpperCase())),
                       ],
                       rows: applications.map((app) {
-                        final dateStr = app.appliedDate != null
-                            ? '${app.appliedDate!.day.toString().padLeft(2, '0')}.${app.appliedDate!.month.toString().padLeft(2, '0')}.${app.appliedDate!.year}'
-                            : '-';
-
-                        final companyBlock = [
-                          app.company,
-                          if (app.address != null && app.address!.isNotEmpty) app.address,
-                        ].join('\n');
-
-                        final contactBlock = [
-                          if (app.contactName != null && app.contactName!.isNotEmpty) app.contactName,
-                          if (app.contactEmail != null && app.contactEmail!.isNotEmpty) app.contactEmail,
-                          if (app.contactPhone != null && app.contactPhone!.isNotEmpty) app.contactPhone,
-                        ].where((s) => s != null).join('\n');
-
-                        String bewerbungsArt = 'Online / E-Mail';
-                        if (app.jobUrl != null && app.jobUrl!.isNotEmpty) {
-                          bewerbungsArt = 'Online-Portal';
-                        } else if (app.contactEmail != null && app.contactEmail!.isNotEmpty) {
-                          bewerbungsArt = 'E-Mail';
-                        }
-
-                        final activities = <String>[];
-                        if (app.followupDate != null) {
-                          activities.add('Nachgefasst: ${app.followupDate!.day.toString().padLeft(2, '0')}.${app.followupDate!.month.toString().padLeft(2, '0')}.${app.followupDate!.year}');
-                        }
-                        if (app.status == 'interview' || (app.nextStep != null && app.nextStep!.toLowerCase().contains('gespräch'))) {
-                          activities.add('Gespräch: ${app.nextStep ?? "Ja"}');
-                        }
-                        final activitiesBlock = activities.isNotEmpty ? activities.join('\n') : '-';
-
-                        String ergebnis = app.status.toUpperCase();
-                        if (app.status == 'absage' && app.rejectionReason != null && app.rejectionReason!.isNotEmpty) {
-                          ergebnis += '\nGrund: ${app.rejectionReason}';
-                        }
-
+                        final cells = JobcenterReport.row(app, now: now);
                         return DataRow(
-                          cells: [
-                            DataCell(Text(dateStr)),
-                            DataCell(Text(companyBlock)),
-                            DataCell(Text(contactBlock.isNotEmpty ? contactBlock : '-')),
-                            DataCell(Text(app.position)),
-                            DataCell(Text(bewerbungsArt)),
-                            DataCell(Text(activitiesBlock)),
-                            DataCell(Text(ergebnis)),
-                          ],
+                          cells: [for (final c in cells) DataCell(Text(c))],
                         );
                       }).toList(),
                     ),

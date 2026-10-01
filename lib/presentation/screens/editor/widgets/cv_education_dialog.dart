@@ -80,6 +80,7 @@ class _CvEducationDialogState extends ConsumerState<CvEducationDialog> {
     try {
       final lang = SpellChecker.currentLanguage;
       final correctedText = await ref.read(aiCorrectionProvider.notifier).correctText(_descriptionController.text, lang);
+      if (!mounted) return;
       if (correctedText != null) {
         setState(() {
           _descriptionController.text = correctedText;

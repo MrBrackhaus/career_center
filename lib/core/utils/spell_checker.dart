@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SpellChecker {
   static HashSet<String> _dictionary = HashSet<String>();
@@ -9,6 +10,12 @@ class SpellChecker {
   static bool _isLoaded = false;
   static String _currentLanguage = 'de';
   static final HashSet<String> _userDictionary = HashSet<String>();
+  static bool _userDictionaryLoaded = false;
+  static const String _ignoredWordsPrefsKey = 'spellcheck_ignored_words';
+
+  /// Laufender Ladevorgang – parallele Aufrufe teilen sich denselben Future.
+  static Future<void>? _loadingFuture;
+  static String? _loadingLanguage;
 
   /// Available languages with display names
   static const Map<String, String> availableLanguages = {
@@ -64,11 +71,27 @@ class SpellChecker {
 
   static String get currentLanguage => _currentLanguage;
 
-  static Future<void> loadDictionary({String language = 'de'}) async {
-    if (_isLoaded && _currentLanguage == language) return;
+  static Future<void> loadDictionary({String language = 'de'}) {
+    if (_isLoaded && _currentLanguage == language) return Future.value();
+    final pending = _loadingFuture;
+    if (pending != null && _loadingLanguage == language) return pending;
 
+    _loadingLanguage = language;
+    final future = _load(language);
+    _loadingFuture = future;
+    return future.whenComplete(() {
+      if (identical(_loadingFuture, future)) {
+        _loadingFuture = null;
+        _loadingLanguage = null;
+      }
+    });
+  }
+
+  static Future<void> _load(String language) async {
     _currentLanguage = language;
     _isLoaded = false;
+
+    await _loadUserDictionary();
 
     try {
       final primaryDict = await rootBundle.loadString(
@@ -77,6 +100,8 @@ class SpellChecker {
 
       // Parse in isolate to avoid UI jank
       final result = await compute(_parseDictionary, primaryDict);
+      // Inzwischen auf eine andere Sprache umgeschaltet? Dann verwerfen.
+      if (_currentLanguage != language) return;
       _dictionary = result['dict'];
       _dictByLength = result['byLength'];
 
@@ -84,7 +109,35 @@ class SpellChecker {
       debugPrint('Dictionary loaded ($language): ${_dictionary.length} words');
     } catch (e) {
       debugPrint('Error loading dictionary ($language): $e');
+      if (_currentLanguage != language) return;
+      // Kein Wörterbuch der alten Sprache weiterverwenden.
+      _dictionary = HashSet<String>();
+      _dictByLength = {};
       _isLoaded = true; // Mark as loaded to prevent infinite retry
+    }
+  }
+
+  static Future<void> _loadUserDictionary() async {
+    if (_userDictionaryLoaded) return;
+    _userDictionaryLoaded = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final words = prefs.getStringList(_ignoredWordsPrefsKey);
+      if (words != null) _userDictionary.addAll(words);
+    } catch (e) {
+      debugPrint('Ignorierte Wörter konnten nicht geladen werden: $e');
+    }
+  }
+
+  static Future<void> _saveUserDictionary() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _ignoredWordsPrefsKey,
+        _userDictionary.toList()..sort(),
+      );
+    } catch (e) {
+      debugPrint('Ignorierte Wörter konnten nicht gespeichert werden: $e');
     }
   }
 
@@ -103,8 +156,11 @@ class SpellChecker {
     return {'dict': dict, 'byLength': byLength};
   }
 
+  /// Fügt ein Wort dem Benutzerwörterbuch hinzu (dauerhaft gespeichert).
   static void ignoreWord(String word) {
-    _userDictionary.add(word.toLowerCase());
+    if (_userDictionary.add(word.toLowerCase())) {
+      _saveUserDictionary();
+    }
   }
 
   /// Check if a word is valid, including suffix stripping and compound splitting for German
@@ -225,6 +281,8 @@ class SpellChecker {
   static Future<List<Map<String, dynamic>>> checkText(String text) async {
     if (!_isLoaded) await loadDictionary(language: _currentLanguage);
     if (text.trim().isEmpty) return [];
+    // Ohne Wörterbuch (Ladefehler) nicht jedes Wort als Fehler melden.
+    if (_dictionary.isEmpty) return [];
 
     final List<Map<String, dynamic>> warnings = [];
 

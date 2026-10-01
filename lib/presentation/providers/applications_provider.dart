@@ -41,6 +41,11 @@ class ApplicationNotifier {
     await repository.updateCoverLetterContent(id, content);
   }
 
+  Future<void> updateCvContent(int id, String json) async {
+    final repository = _ref.read(applicationsRepositoryProvider);
+    await repository.updateCvContent(id, json);
+  }
+
   Future<void> updateJobDescription(int id, String text) async {
     final repository = _ref.read(applicationsRepositoryProvider);
     await repository.updateJobDescription(id, text);

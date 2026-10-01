@@ -145,12 +145,16 @@ class ResponsiveShell extends ConsumerWidget {
       ),
     ];
 
-    int currentIndex = navItems.indexWhere(
-      (item) => location.startsWith(item.path),
+    // Exakter Treffer oder Unterroute ("/report" darf nicht "/reports/..."
+    // markieren). Routen außerhalb des Menüs (z.B. /settings) markieren
+    // keinen Menüpunkt.
+    final int matchIndex = navItems.indexWhere(
+      (item) => location == item.path || location.startsWith('${item.path}/'),
     );
-    if (currentIndex == -1) {
-      currentIndex = 0; // Default
-    }
+    final int? currentIndex = matchIndex == -1 ? null : matchIndex;
+    final bool onSettings =
+        location == '/settings' || location.startsWith('/settings/');
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -180,21 +184,29 @@ class ResponsiveShell extends ConsumerWidget {
                       ),
                       actions: [
                         IconButton(
+                          isSelected: onSettings,
                           icon: const Icon(Icons.settings_outlined),
+                          selectedIcon: const Icon(Icons.settings),
                           onPressed: () => context.go('/settings'),
                           tooltip: loc?.navSettings ?? 'Einstellungen',
                         ),
                       ],
                     ),
                     body: child,
+                    // NavigationBar braucht immer einen Index; außerhalb des
+                    // Menüs wird die Markierung unsichtbar gemacht.
                     bottomNavigationBar: NavigationBar(
-                      selectedIndex: currentIndex,
+                      selectedIndex: currentIndex ?? 0,
+                      indicatorColor:
+                          currentIndex == null ? Colors.transparent : null,
                       onDestinationSelected: (index) =>
                           context.go(navItems[index].path),
                       destinations: navItems.map((item) {
                         return NavigationDestination(
                           icon: Icon(item.icon),
-                          selectedIcon: Icon(item.selectedIcon),
+                          selectedIcon: Icon(
+                            currentIndex == null ? item.icon : item.selectedIcon,
+                          ),
                           label: item.label,
                         );
                       }).toList(),
@@ -239,7 +251,9 @@ class ResponsiveShell extends ConsumerWidget {
                                     ),
                                     const SizedBox(height: 8),
                                     IconButton(
+                                      isSelected: onSettings,
                                       icon: const Icon(Icons.settings_outlined),
+                                      selectedIcon: const Icon(Icons.settings),
                                       onPressed: () => context.go('/settings'),
                                       tooltip:
                                           loc?.navSettings ?? 'Einstellungen',
@@ -331,14 +345,25 @@ class ResponsiveShell extends ConsumerWidget {
                                     InkWell(
                                       onTap: () => context.go('/settings'),
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Padding(
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: onSettings
+                                              ? colorScheme.secondaryContainer
+                                              : null,
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                        ),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 16.0,
                                           vertical: 12.0,
                                         ),
                                         child: Row(
                                           children: [
-                                            const Icon(Icons.settings_outlined),
+                                            Icon(
+                                              onSettings
+                                                  ? Icons.settings
+                                                  : Icons.settings_outlined,
+                                            ),
                                             const SizedBox(width: 12),
                                             Text(
                                               loc?.navSettings ??

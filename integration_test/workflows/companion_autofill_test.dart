@@ -1,80 +1,75 @@
+import 'package:career_center/core/services/companion_server_service.dart';
+import 'package:career_center/presentation/providers/companion_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:career_center/main.dart' as app;
-import 'package:career_center/core/services/companion_server_service.dart';
+
+import '../helpers/test_app.dart';
+
+const _mockUrl =
+    'https://www.arbeitsagentur.de/jobsuche/jobdetail/17560-e52311f57a34493-S';
+
+// What the browser extension posts to /api/import after the user solved any
+// captcha in the real browser.
+const _mockHtml = '''
+<html>
+  <head><title>Stellenangebot: Fachinformatiker Systemintegration (m/w/d) bei AlphaConsult Premium KG</title></head>
+  <body>
+    <h1>Fachinformatiker Systemintegration (m/w/d)</h1>
+    <h2>AlphaConsult Premium KG</h2>
+    <p>Arbeitsort: Köln</p>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org/",
+      "@type": "JobPosting",
+      "title": "Fachinformatiker Systemintegration (m/w/d)",
+      "hiringOrganization": {"@type": "Organization", "name": "AlphaConsult Premium KG"},
+      "jobLocation": {"@type": "Place", "address": {"addressLocality": "Köln"}}
+    }
+    </script>
+  </body>
+</html>
+''';
+
+String _fieldText(WidgetTester tester, String label) =>
+    tester.widget<TextField>(fieldByLabel(label)).controller!.text;
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('Auto-Fill Companion Server Injection Test', (WidgetTester tester) async {
-    app.main();
-    await tester.pumpAndSettle();
+  testWidgets('an "import" event from the browser extension opens a pre-filled '
+      'new application form; saving stores it', (tester) async {
+    final t = await pumpTestApp(tester);
 
-    // The mock data simulating what the browser extension sends after the user solves captchas
-    final mockHtmlFromBrowser = '''
-      <html>
-        <head><title>Stellenangebot: Fachinformatiker Systemintegration (m/w/d) bei AlphaConsult Premium KG</title></head>
-        <body>
-          <h1>Fachinformatiker Systemintegration (m/w/d)</h1>
-          <h2>AlphaConsult Premium KG</h2>
-          <p>Arbeitsort: Köln</p>
-          <p>Befristung: unbefristet</p>
-          <script type="application/ld+json">
-          {
-            "@context": "https://schema.org/",
-            "@type": "JobPosting",
-            "title": "Fachinformatiker Systemintegration (m/w/d)",
-            "hiringOrganization": {
-              "@type": "Organization",
-              "name": "AlphaConsult Premium KG"
-            },
-            "jobLocation": {
-              "@type": "Place",
-              "address": {
-                "addressLocality": "Köln"
-              }
-            }
-          }
-          </script>
-        </body>
-      </html>
-    ''';
+    t.companion.emit(CompanionEvent('import', {'url': _mockUrl, 'html': _mockHtml}));
+    await pumpUntilFound(
+        tester, find.text('✅ Daten direkt aus dem Browser übernommen!'));
 
-    final mockUrl = 'https://www.arbeitsagentur.de/jobsuche/jobdetail/17560-e52311f57a34493-S';
-
-    // Simulate the CompanionServer receiving an import event
-    CompanionServerService().onEvent?.call(
-      CompanionEvent('import', {
-        'url': mockUrl,
-        'html': mockHtmlFromBrowser,
-      })
-    );
-
-    // Give the app time to route and process the data without skipping the SnackBar
-    for (int i = 0; i < 10; i++) {
-      await tester.pump(const Duration(milliseconds: 200));
-    }
-
-    // Verify we navigated to the Application Form Screen
+    // Routing: the new-application form was opened with the URL.
     expect(find.text('Neue Bewerbung'), findsWidgets);
+    expect(_fieldText(tester, 'Link zur Stellenausschreibung'), _mockUrl);
+    // Extraction: the page carries a schema.org JobPosting, so company and
+    // position must be taken from it (not raw <title>/<html> markup).
+    expect(_fieldText(tester, 'Firma *'), 'AlphaConsult Premium KG');
+    expect(_fieldText(tester, 'Position *'),
+        'Fachinformatiker Systemintegration (m/w/d)');
 
-    // We skip the strict SnackBar text check to avoid timing flakiness.
-    // The most important thing is that the text fields are filled!
+    // The event is consumed (cleared) so it does not fire again.
+    expect(t.container.read(companionProvider), isNull);
 
-    // Verify the AutoFill successfully populated the text fields in the UI!
-    final companyField = find.descendant(
-      of: find.byType(TextFormField),
-      matching: find.text('AlphaConsult Premium KG'),
-    );
-    expect(companyField, findsWidgets, reason: 'Company field should be auto-filled');
+    await tapVisible(tester, find.widgetWithIcon(ElevatedButton, Icons.save));
+    final apps = await tester.runAsync(t.db.applicationsDao.getAllApplications);
+    expect(apps, hasLength(1));
+    expect(apps!.single.company, 'AlphaConsult Premium KG');
+    expect(apps.single.jobUrl, _mockUrl);
+  });
 
-    final positionField = find.descendant(
-      of: find.byType(TextFormField),
-      matching: find.text('Fachinformatiker Systemintegration (m/w/d)'),
-    );
-    expect(positionField, findsWidgets, reason: 'Position field should be auto-filled');
-    
-    print('✅ Auto-Fill Companion Server UI Test passed successfully!');
+  testWidgets('events without URL are ignored', (tester) async {
+    final t = await pumpTestApp(tester);
+    t.companion.emit(CompanionEvent('import', {'html': _mockHtml}));
+    await settle(tester);
+
+    expect(find.text('Neue Bewerbung'), findsWidgets); // button on the list
+    expect(find.byType(Form), findsNothing, reason: 'form was not opened');
   });
 }

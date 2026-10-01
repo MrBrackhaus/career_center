@@ -25,10 +25,14 @@ class _CvLanguageDialogState extends State<CvLanguageDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialData?['name'] ?? '');
-    if (widget.initialData != null && widget.initialData!['level'] != null) {
-      if (_levels.contains(widget.initialData!['level'])) {
-        _selectedLevel = widget.initialData!['level'];
+    final storedLevel = widget.initialData?['level']?.toString().trim();
+    if (storedLevel != null && storedLevel.isNotEmpty) {
+      // Unbekannte Niveaus (z. B. "B2" aus Importen) bleiben auswählbar,
+      // statt stillschweigend auf "Grundkenntnisse" zurückzufallen.
+      if (!_levels.contains(storedLevel)) {
+        _levels.insert(0, storedLevel);
       }
+      _selectedLevel = storedLevel;
     }
   }
 
@@ -55,7 +59,7 @@ class _CvLanguageDialogState extends State<CvLanguageDialog> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _selectedLevel,
+              initialValue: _selectedLevel,
               decoration: const InputDecoration(
                 labelText: 'Niveau',
               ),

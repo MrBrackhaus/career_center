@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:career_center/l10n/app_localizations.dart';
 import 'package:career_center/presentation/providers/imap_provider.dart';
 
 import 'contacts_widget.dart';
@@ -7,7 +8,15 @@ import 'contacts_widget.dart';
 class EmailsAndContactsTab extends ConsumerWidget {
   final int applicationId;
 
-  const EmailsAndContactsTab({super.key, required this.applicationId});
+  /// E-Mails werden nur angezeigt, wenn die (KI-basierte) E-Mail-Zuordnung
+  /// aktiv ist. Kontakte sind immer verfügbar.
+  final bool showEmails;
+
+  const EmailsAndContactsTab({
+    super.key,
+    required this.applicationId,
+    this.showEmails = true,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,6 +25,7 @@ class EmailsAndContactsTab extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (showEmails) ...[
           Text(
             'Zugeordnete E-Mails',
             style: Theme.of(context).textTheme.titleLarge,
@@ -29,9 +39,12 @@ class EmailsAndContactsTab extends ConsumerWidget {
               return emailsAsync.when(
                 data: (emails) {
                   if (emails.isEmpty) {
+                    final checkInbox =
+                        AppLocalizations.of(context)?.appCheckInbox ??
+                        'Posteingang checken';
                     return Text(
-                      'Keine zugeordneten E-Mails gefunden.\n(Stelle sicher, dass E-Mail/Firmenname übereinstimmt und drücke auf AppLocalizations.of(context)!.appCheckInbox im Dashboard)',
-                      style: TextStyle(color: Colors.grey),
+                      'Keine zugeordneten E-Mails gefunden.\n(Stelle sicher, dass E-Mail/Firmenname übereinstimmt und drücke auf "$checkInbox" im Dashboard)',
+                      style: const TextStyle(color: Colors.grey),
                     );
                   }
                   return ListView.builder(
@@ -72,6 +85,7 @@ class EmailsAndContactsTab extends ConsumerWidget {
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 16),
+          ],
           ContactsWidget(applicationId: applicationId),
         ],
       ),

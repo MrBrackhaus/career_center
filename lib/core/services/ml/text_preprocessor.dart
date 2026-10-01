@@ -4,7 +4,12 @@
  * Siehe README.md.
  */
 class TextPreprocessor {
-  static final Set<String> _stopWords = Set.of([
+  /// Stoppwörter in derselben Normalisierung wie die Tokens (ä→ae usw.),
+  /// sonst würden z.B. "für", "über", "können" nie herausgefiltert.
+  static final Set<String> _stopWords =
+      _rawStopWords.map(normalizeUmlauts).toSet();
+
+  static const List<String> _rawStopWords = [
     'der',
     'die',
     'das',
@@ -88,7 +93,7 @@ class TextPreprocessor {
     'its', 'like', 'than', 'just', 'over', 'two', 're', 'used', 'make', 'them', 'should', 
     'her', 'such', 'please', 'after', 'then', 'where', 'each', 'she', 'very', 'many', 
     'does', 'under'
-  ]);
+  ];
 
   /// Tokenizes and preprocesses German text for classification.
   static List<String> tokenize(String text) {

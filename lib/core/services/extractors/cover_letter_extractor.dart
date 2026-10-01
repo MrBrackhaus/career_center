@@ -4,6 +4,7 @@
  * Siehe README.md.
  */
 import '../../../domain/models/extraction_result.dart';
+import 'job_posting_extractor.dart';
 
 /// Extrahiert Daten aus deutschen Bewerbungsanschreiben.
 ///
@@ -21,29 +22,29 @@ class CoverLetterExtractor {
     final lines = text.split('\n').map((l) => l.trim()).toList();
     final nonEmptyLines = lines.where((l) => l.isNotEmpty).toList();
 
-    // â”€â”€ 1. Datum suchen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 1. Datum suchen ──────────────────────────────────────────────────────
     FieldResult<DateTime>? foundDate;
     final dateRegex = RegExp(r'(\d{1,2})\.(\d{1,2})\.(\d{4})');
     for (final line in lines) {
       final match = dateRegex.firstMatch(line);
       if (match != null) {
-        try {
-          final date = DateTime(
-            int.parse(match.group(3)!),
-            int.parse(match.group(2)!),
-            int.parse(match.group(1)!),
-          );
+        final date = _validDate(
+          int.parse(match.group(3)!),
+          int.parse(match.group(2)!),
+          int.parse(match.group(1)!),
+        );
+        if (date != null) {
           foundDate = FieldResult(
             value: date,
             confidence: 0.95,
             source: 'regex_date',
           );
           break;
-        } catch (_) {}
+        }
       }
     }
 
-    // â”€â”€ 2. Cover-Letter-Erkennung â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. Cover-Letter-Erkennung ────────────────────────────────────────────
     bool isCoverLetter = false;
     int subjectIndex = -1;
 
@@ -70,7 +71,7 @@ class CoverLetterExtractor {
       return _extractFallback(text, nonEmptyLines, foundDate);
     }
 
-    // â”€â”€ 3. Stellenbezeichnung â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. Stellenbezeichnung ────────────────────────────────────────────────
     FieldResult<String>? foundPosition;
     if (subjectIndex >= 0) {
       // Finde den echten Index in der lines-Liste (mit Leerzeilen)
@@ -95,9 +96,13 @@ class CoverLetterExtractor {
           .replaceAll('- ', '-')
           .replaceAll(' -', '-');
 
-      // "Bewerbung als/auf/um/für" Prefix entfernen
-      title = title.replaceAll(
-        RegExp(r'bewerbung\s*(als|auf|um|für|:|-)?\s*', caseSensitive: false),
+      // "Bewerbung als/auf/um/für" Prefix nur am Anfang entfernen
+      // (sonst wird z.B. "Bewerbungsmanager" zu "smanager")
+      title = title.replaceFirst(
+        RegExp(
+          r'^bewerbung(?:[ \t]+(?:als|auf|um|für)\b|[ \t]*[:\-–—])?[ \t]*',
+          caseSensitive: false,
+        ),
         '',
       );
 
@@ -112,7 +117,7 @@ class CoverLetterExtractor {
       }
     }
 
-    // â”€â”€ 4. Empfängeradresse (PLZ/Ort) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4. Empfängeradresse (PLZ/Ort) ────────────────────────────────────────
     FieldResult<String>? foundAddress;
     FieldResult<String>? foundCompany;
 
@@ -140,7 +145,7 @@ class CoverLetterExtractor {
     }
 
     if (bestRecipientCityIndex != -1) {
-      // â”€â”€ 5. Straße zusammenbauen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── 5. Straße zusammenbauen ────────────────────────────────────────────
       final streetRegex = RegExp(
         r'[a-zäöüß\.\-\s]{1,200}\d{1,4}[a-z]?',
         caseSensitive: false,
@@ -185,7 +190,7 @@ class CoverLetterExtractor {
         );
       }
 
-      // â”€â”€ 6. Firmenname â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── 6. Firmenname ──────────────────────────────────────────────────────
       final skipMarkers = [
         'fachbereich',
         'abteilung',
@@ -224,23 +229,17 @@ class CoverLetterExtractor {
       }
     }
 
-    // â”€â”€ 6.5 Fallback für Firma und Adresse (falls keine PLZ gefunden wurde) â”€
+    // ── 6.5 Fallback für Firma und Adresse (falls keine PLZ gefunden wurde) ─
     if (foundCompany == null && subjectIndex > 0) {
       int searchStartIndex = subjectIndex - 1;
 
       // Überspringe die Datumszeile, falls sie direkt über dem Betreff steht
       if (searchStartIndex >= 0 &&
-          nonEmptyLines[searchStartIndex].contains(
-            DateTime.now().year.toString().substring(0, 2),
-          )) {
-        // Check for year like 2024, 2025, 2026
+          _dateLike.hasMatch(nonEmptyLines[searchStartIndex])) {
         searchStartIndex--;
       }
 
-      final legalForms = RegExp(
-        r'(GmbH(?:\s*&\s*Co\.\s*KG)?|AG|KG|SE|mbH|e\.V\.|GbR|OHG)$',
-        caseSensitive: false,
-      );
+      final legalForms = JobPostingExtractor.legalFormAtLineEnd;
 
       final skipMarkers = [
         'fachbereich',
@@ -279,7 +278,7 @@ class CoverLetterExtractor {
           // Wenn wir noch keine Adresse haben, könnte eine der Zeilen nach der Abteilung die Stadt sein (z.B. Neuss)
           if (foundAddress == null && i + 1 <= searchStartIndex) {
             final potentialCity = nonEmptyLines[i + 1];
-            if (!potentialCity.contains('202') && potentialCity.length < 30) {
+            if (!_dateLike.hasMatch(potentialCity) && potentialCity.length < 30) {
               foundAddress = FieldResult(
                 value: potentialCity,
                 confidence: 0.6,
@@ -310,7 +309,7 @@ class CoverLetterExtractor {
                 break;
               }
             }
-            if (!nextIsDept && !nonEmptyLines[i + 1].contains('202')) {
+            if (!nextIsDept && !_dateLike.hasMatch(nonEmptyLines[i + 1])) {
               foundAddress = FieldResult(
                 value: nonEmptyLines[i + 1],
                 confidence: 0.6,
@@ -355,23 +354,20 @@ class CoverLetterExtractor {
 
     // 7.2 Fallback: Anrede "Sehr geehrte(r)..."
     if (foundContact == null) {
+      // Name muss großgeschrieben sein und auf derselben Zeile stehen;
+      // ein einzelner Nachname ("Sehr geehrter Herr Schmidt,") reicht.
       final contactRegex = RegExp(
-        r'sehr\s+geehrte[r]?\s+(frau|herr)\s*(?:dr\.\s+|prof\.\s+)?([a-zäöüß]{1,200}\s+[a-zäöüß]{1,200}(?:\s+[a-zäöüß]{1,200})*)',
-        caseSensitive: false,
+        r'[Ss]ehr[ \t]+geehrter?[ \t]+(Frau|Herr)[ \t]+(?:(Dr\.|Prof\.(?:[ \t]+Dr\.)?)[ \t]*)?'
+        r'((?:(?:von|van|de|zu)[ \t]+)?[A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)?'
+        r'(?:[ \t]+(?:(?:von|van|de|zu)[ \t]+)?[A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)?)?)',
       );
       final contactMatch = contactRegex.firstMatch(text);
       if (contactMatch != null) {
-        String extractedName = ' '.trim();
-        extractedName = extractedName
-            .split(' ')
-            .map(
-              (w) => w.isNotEmpty
-                  ? w[0].toUpperCase() + w.substring(1).toLowerCase()
-                  : '',
-            )
-            .join(' ');
+        final salutation = contactMatch.group(1)!;
+        final title = contactMatch.group(2);
+        final name = contactMatch.group(3)!.trim();
         foundContact = FieldResult(
-          value: extractedName,
+          value: [salutation, ?title, name].join(' '),
           confidence: 0.9,
           source: 'salutation',
         );
@@ -394,6 +390,22 @@ class CoverLetterExtractor {
         source: 'system',
       ),
     );
+  }
+
+  /// Datumszeile (z.B. "Berlin, 15.09.2026" oder "15. September 2026").
+  static final _dateLike = RegExp(
+    r'\b\d{1,2}\.[ \t]*(?:\d{1,2}\.|[A-ZÄÖÜa-zäöü]{3,}\.?)[ \t]*(?:19|20)\d{2}\b',
+  );
+
+  /// Liefert das Datum nur, wenn Tag/Monat gültig sind (kein Überlauf
+  /// wie 31.02. → 03.03.).
+  static DateTime? _validDate(int year, int month, int day) {
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    final date = DateTime(year, month, day);
+    if (date.year != year || date.month != month || date.day != day) {
+      return null;
+    }
+    return date;
   }
 
   /// Fallback für Nicht-Anschreiben (z.B. Jobcenter-PDF, Stellenanzeige).
@@ -426,10 +438,7 @@ class CoverLetterExtractor {
     }
 
     // E-Mail
-    final emailRegex = RegExp(
-      r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}',
-    );
-    final emailMatch = emailRegex.firstMatch(text);
+    final emailMatch = JobPostingExtractor.emailRegex.firstMatch(text);
     if (emailMatch != null) {
       foundEmail = FieldResult(
         value: emailMatch.group(0)!,
@@ -439,11 +448,10 @@ class CoverLetterExtractor {
     }
 
     // Telefon
-    final phoneRegex = RegExp(r'(\+49|0)[0-9\s/.-]{7,20}');
-    final phoneMatch = phoneRegex.firstMatch(text);
-    if (phoneMatch != null) {
+    final phone = JobPostingExtractor.findPhoneNumber(text);
+    if (phone != null) {
       foundPhone = FieldResult(
-        value: phoneMatch.group(0)!.trim(),
+        value: phone,
         confidence: 0.7,
         source: 'regex_phone',
       );

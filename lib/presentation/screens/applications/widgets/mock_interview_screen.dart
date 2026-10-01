@@ -1,3 +1,6 @@
+import '../../../../core/utils/cv_plain_text.dart';
+import '../../../providers/cv_provider.dart';
+import '../../../providers/database_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:career_center/domain/entities/application_entity.dart';
@@ -17,15 +20,48 @@ class _MockInterviewScreenState extends ConsumerState<MockInterviewScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  /// Lebenslauf als Klartext (Profil + Einträge, sonst Master-Lebenslauf).
+  String _cvText = '';
+
+  Future<void> _loadCvText() async {
+    try {
+      final dao = ref.read(databaseProvider).cvDao;
+      Future<CvDataState> load(int? id) async => CvDataState(
+            experiences: await dao.getWorkExperiences(id),
+            educations: await dao.getEducations(id),
+            skills: await dao.getSkills(id),
+            languages: await dao.getLanguages(id),
+            customItems: await dao.getCustomItems(id),
+          );
+      var data = await load(widget.application.id);
+      if (data.experiences.isEmpty && data.educations.isEmpty) {
+        data = await load(null); // Master-Lebenslauf
+      }
+      _cvText = buildCvPlainText(widget.application.cvContent, data);
+    } catch (_) {
+      _cvText = buildCvPlainText(widget.application.cvContent, null);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
     // Start interview on init
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(interviewProvider.notifier).startInterview(
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await _loadCvText();
+      if (!mounted) return;
+      ref.read(interviewProvider(widget.application.id).notifier).startInterview(
         company: widget.application.company,
         position: widget.application.position,
-        cvContent: widget.application.cvContent ?? '',
+        cvContent: _cvText,
         coverLetterContent: widget.application.coverLetterContent ?? '',
         jobDescription: widget.application.jobDescriptionText ?? '',
       );
@@ -33,6 +69,7 @@ class _MockInterviewScreenState extends ConsumerState<MockInterviewScreen> {
   }
 
   void _scrollToBottom() {
+    if (!mounted) return;
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent + 200, // Extra for safety
@@ -47,11 +84,11 @@ class _MockInterviewScreenState extends ConsumerState<MockInterviewScreen> {
     if (text.trim().isEmpty) return;
     
     _controller.clear();
-    ref.read(interviewProvider.notifier).addApplicantMessage(
+    ref.read(interviewProvider(widget.application.id).notifier).addApplicantMessage(
       text,
       company: widget.application.company,
       position: widget.application.position,
-      cvContent: widget.application.cvContent ?? '',
+      cvContent: _cvText,
         coverLetterContent: widget.application.coverLetterContent ?? '',
       jobDescription: widget.application.jobDescriptionText ?? '',
     );
@@ -60,7 +97,7 @@ class _MockInterviewScreenState extends ConsumerState<MockInterviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(interviewProvider);
+    final state = ref.watch(interviewProvider(widget.application.id));
 
     // Scroll to bottom when streaming updates
     if (state.isRecruiterTyping) {

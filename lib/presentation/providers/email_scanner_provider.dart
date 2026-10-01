@@ -54,10 +54,12 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
       final db = ref.read(databaseProvider);
       final imapService = ImapService();
 
-      final serverSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapServer');
-      final portSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapPort');
-      final emailSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapEmail');
-      final passSetting = await ref.read(settingsRepositoryProvider).getSettingByKey('imapPassword');
+      final settings = ref.read(settingsRepositoryProvider);
+      final serverSetting = await settings.getSettingByKey('imapServer');
+      final portSetting = await settings.getSettingByKey('imapPort');
+      final emailSetting = await settings.getSettingByKey('imapEmail');
+      final passSetting = await settings.getSettingByKey('imapPassword');
+      if (!ref.mounted) return;
 
       if (serverSetting == null ||
           emailSetting == null ||
@@ -66,6 +68,7 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
       }
 
       final password = await ImapService.getPassword();
+      if (!ref.mounted) return;
       final emails = await imapService.fetchEmailsForScanner(
         db,
         serverSetting.value,
@@ -73,6 +76,7 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
         emailSetting.value,
         password,
       );
+      if (!ref.mounted) return;
 
       // Pre-select detected applications that are not yet imported
       final autoSelected = emails
@@ -85,7 +89,8 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
         emails: emails,
         selectedUids: autoSelected,
       );
-    } on Exception catch (e) {
+    } catch (e) {
+      if (!ref.mounted) return;
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
@@ -112,6 +117,8 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
     state = state.copyWith(selectedUids: {});
   }
 
+  /// Importiert die ausgewählten E-Mails und gibt die Anzahl zurück.
+  /// Wirft bei einem Fehler eine Exception (die Liste bleibt erhalten).
   Future<int> importSelected() async {
     final toImport = state.emails
         .where((e) => state.selectedUids.contains(e.uid))
@@ -123,6 +130,7 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
       final db = ref.read(databaseProvider);
       final imapService = ImapService();
       final count = await imapService.importSelectedEmails(db, toImport);
+      if (!ref.mounted) return count;
 
       // Mark imported as already imported in the list
       final updatedEmails = state.emails.map((e) {
@@ -149,9 +157,11 @@ class EmailScannerNotifier extends Notifier<EmailScannerState> {
         lastImportCount: count,
       );
       return count;
-    } on Exception catch (e) {
-      state = state.copyWith(isImporting: false, error: e.toString());
-      return 0;
+    } catch (e) {
+      if (ref.mounted) {
+        state = state.copyWith(isImporting: false, error: state.error);
+      }
+      rethrow;
     }
   }
 }

@@ -9,15 +9,20 @@ class CvDao extends DatabaseAccessor<AppDatabase> with _$CvDaoMixin {
   CvDao(super.db);
 
   // === Work Experiences ===
+  /// Sortierung: aktuelle Stationen zuerst, danach neueste Startdaten zuerst.
   Future<List<CvWorkExperience>> getWorkExperiences(int? applicationId) {
-    if (applicationId == null) {
-      return (select(
-        cvWorkExperiences,
-      )..where((t) => t.applicationId.isNull())).get();
-    }
-    return (select(
-      cvWorkExperiences,
-    )..where((t) => t.applicationId.equals(applicationId))).get();
+    final query = select(cvWorkExperiences)
+      ..where(
+        (t) => applicationId == null
+            ? t.applicationId.isNull()
+            : t.applicationId.equals(applicationId),
+      )
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.isCurrent),
+        (t) => OrderingTerm.desc(t.startDate),
+        (t) => OrderingTerm.desc(t.id),
+      ]);
+    return query.get();
   }
 
   Future<int> insertWorkExperience(CvWorkExperiencesCompanion entry) {
@@ -33,15 +38,21 @@ class CvDao extends DatabaseAccessor<AppDatabase> with _$CvDaoMixin {
   }
 
   // === Educations ===
+  /// Sortierung: laufende Ausbildungen (ohne Enddatum) zuerst, danach
+  /// neueste Startdaten zuerst. (Die Tabelle hat keine isCurrent-Spalte.)
   Future<List<CvEducation>> getEducations(int? applicationId) {
-    if (applicationId == null) {
-      return (select(
-        cvEducations,
-      )..where((t) => t.applicationId.isNull())).get();
-    }
-    return (select(
-      cvEducations,
-    )..where((t) => t.applicationId.equals(applicationId))).get();
+    final query = select(cvEducations)
+      ..where(
+        (t) => applicationId == null
+            ? t.applicationId.isNull()
+            : t.applicationId.equals(applicationId),
+      )
+      ..orderBy([
+        (t) => OrderingTerm.desc(t.endDate.isNull()),
+        (t) => OrderingTerm.desc(t.startDate),
+        (t) => OrderingTerm.desc(t.id),
+      ]);
+    return query.get();
   }
 
   Future<int> insertEducation(CvEducationsCompanion entry) {
@@ -104,14 +115,45 @@ class CvDao extends DatabaseAccessor<AppDatabase> with _$CvDaoMixin {
 
   // === Custom Items ===
   Future<List<CvCustomItem>> getCustomItems(int? applicationId) {
-    if (applicationId == null) {
-      return (select(cvCustomItems)..where((t) => t.applicationId.isNull())..orderBy([(t) => OrderingTerm(expression: t.sortOrder)])).get();
-    }
-    return (select(cvCustomItems)..where((t) => t.applicationId.equals(applicationId))..orderBy([(t) => OrderingTerm(expression: t.sortOrder)])).get();
+    final query = select(cvCustomItems)
+      ..where(
+        (t) => applicationId == null
+            ? t.applicationId.isNull()
+            : t.applicationId.equals(applicationId),
+      )
+      ..orderBy([
+        (t) => OrderingTerm.asc(t.sortOrder),
+        (t) => OrderingTerm.asc(t.id),
+      ]);
+    return query.get();
   }
 
-  Future<int> insertCustomItem(CvCustomItemsCompanion entry) {
-    return into(cvCustomItems).insert(entry);
+  /// Nächster freier sortOrder-Wert (max + 1) für die Bewerbung bzw. den
+  /// Master-Pool (applicationId == null).
+  Future<int> nextCustomItemSortOrder(int? applicationId) async {
+    final maxExpr = cvCustomItems.sortOrder.max();
+    final query = selectOnly(cvCustomItems)
+      ..addColumns([maxExpr])
+      ..where(
+        applicationId == null
+            ? cvCustomItems.applicationId.isNull()
+            : cvCustomItems.applicationId.equals(applicationId),
+      );
+    final max = await query.map((row) => row.read(maxExpr)).getSingle();
+    return max == null ? 0 : max + 1;
+  }
+
+  /// Fügt einen Eintrag ein. Ist kein sortOrder gesetzt, wird er ans Ende
+  /// (max + 1) einsortiert.
+  Future<int> insertCustomItem(CvCustomItemsCompanion entry) async {
+    var toInsert = entry;
+    if (!entry.sortOrder.present) {
+      final appId = entry.applicationId.present ? entry.applicationId.value : null;
+      toInsert = entry.copyWith(
+        sortOrder: Value(await nextCustomItemSortOrder(appId)),
+      );
+    }
+    return into(cvCustomItems).insert(toInsert);
   }
 
   Future<bool> updateCustomItem(CvCustomItemsCompanion entry) {
@@ -121,5 +163,47 @@ class CvDao extends DatabaseAccessor<AppDatabase> with _$CvDaoMixin {
   Future<int> deleteCustomItem(int id) {
     return (delete(cvCustomItems)..where((t) => t.id.equals(id))).go();
   }
-}
 
+  // === Master-Pool ===
+
+  /// Kopiert alle Einträge des Master-Lebenslaufs (applicationId IS NULL)
+  /// in die angegebene Bewerbung. Liefert die Anzahl kopierter Einträge.
+  Future<int> copyMasterToApplication(int applicationId) {
+    return transaction(() async {
+      var copied = 0;
+      final appId = Value<int?>(applicationId);
+
+      for (final e in await getWorkExperiences(null)) {
+        await into(cvWorkExperiences).insert(
+          e.toCompanion(false).copyWith(id: const Value.absent(), applicationId: appId),
+        );
+        copied++;
+      }
+      for (final e in await getEducations(null)) {
+        await into(cvEducations).insert(
+          e.toCompanion(false).copyWith(id: const Value.absent(), applicationId: appId),
+        );
+        copied++;
+      }
+      for (final e in await getSkills(null)) {
+        await into(cvSkills).insert(
+          e.toCompanion(false).copyWith(id: const Value.absent(), applicationId: appId),
+        );
+        copied++;
+      }
+      for (final e in await getLanguages(null)) {
+        await into(cvLanguages).insert(
+          e.toCompanion(false).copyWith(id: const Value.absent(), applicationId: appId),
+        );
+        copied++;
+      }
+      for (final e in await getCustomItems(null)) {
+        await into(cvCustomItems).insert(
+          e.toCompanion(false).copyWith(id: const Value.absent(), applicationId: appId),
+        );
+        copied++;
+      }
+      return copied;
+    });
+  }
+}

@@ -27,22 +27,21 @@ class InterviewState {
   }
 }
 
-final interviewProvider = NotifierProvider<InterviewNotifier, InterviewState>(InterviewNotifier.new);
+/// Interview-Chat pro Bewerbung. Jede Bewerbung hat ihren eigenen Verlauf;
+/// beim Verlassen des Bildschirms wird der Zustand verworfen.
+final interviewProvider = NotifierProvider.autoDispose
+    .family<InterviewNotifier, InterviewState, int>(
+      (applicationId) => InterviewNotifier(applicationId),
+    );
 
 class InterviewNotifier extends Notifier<InterviewState> {
-  late final InterviewRepository _repository;
-  bool _isDisposed = false;
+  final int applicationId;
+  InterviewNotifier(this.applicationId);
 
   @override
-  InterviewState build() {
-    _repository = ref.watch(interviewRepositoryProvider);
-    ref.onDispose(() {
-      _isDisposed = true;
-    });
-    return InterviewState();
-  }
+  InterviewState build() => InterviewState();
 
-  void addApplicantMessage(String text, {
+  Future<void> addApplicantMessage(String text, {
     required String company,
     required String position,
     required String cvContent,
@@ -50,6 +49,7 @@ class InterviewNotifier extends Notifier<InterviewState> {
     required String jobDescription,
   }) async {
     if (text.trim().isEmpty) return;
+    if (state.isRecruiterTyping) return;
 
     final newMessage = InterviewMessage(role: InterviewRole.applicant, content: text.trim());
     state = state.copyWith(
@@ -58,34 +58,52 @@ class InterviewNotifier extends Notifier<InterviewState> {
       currentStreamedChunk: '',
     );
 
-    final settingsRepo = ref.read(settingsRepositoryProvider);
-    final urlSetting = await settingsRepo.getSettingByKey('aiServerUrl');
-    final modelSetting = await settingsRepo.getSettingByKey('aiModelName');
-    
-    final baseUrl = urlSetting?.value ?? 'http://localhost:11434';
-    final modelName = modelSetting?.value ?? 'llama3.1';
-
-    final stream = _repository.getNextRecruiterResponse(
-      baseUrl: baseUrl,
-      modelName: modelName,
-      company: company,
-      position: position,
-      cvContent: cvContent,
-      coverLetterContent: coverLetterContent,
-      jobDescription: jobDescription,
-      history: state.messages,
-    );
-
     String fullResponse = '';
+    try {
+      final repository = ref.read(interviewRepositoryProvider);
+      final settingsRepo = ref.read(settingsRepositoryProvider);
+      final urlSetting = await settingsRepo.getSettingByKey('aiServerUrl');
+      if (!ref.mounted) return;
+      final modelSetting = await settingsRepo.getSettingByKey('aiModelName');
+      if (!ref.mounted) return;
 
-    await for (final chunk in stream) {
-      if (_isDisposed) return;
-      fullResponse += chunk;
-      state = state.copyWith(currentStreamedChunk: fullResponse, isRecruiterTyping: true);
+      final baseUrl = urlSetting?.value ?? 'http://localhost:11434';
+      final modelName = modelSetting?.value ?? 'llama3.1';
+
+      final stream = repository.getNextRecruiterResponse(
+        baseUrl: baseUrl,
+        modelName: modelName,
+        company: company,
+        position: position,
+        cvContent: cvContent,
+        coverLetterContent: coverLetterContent,
+        jobDescription: jobDescription,
+        history: state.messages,
+      );
+
+      await for (final chunk in stream) {
+        if (!ref.mounted) return;
+        fullResponse += chunk;
+        state = state.copyWith(currentStreamedChunk: fullResponse, isRecruiterTyping: true);
+      }
+    } catch (e) {
+      if (!ref.mounted) return;
+      state = state.copyWith(
+        messages: [
+          ...state.messages,
+          InterviewMessage(
+            role: InterviewRole.recruiter,
+            content: '⚠️ Die KI konnte nicht antworten: $e',
+          ),
+        ],
+        isRecruiterTyping: false,
+        currentStreamedChunk: null,
+      );
+      return;
     }
 
-    if (_isDisposed) return;
-    
+    if (!ref.mounted) return;
+
     final recruiterMessage = InterviewMessage(role: InterviewRole.recruiter, content: fullResponse);
     state = state.copyWith(
       messages: [...state.messages, recruiterMessage],
@@ -101,7 +119,7 @@ class InterviewNotifier extends Notifier<InterviewState> {
     required String coverLetterContent,
     required String jobDescription,
   }) {
-    if (state.messages.isEmpty) {
+    if (state.messages.isEmpty && !state.isRecruiterTyping) {
       addApplicantMessage('Hallo, ich bin zu meinem Vorstellungsgespräch hier.', 
         company: company, position: position, cvContent: cvContent, coverLetterContent: coverLetterContent, jobDescription: jobDescription);
     }

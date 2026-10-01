@@ -221,9 +221,9 @@ class CvNotifier {
     String title,
     String? subtitle,
     String? dateRange,
-    String? description,
-    int sortOrder,
-  ) async {
+    String? description, [
+    int? sortOrder,
+  ]) async {
     try {
         final db = ref.read(databaseProvider);
         await db.cvDao.insertCustomItem(
@@ -234,7 +234,8 @@ class CvNotifier {
             subtitle: subtitle == null ? const Value.absent() : Value(subtitle),
             dateRange: dateRange == null ? const Value.absent() : Value(dateRange),
             description: description == null ? const Value.absent() : Value(description),
-            sortOrder: Value(sortOrder),
+            // Ohne expliziten Wert vergibt das DAO max + 1 (ans Ende).
+            sortOrder: sortOrder == null ? const Value.absent() : Value(sortOrder),
           ),
         );
         ref.invalidate(cvProvider(applicationId));
@@ -262,19 +263,24 @@ class CvNotifier {
     await db.cvDao.updateCustomItem(
       CvCustomItemsCompanion(
         id: Value(id),
-        applicationId: applicationId == null ? const Value.absent() : Value(applicationId),
+        applicationId: Value(applicationId),
         sectionName: Value(sectionName),
         title: Value(title),
-        subtitle: subtitle == null ? const Value.absent() : Value(subtitle),
-        dateRange: dateRange == null ? const Value.absent() : Value(dateRange),
-        description: description == null ? const Value.absent() : Value(description),
+        subtitle: Value(subtitle),
+        dateRange: Value(dateRange),
+        description: Value(description),
         sortOrder: Value(sortOrder),
       ),
     );
     ref.invalidate(cvProvider(applicationId));
   }
+
+  /// Kopiert den Master-Lebenslauf (Einträge ohne Bewerbung) in die
+  /// angegebene Bewerbung. Liefert die Anzahl kopierter Einträge.
+  Future<int> copyFromMaster(int applicationId) async {
+    final db = ref.read(databaseProvider);
+    final copied = await db.cvDao.copyMasterToApplication(applicationId);
+    ref.invalidate(cvProvider(applicationId));
+    return copied;
+  }
 }
-
-
-
-

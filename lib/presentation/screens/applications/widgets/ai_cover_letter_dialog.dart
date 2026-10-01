@@ -11,10 +11,19 @@ import '../../../providers/database_provider.dart';
 import '../../../providers/ai_cover_letter_provider.dart';
 
 class AiCoverLetterDialog extends ConsumerStatefulWidget {
-  final Function(String) onCoverLetterGenerated;
+  /// Speichert das generierte Anschreiben (Quill-Delta als JSON).
+  final Future<void> Function(String deltaJson) onCoverLetterGenerated;
   final String company;
   final String position;
   final String jobDescription;
+
+  /// Bereits vorhandenes Anschreiben (Delta-JSON oder Text). Ist es nicht
+  /// leer, wird vor dem Überschreiben nachgefragt.
+  final String? existingCoverLetter;
+
+  /// Bewerbung, der eine Sicherungskopie des alten Anschreibens zugeordnet
+  /// wird.
+  final int? applicationId;
 
   const AiCoverLetterDialog({
     super.key,
@@ -22,6 +31,8 @@ class AiCoverLetterDialog extends ConsumerStatefulWidget {
     required this.company,
     required this.position,
     required this.jobDescription,
+    this.existingCoverLetter,
+    this.applicationId,
   });
 
   @override
@@ -33,6 +44,8 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
   TemplateEntity? _selectedCv;
   List<TemplateEntity> _cvTemplates = [];
   bool _isLoadingTemplates = true;
+  bool _isSaving = false;
+  String? _saveError;
 
   @override
   void initState() {
@@ -65,8 +78,63 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
     }
   }
 
+  /// Fragt nach, ob ein vorhandenes Anschreiben überschrieben werden darf.
+  /// Liefert `null` bei Abbruch, sonst ob eine Sicherung angelegt werden soll.
+  Future<bool?> _confirmOverwrite() async {
+    bool backup = true;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Vorhandenes Anschreiben ersetzen?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Für diese Bewerbung existiert bereits ein Anschreiben. '
+                'Das neu generierte Anschreiben ersetzt es.',
+              ),
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                value: backup,
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text(
+                  'Bisheriges Anschreiben als Vorlage sichern',
+                ),
+                onChanged: (v) => setStateDialog(() => backup = v ?? false),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Ersetzen'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return null;
+    return backup;
+  }
+
   Future<void> _generate() async {
     if (_selectedCv == null && _cvTemplates.isNotEmpty) return;
+
+    final existing = widget.existingCoverLetter;
+    bool backupExisting = false;
+    if (existing != null &&
+        _extractPlainTextFromDelta(existing).trim().isNotEmpty) {
+      final decision = await _confirmOverwrite();
+      if (decision == null || !mounted) return;
+      backupExisting = decision;
+    }
 
     final dao = ref.read(settingsRepositoryProvider);
 
@@ -76,6 +144,7 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
     final phone = (await dao.getSettingByKey('userPhone'))?.value ?? '';
     final address = (await dao.getSettingByKey('userAddress'))?.value ?? '';
     final skills = (await dao.getSettingByKey('userSkills'))?.value ?? '';
+    if (!mounted) return;
 
     String userProfile =
         "Name: $name\nEmail: $email\nTelefon: $phone\nAdresse: $address\nSkills: $skills\n";
@@ -93,17 +162,42 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
           jobDescription: widget.jobDescription,
         );
 
-    if (result != null && mounted) {
-      // Create Quill Document Delta
-      final doc = quill.Document()..insert(0, result);
-      final deltaJson = jsonEncode(doc.toDelta().toJson());
+    if (result == null || !mounted) return;
 
-      // Callback to form
-      widget.onCoverLetterGenerated(deltaJson);
+    // Create Quill Document Delta
+    final doc = quill.Document()..insert(0, result);
+    final deltaJson = jsonEncode(doc.toDelta().toJson());
 
-      if (mounted) {
-        Navigator.of(context).pop(true);
+    setState(() {
+      _isSaving = true;
+      _saveError = null;
+    });
+    try {
+      if (backupExisting && existing != null) {
+        final now = DateTime.now();
+        final stamp =
+            '${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year} '
+            '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        await ref.read(templatesRepositoryProvider).addTemplate(
+              'Anschreiben (Sicherung $stamp) - ${widget.company}',
+              'anschreiben',
+              existing,
+              applicationId: widget.applicationId,
+            );
       }
+      await widget.onCoverLetterGenerated(deltaJson);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+          _saveError = 'Speichern fehlgeschlagen: $e';
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -150,6 +244,13 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
                     'Die KI analysiert nun die Stellenanzeige und deinen Werdegang. Das kann je nach Modellgröße ein paar Sekunden dauern.',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
+                  if (_saveError != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _saveError!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
                   if (aiState.error != null) ...[
                     const SizedBox(height: 16),
                     Text(
@@ -162,14 +263,14 @@ class _AiCoverLetterDialogState extends ConsumerState<AiCoverLetterDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: aiState.isLoading
+          onPressed: aiState.isLoading || _isSaving
               ? null
               : () => Navigator.of(context).pop(false),
           child: const Text('Abbrechen'),
         ),
         ElevatedButton.icon(
-          onPressed: aiState.isLoading ? null : _generate,
-          icon: aiState.isLoading
+          onPressed: aiState.isLoading || _isSaving ? null : _generate,
+          icon: aiState.isLoading || _isSaving
               ? const SizedBox(
                   width: 16,
                   height: 16,

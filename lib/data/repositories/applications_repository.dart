@@ -77,6 +77,17 @@ class ApplicationsRepository {
     );
   }
 
+  /// Teil-Update der Spalte `cvContent` (JSON mit Lebenslauf-Profil und
+  /// Briefkopf-Feldern des Editors).
+  Future<void> updateCvContent(int id, String json) async {
+    await _db.applicationsDao.partialUpdate(
+      id,
+      ApplicationsCompanion(
+        cvContent: drift.Value(json),
+      ),
+    );
+  }
+
   Future<void> updateJobDescription(int id, String text) async {
     await _db.applicationsDao.partialUpdate(
       id,

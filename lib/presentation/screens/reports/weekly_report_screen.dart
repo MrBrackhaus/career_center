@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/applications_provider.dart';
 import '../../providers/stats_provider.dart';
+import '../../providers/streak_provider.dart';
 
 class WeeklyReportScreen extends ConsumerWidget {
   const WeeklyReportScreen({super.key});
@@ -11,31 +12,29 @@ class WeeklyReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final applicationsAsync = ref.watch(applicationsProvider);
     final stats = ref.watch(statsProvider);
+    final goal = sanitizeWeeklyGoal(ref.watch(weeklyGoalProvider).value);
 
     return Scaffold(
       body: applicationsAsync.when(
         data: (applications) {
           final now = DateTime.now();
           final today = DateTime(now.year, now.month, now.day);
-          final startOfWeek = today.subtract(Duration(days: today.weekday - 1));
-          final startOfLastWeek = startOfWeek.subtract(const Duration(days: 7));
+          // ISO-Wochenschlüssel statt Duration-Arithmetik, damit
+          // Sommerzeitwechsel keine Bewerbungen in die falsche Woche schieben.
+          final thisWeekKey = isoWeekKey(today);
+          final lastWeekKey =
+              isoWeekKey(DateTime(today.year, today.month, today.day - 7));
 
           final thisWeekApps = applications.where((app) {
             final appliedDate = app.appliedDate;
             if (appliedDate == null) return false;
-            return appliedDate.isAfter(
-                  startOfWeek.subtract(const Duration(microseconds: 1)),
-                ) &&
-                appliedDate.isBefore(startOfWeek.add(const Duration(days: 7)));
+            return isoWeekKey(appliedDate) == thisWeekKey;
           }).toList();
 
           final lastWeekApps = applications.where((app) {
             final appliedDate = app.appliedDate;
             if (appliedDate == null) return false;
-            return appliedDate.isAfter(
-                  startOfLastWeek.subtract(const Duration(microseconds: 1)),
-                ) &&
-                appliedDate.isBefore(startOfWeek);
+            return isoWeekKey(appliedDate) == lastWeekKey;
           }).toList();
 
           final thisWeekRejections = thisWeekApps
@@ -49,7 +48,7 @@ class WeeklyReportScreen extends ConsumerWidget {
 
           String motivationTitle =
               'Jede Reise beginnt mit dem ersten Schritt! 🚀';
-          if (thisWeekApps.length >= 5) {
+          if (thisWeekApps.length >= goal) {
             motivationTitle = 'FANTASTISCHE ARBEIT DIESE WOCHE! 🎉';
           } else if (thisWeekApps.length >= 3) {
             motivationTitle = 'Starke Leistung diese Woche! 🌟';
@@ -57,7 +56,7 @@ class WeeklyReportScreen extends ConsumerWidget {
             motivationTitle = 'Guter Start! Weiter so! 💪';
           }
 
-          final goalProgress = (thisWeekApps.length / 5).clamp(0.0, 1.0);
+          final goalProgress = (thisWeekApps.length / goal).clamp(0.0, 1.0);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -141,7 +140,7 @@ class WeeklyReportScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Wochenziel: ${thisWeekApps.length} von 5 Bewerbungen',
+                          'Wochenziel: ${thisWeekApps.length} von $goal Bewerbungen',
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: 16),

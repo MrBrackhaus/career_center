@@ -56,28 +56,50 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
 
   AutoUpdaterService get _service => ref.read(autoUpdaterServiceProvider);
 
+  /// Wurde in dieser Sitzung bereits automatisch nach Updates gesucht?
+  bool _autoCheckedThisSession = false;
+
+  /// Sucht nach Updates.
+  ///
+  /// Automatische Prüfungen (`isManual == false`, z.B. beim Öffnen des
+  /// Dashboards) laufen nur einmal pro Sitzung. Ist bereits ein Update
+  /// verfügbar, wird gerade geladen oder ist zur Installation bereit, wird
+  /// der Zustand nie überschrieben.
   Future<void> checkForUpdates({bool isManual = false}) async {
-    if (state.status == UpdaterStatus.checking || state.status == UpdaterStatus.downloading) return;
-    
+    const busyStates = {
+      UpdaterStatus.checking,
+      UpdaterStatus.downloading,
+      UpdaterStatus.available,
+      UpdaterStatus.readyToInstall,
+    };
+    if (busyStates.contains(state.status)) return;
+
+    if (!isManual) {
+      if (_autoCheckedThisSession) return;
+      _autoCheckedThisSession = true;
+    }
+
     state = state.copyWith(status: UpdaterStatus.checking, clearError: true);
-    
+
     try {
       final info = await _service.checkForUpdates();
+      if (!ref.mounted) return;
       if (info != null) {
         state = state.copyWith(status: UpdaterStatus.available, updateInfo: info);
-      } else {
+      } else if (isManual) {
         state = state.copyWith(status: UpdaterStatus.upToDate);
-        if (!isManual) {
-          // Reset to idle after a while if it was an automatic check
-          Future.delayed(const Duration(seconds: 5), () {
-            if (ref.mounted && state.status == UpdaterStatus.upToDate) {
-              state = state.copyWith(status: UpdaterStatus.idle);
-            }
-          });
-        }
+      } else {
+        // Der Service liefert `null` sowohl bei "kein Update" als auch bei
+        // Netzwerkfehlern (offline). Eine automatische Prüfung zeigt daher
+        // keinen Banner an, statt fälschlich "auf dem neuesten Stand" zu
+        // behaupten.
+        state = state.copyWith(status: UpdaterStatus.idle);
       }
     } catch (e) {
-      state = state.copyWith(status: UpdaterStatus.error, errorMessage: e.toString());
+      if (!ref.mounted) return;
+      state = isManual
+          ? state.copyWith(status: UpdaterStatus.error, errorMessage: e.toString())
+          : state.copyWith(status: UpdaterStatus.idle);
     }
   }
 
@@ -107,6 +129,8 @@ class AutoUpdaterNotifier extends Notifier<AutoUpdaterState> {
       }
     } on UpdateIntegrityException catch (e) {
       state = state.copyWith(status: UpdaterStatus.error, errorMessage: e.toString());
+    } catch (e) {
+      state = state.copyWith(status: UpdaterStatus.error, errorMessage: 'Download fehlgeschlagen: $e');
     }
   }
 

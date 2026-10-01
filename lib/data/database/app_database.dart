@@ -4,11 +4,9 @@
  * Siehe README.md.
  */
 import 'dart:io';
-import 'dart:math' show Random;
-import 'dart:convert';
 import 'dart:developer';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'db_migrator.dart';
+import 'db_key_service.dart';
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -217,7 +215,13 @@ class AppDatabase extends _$AppDatabase {
   CvDao get cvDao => CvDao(this);
 
   @override
-  int get schemaVersion => 14;
+  int get schemaVersion => 15;
+
+  /// Eindeutiger Index: eine Message-ID pro Bewerbung (verhindert Duplikate
+  /// beim IMAP-Sync; `insertOrIgnore` überspringt sie dann).
+  static const _emailsMessageIdIndex =
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_emails_application_message '
+      'ON emails (application_id, message_id)';
 
   @override
   MigrationStrategy get migration {
@@ -228,6 +232,7 @@ class AppDatabase extends _$AppDatabase {
       },
       onCreate: (Migrator m) async {
         await m.createAll();
+        await customStatement(_emailsMessageIdIndex);
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -275,6 +280,33 @@ class AppDatabase extends _$AppDatabase {
           try { await m.createTable(cvLanguages); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
           try { await m.createTable(cvCustomItems); } catch (e) { log('Migration step skipped: $e', name: 'app_database'); }
         }
+        if (from < 15) {
+          // Doppelte E-Mails entfernen (die mit der kleinsten id bleibt),
+          // danach den eindeutigen Index anlegen.
+          await customStatement(
+            'DELETE FROM emails WHERE id NOT IN ('
+            'SELECT MIN(id) FROM emails GROUP BY application_id, message_id)',
+          );
+          await customStatement(_emailsMessageIdIndex);
+
+          // Alte, vom Kanban nicht darstellbare Statuswerte vereinheitlichen
+          // (siehe normalizeApplicationStatus).
+          await customStatement(
+            "UPDATE applications SET status = 'versendet' WHERE lower(trim(status)) "
+            "IN ('bestaetigung', 'bestätigung', 'eingangsbestätigung')",
+          );
+          await customStatement(
+            "UPDATE applications SET status = 'zusage' WHERE lower(trim(status)) = 'angebot'",
+          );
+          await customStatement(
+            "UPDATE applications SET status = 'interview' WHERE lower(trim(status)) "
+            "IN ('einladung', 'vorstellungsgespräch')",
+          );
+          await customStatement(
+            "UPDATE applications SET status = lower(trim(status)) WHERE lower(trim(status)) "
+            "IN ('offen', 'versendet', 'interview', 'zusage', 'absage')",
+          );
+        }
       },
     );
   }
@@ -285,14 +317,9 @@ LazyDatabase _openConnection() {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = File(p.join(dbFolder.path, 'career_center.sqlite'));
 
-    const storage = FlutterSecureStorage();
-    String? encryptionKey = await storage.read(key: 'db_encryption_key');
-    if (encryptionKey == null) {
-      final random = Random.secure();
-      final values = List<int>.generate(32, (i) => random.nextInt(256));
-      encryptionKey = base64UrlEncode(values);
-      await storage.write(key: 'db_encryption_key', value: encryptionKey);
-    }
+    // Liest den Schlüssel; fehlt er, wird eine unlesbare verschlüsselte
+    // Datenbank beiseitegelegt (nie gelöscht) und neu gestartet.
+    final encryptionKey = await DbKeyService().obtainKeyForDatabase(file);
 
     try {
       migrateToEncryptedIfNecessary(file, encryptionKey);

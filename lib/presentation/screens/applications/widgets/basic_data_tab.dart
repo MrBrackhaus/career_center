@@ -212,7 +212,7 @@ class BasicDataTab extends StatelessWidget {
             _buildField(
               AppLocalizations.of(context)!.promptCompany,
               bundle.companyController,
-              'Unternehmen',
+              FormMarkerField.company,
               isRequired: true,
               maxLength: 100,
             ),
@@ -236,7 +236,7 @@ class BasicDataTab extends StatelessWidget {
             _buildField(
               'Position',
               bundle.positionController,
-              'Position',
+              FormMarkerField.position,
               isRequired: true,
               maxLength: 100,
             ),
@@ -251,7 +251,11 @@ class BasicDataTab extends StatelessWidget {
               minLines: 3,
             ),
 
+            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
+              // Key erzwingt Neuaufbau, wenn der Status von außen geändert
+              // wird (z.B. nach dem Versand per E-Mail oder Auto-Fill).
+              key: ValueKey('status-${bundle.status}'),
               initialValue: bundle.status,
               decoration: InputDecoration(
                 labelText: AppLocalizations.of(context)!.formBasicStatus,
@@ -404,7 +408,7 @@ class BasicDataTab extends StatelessWidget {
             _buildField(
               'Ansprechperson',
               bundle.contactNameController,
-              'Ansprechpartner',
+              FormMarkerField.contactName,
             ),
             const SizedBox(height: 12),
             Row(
@@ -413,7 +417,7 @@ class BasicDataTab extends StatelessWidget {
                   child: _buildField(
                     'E-Mail',
                     bundle.contactEmailController,
-                    'E-Mail',
+                    FormMarkerField.contactEmail,
                     keyboardType: TextInputType.emailAddress,
                   ),
                 ),
@@ -422,7 +426,7 @@ class BasicDataTab extends StatelessWidget {
                   child: _buildField(
                     'Telefon',
                     bundle.contactPhoneController,
-                    'Telefon',
+                    FormMarkerField.contactPhone,
                     keyboardType: TextInputType.phone,
                   ),
                 ),
@@ -432,7 +436,7 @@ class BasicDataTab extends StatelessWidget {
             _buildField(
               'Adresse',
               bundle.addressController,
-              'Adresse',
+              FormMarkerField.address,
               maxLines: 2,
             ),
 

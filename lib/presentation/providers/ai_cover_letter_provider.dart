@@ -56,10 +56,12 @@ class AiCoverLetterNotifier extends Notifier<AiCoverLetterState> {
         apiKey: apiKey,
       );
 
-      state = state.copyWith(isLoading: false);
+      if (ref.mounted) state = state.copyWith(isLoading: false);
       return result;
-    } on Exception catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+    } catch (e) {
+      if (ref.mounted) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      }
       return null;
     }
   }

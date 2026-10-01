@@ -108,6 +108,10 @@ const obsidianDarkScheme = ColorScheme(
 final obsidianLightScheme = _neutralLightScheme(const Color(0xFF7C6AF7));
 
 class ThemeNotifier extends Notifier<ThemeState> {
+  /// Wird gesetzt, sobald der Nutzer das Theme ändert. Das asynchrone
+  /// initiale Laden überschreibt eine solche Wahl dann nicht mehr.
+  bool _userChanged = false;
+
   @override
   ThemeState build() {
     _loadTheme();
@@ -115,9 +119,19 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 
   Future<void> _loadTheme() async {
-    final modeStr = await ref.read(settingsRepositoryProvider).getSettingByKey('themeMode');
-    final colorStr = await ref.read(settingsRepositoryProvider).getSettingByKey('themeColor');
-    final presetStr = await ref.read(settingsRepositoryProvider).getSettingByKey('themePreset');
+    final SettingEntity? modeStr;
+    final SettingEntity? colorStr;
+    final SettingEntity? presetStr;
+    try {
+      final repo = ref.read(settingsRepositoryProvider);
+      modeStr = await repo.getSettingByKey('themeMode');
+      colorStr = await repo.getSettingByKey('themeColor');
+      presetStr = await repo.getSettingByKey('themePreset');
+    } catch (e, st) {
+      log('Theme konnte nicht geladen werden', error: e, stackTrace: st);
+      return; // Standard-Theme bleibt aktiv.
+    }
+    if (!ref.mounted || _userChanged) return;
 
     ThemeMode mode = ThemeMode.system;
     if (modeStr != null) {
@@ -129,7 +143,7 @@ class ThemeNotifier extends Notifier<ThemeState> {
     if (colorStr != null && colorStr.value.isNotEmpty) {
       try {
         color = Color(int.parse(colorStr.value));
-      } on Exception catch (e, st) {
+      } catch (e, st) {
         log('An error occurred', error: e, stackTrace: st);
       }
     }
@@ -141,6 +155,7 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
+    _userChanged = true;
     state = state.copyWith(themeMode: mode);
     String modeString = 'system';
     if (mode == ThemeMode.light) modeString = 'light';
@@ -151,6 +166,7 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 
   Future<void> setSeedColor(Color color) async {
+    _userChanged = true;
     state = state.copyWith(seedColor: color, preset: ThemePreset.standard);
     await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
       SettingEntity(key: 'themeColor', value: color.toARGB32().toString()),
@@ -161,6 +177,7 @@ class ThemeNotifier extends Notifier<ThemeState> {
   }
 
   Future<void> setPreset(ThemePreset preset) async {
+    _userChanged = true;
     state = state.copyWith(preset: preset);
     await ref.read(settingsRepositoryProvider).insertOrUpdateSetting(
       SettingEntity(key: 'themePreset', value: preset.name),

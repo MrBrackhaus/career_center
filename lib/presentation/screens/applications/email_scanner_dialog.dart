@@ -382,15 +382,26 @@ class _EmailScannerDialogState extends ConsumerState<EmailScannerDialog>
                       onPressed: (selectedCount == 0 || scanState.isImporting)
                           ? null
                           : () async {
-                              final count = await ref.read(emailScannerProvider.notifier).importSelected();
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                              final messenger = ScaffoldMessenger.of(context);
+                              try {
+                                final count = await ref.read(emailScannerProvider.notifier).importSelected();
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      '$count Bewerbung(en) erfolgreich importiert!',
+                                      count > 0
+                                          ? '$count Bewerbung(en) erfolgreich importiert!'
+                                          : 'Es wurde keine Bewerbung importiert.',
                                     ),
-                                    backgroundColor: Colors.green,
+                                    backgroundColor: count > 0 ? Colors.green : Colors.orange,
                                     duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              } catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text('Import fehlgeschlagen: $e'),
+                                    backgroundColor: Colors.red,
+                                    duration: const Duration(seconds: 6),
                                   ),
                                 );
                               }

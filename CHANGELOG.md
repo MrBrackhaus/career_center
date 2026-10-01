@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.9.1] - 2026-10-01
+
+### Fixed (critical)
+- Weekly goal <= 0 caused an infinite loop on the UI isolate (app hung on every start); goal is now validated (1–100) and clamped.
+- Calendar crashed from 2027-01-01 (hard-coded `lastDay`); now localized and starting on Monday.
+- SMTP: STARTTLS enforced on non-465 ports, auth mechanism negotiated, HTML body escaped.
+- Windows single-instance guard (named mutex + `AppMutex`); app restarts after silent auto-update.
+
+### Fixed (data loss)
+- Editor: template autosave no longer inserts duplicates; pending edits flushed on close; revision-based dirty tracking; save errors surfaced.
+- CV profile and letter header fields persisted (`applications.cvContent` JSON / settings).
+- Templates: partial updates keep `applicationId`, `filePath`, `createdAt`; delete asks for confirmation and removes the copied PDF.
+- Application form: file drops only extract on the basic-data tab and ask before overwriting; custom fields merged; unsaved-changes prompt; Ctrl+S on any tab.
+- Kanban drag, e-mail composer and AI cover letter use partial updates instead of full-row rewrites.
+- Legacy status values normalized (schema v15 migration + on read).
+
+### Jobcenter report & PDFs
+- Date range, only sent applications, sorted; honest follow-up and channel columns; no placeholders.
+- Bundled Noto Sans (OFL) for Unicode PDF output; CV and cover-letter PDF export implemented.
+
+### Backup & privacy
+- Recovery key display; import of backups encrypted with another key; key-loss guard renames the unreadable DB instead of overwriting.
+- Documents stored in the app support directory; files deleted with their records.
+- Removed Clearbit logo requests; feedback dialog privacy notice, limits and timeouts.
+
+### Extraction
+- Job pages classified on visible text; URL imports are always job postings (fixes raw HTML in fields with the synthetic model).
+- Fixed quadratic title/e-mail regexes, case-insensitive legal-form/contact regexes, JSON-LD salary, phone/address/date parsing, interview detection, ICS escaping/folding/UIDs, CSV injection guard, keyword tokenizer, ML stop words and online pruning.
+- Unique index on `emails(application_id, message_id)` with duplicate cleanup.
+
+### Tests & CI
+- Integration tests run against an in-memory database via a shared harness (no more access to the real user database); removed data-wiping and assertion-free tests.
+- Re-enabled localization integrity test; removed a test that only tested its own reimplementation; ~30 new regression tests.
+- CI: secret injected via env, release tag must match pubspec version, nightly concurrency group.
+
 ## [0.9.0] - 2026-10-01
 
 ### Security & Privacy

@@ -24,6 +24,12 @@ class DocumentSanitizerService {
     if (input.trim().startsWith('<') || input.contains('<!DOCTYPE')) {
       try {
         final doc = html_parser.parse(input);
+        // Nicht sichtbare Inhalte (Skripte, Styles, Tracking) entfernen
+        for (final el in doc.querySelectorAll(
+          'script, style, noscript, template',
+        )) {
+          el.remove();
+        }
         var text = doc.body?.text ?? doc.documentElement?.text ?? input;
         return text.replaceAll(RegExp(r'\s+'), ' ').trim();
       } catch (_) {

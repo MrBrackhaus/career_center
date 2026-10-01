@@ -16,6 +16,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check tag matches pubspec version
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          ver="$(grep -m1 -E '^version:' pubspec.yaml | sed -E 's/^version:[[:space:]]*//' | cut -d+ -f1 | tr -d '\r[:space:]')"
+          echo "Tag: $tag / pubspec: $ver"
+          if [ -z "$ver" ] || [ "$tag" != "$ver" ]; then
+            echo "::error::Tag ($GITHUB_REF_NAME) passt nicht zur pubspec-Version ($ver)."
+            exit 1
+          fi
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -23,11 +36,24 @@ jobs:
 
       - name: Create secrets.dart
         shell: bash
+        env:
+          # Secret nur per Umgebungsvariable, nie direkt im Skripttext
+          # (verhindert Shell-/Dart-Injection durch Sonderzeichen).
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           mkdir -p lib/core
-          echo "class Secrets {" > lib/core/secrets.dart
-          echo "  static const String discordWebhookUrl = '${{ secrets.DISCORD_WEBHOOK }}';" >> lib/core/secrets.dart
-          echo "}" >> lib/core/secrets.dart
+          python - <<'PY'
+          import json, os
+          value = os.environ.get("DISCORD_WEBHOOK", "")
+          # JSON-String-Escapes sind gueltige Dart-Escapes; "$" zusaetzlich
+          # escapen, damit Dart nicht interpoliert.
+          literal = json.dumps(value).replace("$", "\\$")
+          with open("lib/core/secrets.dart", "w", encoding="utf-8", newline="\n") as f:
+              f.write("class Secrets {\n")
+              f.write("  static const String discordWebhookUrl = " + literal + ";\n")
+              f.write("}\n")
+          print("lib/core/secrets.dart geschrieben (Webhook gesetzt: %s)" % bool(value))
+          PY
 
       - name: Install dependencies
         run: flutter pub get
@@ -39,7 +65,7 @@ jobs:
         run: flutter build windows
 
       - name: Build Installer
-        run: iscc windows/installer.iss
+        run: iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" windows/installer.iss
 
       - name: Compress Release
         run: |

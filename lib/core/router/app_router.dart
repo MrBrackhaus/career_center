@@ -68,11 +68,16 @@ final appRouter = GoRouter(
             GoRoute(
               path: 'add',
               builder: (context, state) {
-                final extra = state.extra as Map<String, dynamic>?;
+                final extra = state.extra is Map ? state.extra as Map : null;
+                String? str(String key) {
+                  final v = extra?[key];
+                  return v is String ? v : null;
+                }
+
                 return ApplicationFormScreen(
-                  initialUrl: extra?['url'] as String?,
-                  initialHtml: extra?['html'] as String?,
-                  initialScreenshotBase64: extra?['screenshot'] as String?,
+                  initialUrl: str('url'),
+                  initialHtml: str('html'),
+                  initialScreenshotBase64: str('screenshot'),
                 );
               },
             ),
@@ -95,7 +100,8 @@ final appRouter = GoRouter(
             GoRoute(
               path: ':id/interview',
               builder: (context, state) {
-                final app = state.extra as ApplicationEntity?;
+                final extra = state.extra;
+                final app = extra is ApplicationEntity ? extra : null;
                 if (app == null) return const Scaffold(body: Center(child: Text('App fehlt')));
                 return MockInterviewScreen(application: app);
               },
@@ -164,18 +170,16 @@ class ScaffoldWithTopBar extends ConsumerWidget {
     ref.listen<CompanionEvent?>(companionProvider, (previous, next) {
       if (next != null) {
         if (next.type == 'import') {
-          final url = next.payload['url'] as String?;
+          final rawUrl = next.payload['url'];
+          final url = rawUrl is String && rawUrl.isNotEmpty ? rawUrl : null;
           if (url != null) {
-            // We can pass this to /applications/add via extra or we just route there
-            // For now, let's just route to Add and show a snackbar!
-            context.go(
-              '/applications/add',
-              extra: {
-                'url': url,
-                'html': next.payload['html'],
-                'screenshot': next.payload['screenshot'],
-              },
-            );
+            final rawHtml = next.payload['html'];
+            final rawShot = next.payload['screenshot'];
+            _handleImport(context, {
+              'url': url,
+              if (rawHtml is String) 'html': rawHtml,
+              if (rawShot is String) 'screenshot': rawShot,
+            });
           }
         } else if (next.type == 'autofill_request') {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -195,5 +199,54 @@ class ScaffoldWithTopBar extends ConsumerWidget {
     return ResponsiveShell(child: child);
   }
 
-  
+  /// Ist gerade ein Formular (Neu/Bearbeiten/Editor) geöffnet, dessen
+  /// ungespeicherte Eingaben bei einer Navigation verloren gingen?
+  static bool _isOnForm(String path) =>
+      path == '/applications/add' ||
+      path.startsWith('/applications/edit/') ||
+      path.endsWith('/editor') ||
+      path == '/editor';
+
+  static Future<void> _handleImport(
+    BuildContext context,
+    Map<String, String> extra,
+  ) async {
+    final currentPath = appRouter.routerDelegate.currentConfiguration.uri.path;
+
+    if (_isOnForm(currentPath)) {
+      final dialogContext = _rootNavigatorKey.currentContext ?? context;
+      final confirmed = await showDialog<bool>(
+        context: dialogContext,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Stellenanzeige importieren?'),
+          content: const Text(
+            'Es ist gerade ein Formular geöffnet. Nicht gespeicherte Eingaben '
+            'gehen verloren, wenn du die importierte Stelle jetzt öffnest.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Verwerfen und öffnen'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
+    if (currentPath == '/applications/add') {
+      // Gleiche Route: erst verlassen, damit das Formular mit den neuen
+      // Importdaten frisch aufgebaut wird.
+      appRouter.go('/applications');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        appRouter.go('/applications/add', extra: extra);
+      });
+    } else {
+      appRouter.go('/applications/add', extra: extra);
+    }
+  }
 }

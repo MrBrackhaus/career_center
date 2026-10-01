@@ -5,13 +5,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/entities/application_entity.dart';
 import '../../../domain/entities/document_entity.dart';
-import '../../../domain/models/application_form_dto.dart';
+import '../../../domain/enums/application_status.dart';
 
-import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
+import 'application_status_updates.dart';
 
 import '../../providers/smtp_provider.dart';
 import 'dart:developer' show log;
+
+/// Interne Dateien (z.B. der automatisch gespeicherte Screenshot der
+/// Stellenanzeige), die nicht standardmäßig angehängt werden sollen.
+const Set<String> _internalDocumentNames = {'stellenanzeige_screenshot.png'};
+const Set<String> _imageTypes = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'};
+
+/// Entscheidet, ob ein Dokument beim Öffnen des Dialogs als Anhang
+/// vorausgewählt wird. Interne Dateien und Bilder (Screenshots) werden nicht
+/// vorausgewählt.
+bool isDefaultAttachment(DocumentEntity doc) {
+  final name = doc.fileName.toLowerCase();
+  if (_internalDocumentNames.contains(name)) return false;
+  if (name.startsWith('screenshot_')) return false;
+  final type = doc.fileType.toLowerCase().replaceAll('.', '');
+  if (_imageTypes.contains(type)) return false;
+  return true;
+}
 
 class EmailComposerDialog extends ConsumerStatefulWidget {
   final ApplicationEntity application;
@@ -31,6 +48,7 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
   bool _isGenerating = false;
   List<DocumentEntity> _documents = [];
   Set<int> _selectedDocIds = {};
+  Set<int> _missingDocIds = {};
 
   @override
   void dispose() {
@@ -49,15 +67,70 @@ class _EmailComposerDialogState extends ConsumerState<EmailComposerDialog> {
   }
 
   Future<void> _loadDocuments() async {
-    final docs = await ref.read(documentsRepositoryProvider)
-        .watchDocumentsForApplication(widget.application.id)
-        .first;
-    if (mounted) {
+    try {
+      final docs = await ref.read(documentsRepositoryProvider)
+          .watchDocumentsForApplication(widget.application.id)
+          .first;
+      final missing = <int>{};
+      for (final d in docs) {
+        if (!await File(d.filePath).exists()) missing.add(d.id);
+      }
+      if (!mounted) return;
       setState(() {
         _documents = docs;
-        _selectedDocIds = docs.map((d) => d.id).toSet();
+        _missingDocIds = missing;
+        _selectedDocIds = docs
+            .where((d) => !missing.contains(d.id) && isDefaultAttachment(d))
+            .map((d) => d.id)
+            .toSet();
       });
+    } catch (e, st) {
+      log('Dokumente konnten nicht geladen werden: $e', error: e, stackTrace: st);
     }
+  }
+
+  /// Prüft die ausgewählten Anhänge. Gibt die zu sendenden Dateien zurück
+  /// oder `null`, wenn der Nutzer wegen fehlender Dateien abbricht.
+  Future<List<File>?> _collectAttachments() async {
+    final selected =
+        _documents.where((d) => _selectedDocIds.contains(d.id)).toList();
+    final existing = <File>[];
+    final missing = <DocumentEntity>[];
+    for (final d in selected) {
+      final f = File(d.filePath);
+      if (await f.exists()) {
+        existing.add(f);
+      } else {
+        missing.add(d);
+      }
+    }
+    if (missing.isEmpty) return existing;
+    if (!mounted) return null;
+
+    setState(() => _missingDocIds = {..._missingDocIds, ...missing.map((d) => d.id)});
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Anhänge nicht gefunden'),
+        content: Text(
+          'Folgende Dateien existieren nicht mehr am gespeicherten Ort:\n\n'
+          '${missing.map((d) => '• ${d.fileName}\n  (${d.filePath})').join('\n')}\n\n'
+          'Ohne diese Anhänge senden?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ohne diese senden'),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true) return null;
+    return existing;
   }
 
   Future<void> _generateDraft() async {
@@ -122,15 +195,19 @@ $name
       return;
     }
 
+    final attachments = await _collectAttachments();
+    if (attachments == null || !mounted) return;
+
     setState(() => _isLoading = true);
     try {
-
+      final settings = ref.read(settingsRepositoryProvider);
       final smtpServer =
-          (await ref.read(settingsRepositoryProvider).getSettingByKey('smtpServer'))?.value ?? '';
+          (await settings.getSettingByKey('smtpServer'))?.value ?? '';
       final smtpPortStr =
-          (await ref.read(settingsRepositoryProvider).getSettingByKey('smtpPort'))?.value ?? '465';
+          (await settings.getSettingByKey('smtpPort'))?.value ?? '465';
       final userEmail =
-          (await ref.read(settingsRepositoryProvider).getSettingByKey('imapEmail'))?.value ?? '';
+          (await settings.getSettingByKey('imapEmail'))?.value ?? '';
+      if (!mounted) return;
 
       if (smtpServer.isEmpty || userEmail.isEmpty) {
         throw Exception(
@@ -139,12 +216,6 @@ $name
       }
 
       final smtpPort = int.tryParse(smtpPortStr) ?? 465;
-
-      final attachments = _documents
-          .where((d) => _selectedDocIds.contains(d.id))
-          .map((d) => File(d.filePath))
-          .where((f) => f.existsSync())
-          .toList();
 
       await ref
           .read(smtpServiceProvider)
@@ -158,42 +229,39 @@ $name
             attachments: attachments,
           );
 
-      // E-Mail erfolgreich versendet -> Bewerbungsstatus anpassen
-      if (widget.application.status == 'offen') {
-        final dto = ApplicationFormDto(
-          id: widget.application.id,
-          company: widget.application.company,
-          position: widget.application.position,
-          status: 'versendet',
-          notes: widget.application.notes,
-          rejectionReason: widget.application.rejectionReason,
-          appliedDate: DateTime.now(),
-          followupDate: widget.application.followupDate,
-          commuteCar: widget.application.commuteCar,
-          salaryWish: widget.application.salaryWish,
-          jobUrl: widget.application.jobUrl,
-          companyUrl: widget.application.companyUrl,
-          contactName: widget.application.contactName,
-          contactEmail: widget.application.contactEmail,
-          contactPhone: widget.application.contactPhone,
-          address: widget.application.address,
-          customFields: widget.application.customFields,
-          jobDescriptionText: widget.application.jobDescriptionText,
-        );
-        await ref.read(applicationNotifierProvider).updateApplication(dto);
+      // E-Mail erfolgreich versendet -> Bewerbungsstatus per Teil-Update
+      // anpassen (keine anderen Felder überschreiben).
+      String? statusWarning;
+      try {
+        final current = await ref
+            .read(applicationsRepositoryProvider)
+            .getApplicationById(widget.application.id);
+        final status = current?.status ?? widget.application.status;
+        if (status == ApplicationStatus.offen) {
+          await changeApplicationStatus(
+            ref,
+            id: widget.application.id,
+            newStatus: ApplicationStatus.versendet,
+            currentAppliedDate: current?.appliedDate,
+            currentResponseDate: current?.responseDate,
+          );
+        } else if (current != null && current.appliedDate == null) {
+          await setApplicationAppliedDate(ref, current.id, DateTime.now());
+        }
+      } catch (e, st) {
+        log('Status-Update nach Versand fehlgeschlagen: $e', error: e, stackTrace: st);
+        statusWarning = 'E-Mail gesendet, aber der Status konnte nicht aktualisiert werden: $e';
       }
 
       if (!mounted) return;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('E-Mail erfolgreich gesendet! 🚀'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.of(context).pop(true);
-      }
-    } on Exception catch (e, st) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(statusWarning ?? 'E-Mail erfolgreich gesendet! 🚀'),
+          backgroundColor: statusWarning == null ? Colors.green : Colors.orange,
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e, st) {
       log('An error occurred: $e', error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -293,11 +361,18 @@ $name
                 spacing: 8,
                 children: _documents.map((doc) {
                   final isSelected = _selectedDocIds.contains(doc.id);
+                  final isMissing = _missingDocIds.contains(doc.id);
                   return FilterChip(
                     label: Text(
-                      doc.fileName,
-                      style: const TextStyle(fontSize: 12),
+                      isMissing ? '${doc.fileName} (Datei fehlt)' : doc.fileName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isMissing ? Colors.red : null,
+                      ),
                     ),
+                    tooltip: isMissing
+                        ? 'Datei nicht gefunden: ${doc.filePath}'
+                        : doc.filePath,
                     selected: isSelected,
                     onSelected: (val) {
                       setState(() {
@@ -308,7 +383,11 @@ $name
                         }
                       });
                     },
-                    avatar: const Icon(Icons.picture_as_pdf, size: 16),
+                    avatar: Icon(
+                      isMissing ? Icons.warning_amber : Icons.attach_file,
+                      size: 16,
+                      color: isMissing ? Colors.red : null,
+                    ),
                   );
                 }).toList(),
               ),

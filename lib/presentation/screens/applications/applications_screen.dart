@@ -5,17 +5,14 @@ import '../../../core/services/document_sanitizer_service.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'widgets/mock_interview_screen.dart';
 
 import '../../../core/utils/ics_exporter.dart';
 
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'widgets/mock_interview_screen.dart';
 import 'package:career_center/l10n/app_localizations.dart';
 
 import '../../../domain/entities/application_entity.dart';
-import '../../../domain/models/application_form_dto.dart';
+import '../../../domain/enums/application_status.dart';
 import '../../providers/applications_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../../core/services/extractors/magic_clipboard_service.dart';
@@ -25,7 +22,9 @@ import '../../providers/ai_settings_provider.dart';
 import 'widgets/ai_cover_letter_dialog.dart';
 import '../onboarding/tutorial_flow.dart';
 import 'widgets/application_card.dart';
+import 'widgets/company_avatar.dart';
 import 'email_scanner_dialog.dart';
+import 'application_status_updates.dart';
 
 import 'dart:developer' show log;
 
@@ -40,7 +39,19 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
   String _searchQuery = '';
   String? _statusFilter;
   bool _isKanbanView = false;
-  ApplicationEntity? _selectedApplication;
+
+  /// Nur die ID der ausgewählten Bewerbung wird gespeichert; die aktuelle
+  /// Version wird bei jedem Build aus dem Provider gelesen.
+  int? _selectedApplicationId;
+  late final PageController _kanbanPageController = PageController(
+    viewportFraction: 0.85,
+  );
+
+  @override
+  void dispose() {
+    _kanbanPageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -223,7 +234,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             onPressed: () {
               setState(() {
                 _isKanbanView = !_isKanbanView;
-                _selectedApplication =
+                _selectedApplicationId =
                     null; // Close side panel when switching views
               });
             },
@@ -399,8 +410,12 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             ),
                             const SizedBox(height: 32),
                             if (_searchQuery.isEmpty && _statusFilter == null)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              // Wrap statt Row: Die beiden Buttons passen nicht
+                              // nebeneinander in die 450 px breite Karte.
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                spacing: 16,
+                                runSpacing: 12,
                                 children: [
                                   FilledButton.tonalIcon(
                                     onPressed: () => _handleMagicClipboard(context),
@@ -416,7 +431,6 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 16),
                                   FilledButton.icon(
                                     onPressed: () =>
                                         context.go('/applications/add'),
@@ -445,6 +459,16 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                   return _buildKanbanBoard(filteredApps);
                 }
 
+                ApplicationEntity? selectedApp;
+                if (_selectedApplicationId != null) {
+                  for (final a in applications) {
+                    if (a.id == _selectedApplicationId) {
+                      selectedApp = a;
+                      break;
+                    }
+                  }
+                }
+
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -455,13 +479,13 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                           final app = filteredApps[index];
                           return ApplicationCard(
                             application: app,
-                            isSelected: _selectedApplication?.id == app.id,
+                            isSelected: _selectedApplicationId == app.id,
                             onTap: () {
                               setState(() {
-                                if (_selectedApplication?.id == app.id) {
-                                  _selectedApplication = null;
+                                if (_selectedApplicationId == app.id) {
+                                  _selectedApplicationId = null;
                                 } else {
-                                  _selectedApplication = app;
+                                  _selectedApplicationId = app.id;
                                 }
                               });
                             },
@@ -470,8 +494,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                         },
                       ),
                     ),
-                    if (_selectedApplication != null)
-                      _buildDossierPanel(_selectedApplication!),
+                    if (selectedApp != null)
+                      _buildDossierPanel(selectedApp),
                   ],
                 );
               },
@@ -486,15 +510,6 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
 
   Widget _buildDossierPanel(ApplicationEntity app) {
     final colorScheme = Theme.of(context).colorScheme;
-    final hasLogoUrl = app.companyUrl != null && app.companyUrl!.isNotEmpty;
-    String? logoUrl;
-    if (hasLogoUrl) {
-      try {
-        final uri = Uri.parse(app.companyUrl!);
-        logoUrl = 'https://logo.clearbit.com/${uri.host}';
-      } catch (_) {}
-      log('An error occurred');
-    }
 
     return Container(
       width: 400,
@@ -533,27 +548,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (logoUrl != null)
-                  CircleAvatar(
-                    backgroundColor: Colors.white,
-                    backgroundImage: NetworkImage(logoUrl),
-                    radius: 28,
-                  )
-                else
-                  CircleAvatar(
-                    backgroundColor: colorScheme.primaryContainer,
-                    radius: 28,
-                    child: Text(
-                      app.company.isNotEmpty
-                          ? app.company[0].toUpperCase()
-                          : '?',
-                      style: TextStyle(
-                        color: colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
-                    ),
-                  ),
+                CompanyAvatar(company: app.company, radius: 28),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -579,7 +574,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _selectedApplication = null),
+                  onPressed: () => setState(() => _selectedApplicationId = null),
                 ),
               ],
             ),
@@ -621,111 +616,14 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                             : () async {
                                 String jobDesc = app.jobDescriptionText ?? '';
                                 if (jobDesc.isEmpty) {
-                                  final controller = TextEditingController();
                                   jobDesc =
                                       await showDialog<String>(
                                         context: context,
-                                        builder: (context) => StatefulBuilder(
-                                          builder: (context, setStateDialog) => AlertDialog(
-                                            title: const Text(
-                                              'Stellenanzeige einfügen',
-                                            ),
-                                            content: SizedBox(
-                                              width: 400,
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  const Text(
-                                                    'Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.',
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  TextField(
-                                                    controller: controller,
-                                                    maxLines: 5,
-                                                    decoration:
-                                                        const InputDecoration(
-                                                          border:
-                                                              OutlineInputBorder(),
-                                                        ),
-                                                  ),
-                                                  const SizedBox(height: 8),
-                                                  TextButton.icon(
-                                                    onPressed: () async {
-                                                      try {
-                                                        final typeGroup =
-                                                            const XTypeGroup(
-                                                              label: 'PDF',
-                                                              extensions: [
-                                                                'pdf',
-                                                              ],
-                                                            );
-                                                        final file =
-                                                            await openFile(
-                                                              acceptedTypeGroups:
-                                                                  [typeGroup],
-                                                            );
-                                                        if (file == null)
-                                                          return;
-                                                        final bytes = await file
-                                                            .readAsBytes();
-                                                        final resultText =
-                                                            await DocumentSanitizerService.extractTextFromPdf(
-                                                              bytes,
-                                                            );
-                                                        setStateDialog(() {
-                                                          controller.text =
-                                                              resultText;
-                                                        });
-                                                      } on Exception catch (
-                                                        e,
-                                                        st
-                                                      ) {
-                                                        log(
-                                                          'An error occurred: $e',
-                                                          error: e,
-                                                          stackTrace: st,
-                                                        );
-                                                        if (!context.mounted)
-                                                          return;
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          SnackBar(
-                                                            content: Text(
-                                                              'Fehler beim Auslesen: ',
-                                                            ),
-                                                          ),
-                                                        );
-                                                      }
-                                                    },
-                                                    icon: const Icon(
-                                                      Icons.picture_as_pdf,
-                                                    ),
-                                                    label: const Text(
-                                                      'Stellenanzeige als PDF hochladen',
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: const Text('Abbrechen'),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () => Navigator.pop(
-                                                  context,
-                                                  controller.text,
-                                                ),
-                                                child: const Text('Weiter'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                        builder: (context) =>
+                                            const _JobDescriptionDialog(),
                                       ) ??
                                       '';
+                                  if (!mounted) return;
 
                                   if (jobDesc.isEmpty) return;
 
@@ -737,13 +635,22 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                         );
                                   }
 
-                                  final notifier = ref.read(
-                                    applicationNotifierProvider,
-                                  );
-                                  await notifier.updateJobDescription(
-                                    app.id,
-                                    jobDesc,
-                                  );
+                                  try {
+                                    await ref
+                                        .read(applicationNotifierProvider)
+                                        .updateJobDescription(app.id, jobDesc);
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Stellenanzeige konnte nicht gespeichert werden: $e',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                    return;
+                                  }
                                 }
 
                                 if (!mounted) return;
@@ -754,6 +661,8 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
                                     company: app.company,
                                     position: app.position,
                                     jobDescription: jobDesc,
+                                    existingCoverLetter: app.coverLetterContent,
+                                    applicationId: app.id,
                                     onCoverLetterGenerated: (deltaJson) async {
                                       final notifier = ref.read(
                                         applicationNotifierProvider,
@@ -1082,7 +991,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
         await ref.read(applicationNotifierProvider).deleteApplication(app);
         if (context.mounted) {
           setState(() {
-            if (_selectedApplication?.id == app.id) _selectedApplication = null;
+            if (_selectedApplicationId == app.id) _selectedApplicationId = null;
           });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Bewerbung gelöscht.')),
@@ -1120,28 +1029,24 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
             details.data.status.toLowerCase() != status,
         onAcceptWithDetails: (details) async {
           final app = details.data;
-          final notifier = ref.read(applicationNotifierProvider);
-          final dto = ApplicationFormDto(
-            id: app.id,
-            company: app.company,
-            position: app.position,
-            status: status,
-            notes: app.notes,
-            rejectionReason: app.rejectionReason,
-            appliedDate: app.appliedDate,
-            followupDate: app.followupDate,
-            commuteCar: app.commuteCar,
-            salaryWish: app.salaryWish,
-            jobUrl: app.jobUrl,
-            companyUrl: app.companyUrl,
-            contactName: app.contactName,
-            contactEmail: app.contactEmail,
-            contactPhone: app.contactPhone,
-            address: app.address,
-            customFields: app.customFields,
-            jobDescriptionText: app.jobDescriptionText,
-          );
-          await notifier.updateApplication(dto);
+          try {
+            await changeApplicationStatus(
+              ref,
+              id: app.id,
+              newStatus: status,
+              currentAppliedDate: app.appliedDate,
+              currentResponseDate: app.responseDate,
+            );
+          } catch (e, st) {
+            log('Statuswechsel fehlgeschlagen: $e', error: e, stackTrace: st);
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Status konnte nicht geändert werden: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         },
         builder: (context, candidateData, rejectedData) {
           final isHovering = candidateData.isNotEmpty;
@@ -1247,7 +1152,7 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
       builder: (context, constraints) {
         if (constraints.maxWidth < 600) {
           return PageView.builder(
-            controller: PageController(viewportFraction: 0.85),
+            controller: _kanbanPageController,
             itemCount: columns.length,
             itemBuilder: (context, index) =>
                 buildColumn(columns[index], constraints.maxWidth * 0.85),
@@ -1327,67 +1232,174 @@ class _ApplicationsScreenState extends ConsumerState<ApplicationsScreen> {
     );
   }
 
+  /// Maximale Länge des aus der Zwischenablage übernommenen Absagegrunds.
+  static const int _maxRejectionExcerpt = 300;
+
+  static String _rejectionExcerpt(String text) {
+    final compact = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (compact.length <= _maxRejectionExcerpt) return compact;
+    return '${compact.substring(0, _maxRejectionExcerpt).trimRight()} …';
+  }
+
   Future<void> _handleMagicClipboard(BuildContext context) async {
     final apps = ref.read(applicationsProvider).value ?? [];
+    final messenger = ScaffoldMessenger.of(context);
     if (apps.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Keine Bewerbungen zum Abgleich gefunden.')),
       );
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    messenger.showSnackBar(
       const SnackBar(content: Text('Analysiere Zwischenablage...')),
     );
 
-    final service = ref.read(magicClipboardProvider);
-    final result = await service.analyzeClipboard(apps);
+    try {
+      final service = ref.read(magicClipboardProvider);
+      final result = await service.analyzeClipboard(apps);
 
-    if (!context.mounted) return;
+      if (!context.mounted) return;
 
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Keine relevanten Bewerbungs-Infos gefunden.')),
+      if (result == null) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Keine relevanten Bewerbungs-Infos gefunden.')),
+        );
+        return;
+      }
+
+      if (result.matchedApplication != null && result.detectedStatus != null) {
+        final app = result.matchedApplication!;
+        final newStatus = normalizeApplicationStatus(result.detectedStatus);
+
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Status-Update gefunden!'),
+            content: Text('Soll der Status für "${app.position}" bei "${app.company}" auf "$newStatus" gesetzt werden?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Abbrechen'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('Aktualisieren'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm != true || !context.mounted) return;
+
+        await changeApplicationStatus(
+          ref,
+          id: app.id,
+          newStatus: newStatus,
+          currentAppliedDate: app.appliedDate,
+          currentResponseDate: app.responseDate,
+          rejectionReason:
+              newStatus == ApplicationStatus.absage && result.originalText != null
+                  ? _rejectionExcerpt(result.originalText!)
+                  : null,
+        );
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Status aktualisiert!')),
+        );
+      } else {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Zwischenablage erkannt, konnte aber nicht exakt zugeordnet werden.')),
+        );
+      }
+    } catch (e, st) {
+      log('Zwischenablage-Auswertung fehlgeschlagen: $e', error: e, stackTrace: st);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Fehler beim Auswerten der Zwischenablage: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
-      return;
     }
+  }
+}
 
-    if (result.matchedApplication != null && result.detectedStatus != null) {
-      final app = result.matchedApplication!;
-      final newStatus = result.detectedStatus!;
-      
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (c) => AlertDialog(
-          title: const Text('Status-Update gefunden!'),
-          content: Text('Soll der Status für "${app.position}" bei "${app.company}" auf "$newStatus" gesetzt werden?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(c, false),
-              child: const Text('Abbrechen'),
+/// Dialog zum Einfügen/Hochladen der Stellenanzeige. Besitzt seinen eigenen
+/// Controller, der beim Schließen sauber freigegeben wird.
+class _JobDescriptionDialog extends StatefulWidget {
+  const _JobDescriptionDialog();
+
+  @override
+  State<_JobDescriptionDialog> createState() => _JobDescriptionDialogState();
+}
+
+class _JobDescriptionDialogState extends State<_JobDescriptionDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _uploadPdf() async {
+    try {
+      const typeGroup = XTypeGroup(label: 'PDF', extensions: ['pdf']);
+      final file = await openFile(acceptedTypeGroups: [typeGroup]);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final resultText =
+          await DocumentSanitizerService.extractTextFromPdf(bytes);
+      if (!mounted) return;
+      setState(() => _controller.text = resultText);
+    } catch (e, st) {
+      log('An error occurred: $e', error: e, stackTrace: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Fehler beim Auslesen: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Stellenanzeige einfügen'),
+      content: SizedBox(
+        width: 400,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Bitte füge den Text der Stellenanzeige ein oder lade sie als PDF hoch, damit die KI das Anschreiben anpassen kann.',
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(c, true),
-              child: const Text('Aktualisieren'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _controller,
+              maxLines: 5,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: _uploadPdf,
+              icon: const Icon(Icons.picture_as_pdf),
+              label: const Text('Stellenanzeige als PDF hochladen'),
             ),
           ],
         ),
-      );
-
-      if (confirm == true) {
-        await ref.read(applicationNotifierProvider).updateApplicationStatus(
-          app.id, 
-          newStatus, 
-          rejectionReason: newStatus == 'absage' ? result.originalText : null,
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Status aktualisiert!')),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zwischenablage erkannt, konnte aber nicht exakt zugeordnet werden.')),
-      );
-    }
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text),
+          child: const Text('Weiter'),
+        ),
+      ],
+    );
   }
 }

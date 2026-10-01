@@ -29,8 +29,8 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
   Widget build(BuildContext context) {
     final notesAsync = ref.watch(notesProvider(widget.applicationId));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
         Row(
           children: [
@@ -85,18 +85,29 @@ class _NotesWidgetState extends ConsumerState<NotesWidget> {
               }).toList(),
             );
           },
-          loading: () => const CircularProgressIndicator(),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text('Fehler: $e'),
         ),
       ],
     );
   }
 
-  void _addNote() {
-    if (_controller.text.trim().isEmpty) { return; }
-    ref
-        .read(notesNotifierProvider(widget.applicationId).notifier)
-        .addNote(_controller.text.trim());
-    _controller.clear();
+  Future<void> _addNote() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref
+          .read(notesNotifierProvider(widget.applicationId).notifier)
+          .addNote(text);
+      if (mounted) _controller.clear();
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Notiz konnte nicht gespeichert werden: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

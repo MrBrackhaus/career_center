@@ -16,6 +16,7 @@ class EditorRepository {
         ),
       );
     } else {
+      // Teil-Update: applicationId, filePath und createdAt bleiben erhalten.
       await _db.templatesDao.updateTemplate(
         TemplatesCompanion(
           id: drift.Value(existingId),
@@ -26,17 +27,5 @@ class EditorRepository {
       );
       return existingId;
     }
-  }
-  
-  Future<int> addDocument(int applicationId, String finalName, String type, String filePath) async {
-    return await _db.documentsDao.insertDocument(
-      DocumentsCompanion.insert(
-        applicationId: applicationId,
-        fileName: finalName,
-        filePath: filePath,
-        fileType: type,
-        uploadedAt: drift.Value(DateTime.now()),
-      )
-    );
   }
 }

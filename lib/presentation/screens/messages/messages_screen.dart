@@ -14,6 +14,15 @@ final allEmailsStreamProvider = StreamProvider.autoDispose<List<EmailEntity>>((r
   return ref.watch(emailsRepositoryProvider).watchAllEmails();
 });
 
+/// E-Mails einer Bewerbung als gecachter Stream. Wird über `ref.watch`
+/// abonniert, damit nicht bei jedem Rebuild ein neuer Drift-Stream entsteht.
+final emailsForApplicationStreamProvider =
+    StreamProvider.autoDispose.family<List<EmailEntity>, int>((ref, appId) {
+  return ref
+      .watch(emailsRepositoryProvider)
+      .watchEmailsForApplication(appId);
+});
+
 class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
 
@@ -110,13 +119,29 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   }
 
   Widget _buildChatView(int appId) {
-    return StreamBuilder<List<EmailEntity>>(
-      stream: ref.read(emailsRepositoryProvider).watchEmailsForApplication(appId),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final emails = snapshot.data!.toList();
+    final emailsAsync = ref.watch(emailsForApplicationStreamProvider(appId));
+    return emailsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 40),
+            const SizedBox(height: 8),
+            Text('E-Mails konnten nicht geladen werden: $e',
+                textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  ref.invalidate(emailsForApplicationStreamProvider(appId)),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Erneut versuchen'),
+            ),
+          ],
+        ),
+      ),
+      data: (data) {
+        final emails = data.toList();
         emails.sort(
           (a, b) => a.receivedAt.compareTo(b.receivedAt),
         ); // Älteste zuerst

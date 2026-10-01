@@ -48,44 +48,131 @@ class MagicClipboardService {
     if (status != null) status = normalizeApplicationStatus(status);
 
     // 2. Firma/Position suchen
-    // Wir gleichen den Text mit den bestehenden Bewerbungen ab.
-    ApplicationEntity? bestMatch;
-    int highestScore = 0;
-
-    for (final app in existingApps) {
-      int score = 0;
-      final companyParts = app.company.toLowerCase().split(' ');
-      for (final part in companyParts) {
-        if (part.length > 3 && lowerText.contains(part)) {
-          score += 2;
-        }
-      }
-      
-      final positionParts = app.position.toLowerCase().split(' ');
-      for (final part in positionParts) {
-        if (part.length > 4 && lowerText.contains(part)) {
-          score += 1;
-        }
-      }
-
-      if (score > highestScore) {
-        highestScore = score;
-        bestMatch = app;
-      }
-    }
+    // Wir gleichen den Text mit den bestehenden Bewerbungen ab. Ein Treffer
+    // erfordert, dass entweder der vollständige Firmenname (ohne
+    // Rechtsform-Zusätze wie "GmbH") oder die E-Mail-Domain des Kontakts im
+    // Text vorkommt. Die Position dient nur als Zusatzpunkt. Bei Gleichstand
+    // wird keine Bewerbung ausgewählt.
+    final bestMatch = findBestMatchingApplication(text, existingApps);
 
     if (bestMatch == null && status == null) {
       return null;
     }
 
     return MagicClipboardResult(
-      matchedApplication: highestScore >= 2 ? bestMatch : null,
+      matchedApplication: bestMatch,
       detectedStatus: status,
       extractedCompany: null, 
       extractedPosition: null,
       originalText: text,
     );
   }
+}
+
+/// Rechtsform- und Füll-Tokens, die beim Firmennamen-Abgleich ignoriert werden.
+const Set<String> _legalFormTokens = {
+  'gmbh', 'mbh', 'ag', 'kg', 'kgaa', 'se', 'co', 'ug', 'ohg', 'gbr', 'ev',
+  'eg', 'inc', 'ltd', 'llc', 'plc', 'corp', 'sa', 'sarl', 'bv', 'nv', 'srl',
+  'spa', 'ab', 'as', 'oy', 'haftungsbeschränkt', 'haftungsbeschraenkt',
+  'mwd', 'wmd', 'mdw', 'm', 'w', 'd', 'und',
+};
+
+/// Generische Mail-Anbieter, deren Domain keinen Firmenbezug hat.
+const Set<String> _genericMailDomains = {
+  'gmail.com', 'googlemail.com', 'gmx.de', 'gmx.net', 'gmx.at', 'gmx.ch',
+  'web.de', 'outlook.com', 'outlook.de', 'hotmail.com', 'hotmail.de',
+  'live.com', 'live.de', 'yahoo.com', 'yahoo.de', 'icloud.com', 'me.com',
+  't-online.de', 'freenet.de', 'posteo.de', 'mailbox.org', 'aol.com',
+  'protonmail.com', 'proton.me',
+};
+
+/// Normalisiert Text für den Abgleich: Kleinbuchstaben, alle Zeichen außer
+/// Buchstaben/Ziffern werden zu Leerzeichen, Mehrfach-Leerzeichen entfernt.
+String _normalizeForMatch(String input) {
+  final lower = input.toLowerCase().replaceAll(RegExp(r'\(m/w/d\)|\(w/m/d\)|\(m/w/x\)'), ' ');
+  final cleaned = lower.replaceAll(RegExp(r'[^a-z0-9äöüß]+'), ' ');
+  return cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
+}
+
+/// Liefert den "Kern" eines Firmennamens ohne Rechtsform-Zusätze,
+/// z.B. "NCSolution GmbH & Co. KG" -> "ncsolution".
+String companyCoreName(String company) {
+  final tokens = _normalizeForMatch(company)
+      .split(' ')
+      .where((t) => t.isNotEmpty && !_legalFormTokens.contains(t))
+      .toList();
+  return tokens.join(' ');
+}
+
+/// Extrahiert die (nicht-generische) Domain einer E-Mail-Adresse.
+String? companyMailDomain(String? email) {
+  if (email == null) return null;
+  final at = email.lastIndexOf('@');
+  if (at < 0 || at == email.length - 1) return null;
+  final domain = email.substring(at + 1).trim().toLowerCase();
+  if (!domain.contains('.') || _genericMailDomains.contains(domain)) {
+    return null;
+  }
+  return domain;
+}
+
+/// Sucht die am besten passende Bewerbung für [text].
+///
+/// Voraussetzung für einen Treffer ist ein vollständiger Firmennamen-Treffer
+/// (ohne Rechtsform) oder ein Treffer der Kontakt-Mail-Domain. Die Position
+/// erhöht nur die Punktzahl. Bei Gleichstand wird `null` zurückgegeben.
+ApplicationEntity? findBestMatchingApplication(
+  String text,
+  List<ApplicationEntity> apps,
+) {
+  final normalizedText = ' ${_normalizeForMatch(text)} ';
+  final lowerText = text.toLowerCase();
+
+  ApplicationEntity? best;
+  var bestScore = 0;
+  var tie = false;
+
+  for (final app in apps) {
+    var score = 0;
+    var anchored = false;
+
+    final core = companyCoreName(app.company);
+    if (core.length >= 3 && normalizedText.contains(' $core ')) {
+      score += 10;
+      anchored = true;
+    }
+
+    final domain = companyMailDomain(app.contactEmail);
+    if (domain != null &&
+        RegExp('(^|[^a-z0-9.-])(?:[a-z0-9-]+\\.)*${RegExp.escape(domain)}(\$|[^a-z0-9-])')
+            .hasMatch(lowerText)) {
+      score += 10;
+      anchored = true;
+    }
+
+    if (!anchored) continue;
+
+    final position = _normalizeForMatch(app.position);
+    if (position.length >= 3 && normalizedText.contains(' $position ')) {
+      score += 3;
+    } else {
+      for (final part in position.split(' ')) {
+        if (part.length > 4 && normalizedText.contains(' $part ')) {
+          score += 1;
+        }
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = app;
+      tie = false;
+    } else if (score == bestScore) {
+      tie = true;
+    }
+  }
+
+  return tie ? null : best;
 }
 
 final magicClipboardProvider = Provider((ref) => MagicClipboardService());

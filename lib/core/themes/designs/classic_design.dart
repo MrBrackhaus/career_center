@@ -58,22 +58,58 @@ class ClassicDesign extends DocumentDesign {
 
   @override
   Widget buildCurriculumVitae(BuildContext context, Color accentColor, CvData cvData) {
+    final image = cvData.profileImage;
+    final contactLine = [cvData.address, cvData.phone, cvData.email]
+        .where((e) => e.trim().isNotEmpty)
+        .join('  •  ');
+    final personalLine = [
+      if (cvData.birthLine.isNotEmpty) 'Geboren: ${cvData.birthLine}',
+      if (cvData.maritalStatus.trim().isNotEmpty) cvData.maritalStatus.trim(),
+    ].join('  •  ');
+    final dimColor = cvData.textColor.withValues(alpha: 0.8);
+
+    final headerText = Column(
+      children: [
+        Text(cvData.name.toUpperCase(), textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: cvData.textColor)),
+        if (cvData.title.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(cvData.title, textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: dimColor, letterSpacing: 1.0)),
+        ],
+        if (contactLine.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(contactLine, textAlign: TextAlign.center, style: TextStyle(fontSize: 9, color: dimColor)),
+        ],
+        if (personalLine.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(personalLine, textAlign: TextAlign.center, style: TextStyle(fontSize: 9, color: dimColor)),
+        ],
+      ],
+    );
+
     return Padding(
       padding: cvData.pageMargins,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Column(
+          if (image == null)
+            Center(child: headerText)
+          else
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(cvData.name.toUpperCase(), style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2.0, color: cvData.textColor)),
-                const SizedBox(height: 4),
-                Text(cvData.title, style: TextStyle(fontSize: 12, color: cvData.textColor.withValues(alpha: 0.8), letterSpacing: 1.0)),
-                const SizedBox(height: 8),
-                Text('${cvData.address}  •  ${cvData.phone}  •  ${cvData.email}', style: TextStyle(fontSize: 9, color: cvData.textColor.withValues(alpha: 0.8))),
+                const SizedBox(width: 90),
+                const SizedBox(width: 16),
+                Expanded(child: headerText),
+                const SizedBox(width: 16),
+                Container(
+                  width: 90,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    image: DecorationImage(image: image, fit: BoxFit.cover),
+                  ),
+                ),
               ],
             ),
-          ),
           const SizedBox(height: 16),
           Divider(color: cvData.textColor.withValues(alpha: 0.3), thickness: 1),
           const SizedBox(height: 24),

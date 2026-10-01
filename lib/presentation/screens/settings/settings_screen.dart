@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../widgets/signature_dialog.dart' as signature_dialog;
 import '../changelog/changelog_screen.dart';
 
@@ -15,18 +17,36 @@ import '../../providers/theme_provider.dart';
 import '../../providers/auto_updater_provider.dart';
 import 'widgets/update_banner.dart';
 import 'widgets/companion_token_card.dart';
+import 'widgets/locked_database_banner.dart';
+import 'widgets/recovery_key_dialogs.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/database_provider.dart';
 import '../../providers/custom_columns_provider.dart';
 import '../../providers/imap_provider.dart';
+import '../../providers/streak_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/utils/pdf_generator.dart';
 import '../../../core/utils/csv_generator.dart';
 import '../../../data/database/app_database.dart';
+import '../../../data/database/db_key_service.dart';
 import '../../../core/services/imap_service.dart';
 import '../../../core/utils/spell_checker.dart';
 import '../../../core/services/secure_settings_service.dart';
+
+/// Gültiger Bereich für das wöchentliche Bewerbungsziel.
+const _minWeeklyGoal = 1;
+const _maxWeeklyGoal = 100;
+
+/// Gibt das wöchentliche Bewerbungsziel zurück oder `null`, wenn die Eingabe
+/// keine ganze Zahl zwischen 1 und 100 ist.
+int? parseWeeklyGoal(String raw) {
+  final value = raw.trim();
+  if (!RegExp(r'^\d+$').hasMatch(value)) return null;
+  final goal = int.tryParse(value);
+  if (goal == null || goal < _minWeeklyGoal || goal > _maxWeeklyGoal) return null;
+  return goal;
+}
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -74,6 +94,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _aiCvAssistantEnabled = false;
   bool _cloudAiEnabled = false;
   String _appVersion = '';
+
+  final _dbKeyService = DbKeyService();
 
   final _presets = {
     'IT / Software': 'Tech-Stack, Portfolio-Link, Remote-Anteil',
@@ -188,6 +210,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
+    final weeklyGoal = parseWeeklyGoal(_weeklyGoalController.text);
+    if (weeklyGoal == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Das wöchentliche Bewerbungsziel muss eine Zahl zwischen $_minWeeklyGoal und $_maxWeeklyGoal sein. Einstellungen wurden nicht gespeichert.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
     final dao = ref.read(databaseProvider).settingsDao;
     await dao.insertOrUpdateSetting(Setting(key: 'userName', value: _nameController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'userEmail', value: _emailController.text));
@@ -199,7 +233,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await dao.insertOrUpdateSetting(Setting(key: 'userSkills', value: _skillsController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'userLinkedin', value: _linkedinController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'userWebsite', value: _websiteController.text));
-    await dao.insertOrUpdateSetting(Setting(key: 'weeklyApplicationGoal', value: _weeklyGoalController.text));
+    await dao.insertOrUpdateSetting(Setting(key: 'weeklyApplicationGoal', value: weeklyGoal.toString()));
     await dao.insertOrUpdateSetting(Setting(key: 'aiServerUrl', value: _aiUrlController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'aiModelName', value: _aiModelController.text));
     await dao.insertOrUpdateSetting(Setting(key: 'aiCvAssistantEnabled', value: _aiCvAssistantEnabled.toString()));
@@ -226,6 +260,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     ref.invalidate(customColumnsProvider);
+    ref.invalidate(weeklyGoalProvider);
 
     if (mounted) {
       if (apiKeyError != null) {
@@ -281,13 +316,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Backup erfolgreich gespeichert!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('✅ Backup erfolgreich gespeichert! Bewahre deinen Wiederherstellungsschlüssel sicher auf – '
+                'ohne ihn lässt sich das Backup auf einem anderen PC oder nach einer Neuinstallation nicht öffnen '
+                '(Export & Backup → Wiederherstellungsschlüssel anzeigen).'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 8),
+          ),
         );
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e'), backgroundColor: Colors.red));
     }
   }
+
+  Future<String?> _readDbKey() async {
+    try {
+      return await _dbKeyService.readKey().timeout(_secureStorageTimeout);
+    } catch (e) {
+      debugPrint('Datenbankschlüssel konnte nicht gelesen werden: $e');
+      return null;
+    }
+  }
+
+  Future<void> _showRecoveryKey() async {
+    if (!await confirmShowRecoveryKey(context)) return;
+    final key = await _readDbKey();
+    if (!mounted) return;
+    if (key == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Der Wiederherstellungsschlüssel konnte nicht gelesen werden.'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    await showRecoveryKeyDialog(context, key);
+  }
+
+  // Die Schlüsselableitung von SQLCipher dauert spürbar – daher im Isolate.
+  // Statische Helfer, damit die Closures keinen Widget-State einfangen.
+  static Future<BackupKeyStatus> _checkBackupInIsolate(String path, String? key) =>
+      Isolate.run(() => DbKeyService.checkBackup(File(path), key));
+
+  static Future<bool> _opensWithKeyInIsolate(String path, String key) =>
+      Isolate.run(() => DbKeyService.opensWithKey(File(path), key));
 
   /// Maximale Größe einer importierten Datenbank (Plausibilitätsprüfung).
   static const _maxBackupBytes = 2 * 1024 * 1024 * 1024;
@@ -351,6 +422,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return;
       }
 
+      // Prüfen, ob das Backup mit dem aktuellen Schlüssel lesbar ist.
+      // Unverschlüsselte Backups werden beim nächsten Start verschlüsselt.
+      final currentKey = await _readDbKey();
+      final status = await _checkBackupInIsolate(source.path, currentKey);
+      String? backupKey;
+      if (status == BackupKeyStatus.otherKey) {
+        if (!mounted) return;
+        final entered = await askForBackupRecoveryKey(context);
+        if (entered == null) return;
+        final opens = await _opensWithKeyInIsolate(source.path, entered);
+        if (!opens) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Das Backup lässt sich mit diesem Wiederherstellungsschlüssel nicht öffnen. Es wurde nichts importiert.'),
+              backgroundColor: Colors.red,
+            ));
+          }
+          return;
+        }
+        backupKey = entered;
+      }
+
       // Ab hier keine Datenbankzugriffe mehr – die App muss danach beendet werden.
       await ref.read(databaseProvider).close();
       dbClosed = true;
@@ -364,12 +457,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         }
       }
 
-      await source.copy(dbFile.path);
+      // Erst vollständig neben die Datenbank kopieren, dann ggf. den
+      // Schlüssel des Backups speichern und zuletzt die Datei austauschen –
+      // so passen Datenbank und Schlüssel auch bei Fehlern zusammen.
+      final tempFile = File('${dbFile.path}.import-tmp');
+      if (await tempFile.exists()) await tempFile.delete();
+      await source.copy(tempFile.path);
+      if (backupKey != null) {
+        try {
+          await _dbKeyService.writeKey(backupKey).timeout(_secureStorageTimeout);
+        } catch (e) {
+          await tempFile.delete();
+          throw Exception('Der Wiederherstellungsschlüssel konnte nicht gespeichert werden ($e). Die bisherige Datenbank bleibt unverändert.');
+        }
+      }
+      try {
+        await tempFile.rename(dbFile.path);
+      } catch (e) {
+        if (backupKey != null && currentKey != null) {
+          await _dbKeyService.writeKey(currentKey).timeout(_secureStorageTimeout);
+        }
+        if (await tempFile.exists()) await tempFile.delete();
+        rethrow;
+      }
 
       if (mounted) {
         await _showQuitDialog(
           title: '✅ Import erfolgreich',
-          message: 'Die Datenbank wurde ersetzt. Bitte schließe die App komplett und starte sie neu, um die Änderungen zu laden.',
+          message: backupKey != null
+              ? 'Die Datenbank wurde ersetzt und der Wiederherstellungsschlüssel des Backups ist jetzt der aktive Schlüssel. Bitte schließe die App komplett und starte sie neu, um die Änderungen zu laden.'
+              : 'Die Datenbank wurde ersetzt. Bitte schließe die App komplett und starte sie neu, um die Änderungen zu laden.',
         );
       }
     } catch (e) {
@@ -415,6 +532,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: Column(
         children: [
           const UpdateBanner(),
+          const LockedDatabaseBanner(),
           Expanded(
             child: Row(
               children: [
@@ -771,8 +889,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 16),
         TextField(
           controller: _weeklyGoalController,
-          decoration: const InputDecoration(labelText: 'Wöchentliches Bewerbungsziel', border: OutlineInputBorder()),
+          decoration: const InputDecoration(labelText: 'Wöchentliches Bewerbungsziel', helperText: 'Zahl zwischen 1 und 100', border: OutlineInputBorder()),
           keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
         ),
         const SizedBox(height: 16),
         SwitchListTile(
@@ -880,6 +999,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         ListTile(leading: const Icon(Icons.backup), title: const Text('Backup erstellen'), onTap: _exportBackup),
         ListTile(leading: const Icon(Icons.restore), title: const Text('Backup wiederherstellen'), onTap: _importBackup),
+        ListTile(
+          leading: const Icon(Icons.key),
+          title: const Text('Wiederherstellungsschlüssel anzeigen'),
+          subtitle: const Text('Wird benötigt, um Backups auf einem anderen PC oder nach einer Neuinstallation wiederherzustellen.'),
+          onTap: _showRecoveryKey,
+        ),
       ],
     );
   }

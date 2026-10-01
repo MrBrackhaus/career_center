@@ -24,8 +24,8 @@ class TemplatesRepository {
     return list.map((t) => t.toEntity()).toList();
   }
 
-  Future<void> addTemplate(String name, String type, String content, {String? filePath, int? applicationId}) async {
-    await _db.templatesDao.insertTemplate(
+  Future<int> addTemplate(String name, String type, String content, {String? filePath, int? applicationId}) {
+    return _db.templatesDao.insertTemplate(
       TemplatesCompanion.insert(
         name: name,
         type: type,
@@ -41,6 +41,8 @@ class TemplatesRepository {
      await _db.templatesDao.insertTemplate(t.toCompanion(false));
   }
 
+  /// Teil-Update (name/type/content); applicationId, filePath und createdAt
+  /// bleiben erhalten, sofern sie in [template] nicht explizit gesetzt sind.
   Future<void> updateTemplate(TemplateEntity template) async {
     await _db.templatesDao.updateTemplate(template.toCompanion(true));
   }

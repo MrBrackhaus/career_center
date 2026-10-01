@@ -9,7 +9,6 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/services/document_intelligence_service.dart';
 import '../../../core/services/headless_webview_service.dart';
 import '../../../core/services/extractors/job_posting_extractor.dart';
-import '../../../domain/enums/document_type.dart';
 import '../../../domain/models/extraction_result.dart';
 
 class CaptchaDetectedException implements Exception {

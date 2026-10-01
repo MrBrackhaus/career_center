@@ -71,65 +71,100 @@ class ContactsWidget extends ConsumerWidget {
     );
   }
 
-  void _showContactDialog(BuildContext context, WidgetRef ref, int appId) {
-    final nameCtrl = TextEditingController();
-    final roleCtrl = TextEditingController();
-    final emailCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-
-    showDialog(
+  Future<void> _showContactDialog(
+      BuildContext context, WidgetRef ref, int appId) async {
+    // Der Dialog besitzt seine Controller selbst und gibt sie erst nach der
+    // Ausblend-Animation frei (vorher: dispose in .then() -> Absturz beim
+    // Speichern, weil die Textfelder noch gezeichnet wurden).
+    final result = await showDialog<_NewContact>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Neuer Kontakt'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: roleCtrl,
-                decoration: const InputDecoration(labelText: 'Rolle (z.B. HR)'),
-              ),
-              TextField(
-                controller: emailCtrl,
-                decoration: const InputDecoration(labelText: 'E-Mail'),
-              ),
-              TextField(
-                controller: phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Telefon'),
-              ),
-            ],
-          ),
+      builder: (_) => const _ContactDialog(),
+    );
+    if (result == null) return;
+    await ref.read(contactsNotifierProvider(appId).notifier).addContact(
+          result.name,
+          result.email,
+          result.phone,
+          result.role,
+        );
+  }
+}
+
+class _NewContact {
+  final String name;
+  final String role;
+  final String email;
+  final String phone;
+  const _NewContact(this.name, this.role, this.email, this.phone);
+}
+
+class _ContactDialog extends StatefulWidget {
+  const _ContactDialog();
+
+  @override
+  State<_ContactDialog> createState() => _ContactDialogState();
+}
+
+class _ContactDialogState extends State<_ContactDialog> {
+  final _nameCtrl = TextEditingController();
+  final _roleCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _roleCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Neuer Kontakt'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: _roleCtrl,
+              decoration: const InputDecoration(labelText: 'Rolle (z.B. HR)'),
+            ),
+            TextField(
+              controller: _emailCtrl,
+              decoration: const InputDecoration(labelText: 'E-Mail'),
+            ),
+            TextField(
+              controller: _phoneCtrl,
+              decoration: const InputDecoration(labelText: 'Telefon'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
-          ),
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(contactsNotifierProvider(appId).notifier)
-                  .addContact(
-                    nameCtrl.text,
-                    emailCtrl.text,
-                    phoneCtrl.text,
-                    roleCtrl.text,
-                  );
-              Navigator.pop(ctx);
-            },
-            child: Text(AppLocalizations.of(context)!.formBasicSave),
-          ),
-        ],
       ),
-    ).then((_) {
-      nameCtrl.dispose();
-      roleCtrl.dispose();
-      emailCtrl.dispose();
-      phoneCtrl.dispose();
-    });
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Abbrechen'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(
+            context,
+            _NewContact(
+              _nameCtrl.text,
+              _roleCtrl.text,
+              _emailCtrl.text,
+              _phoneCtrl.text,
+            ),
+          ),
+          child: Text(AppLocalizations.of(context)!.formBasicSave),
+        ),
+      ],
+    );
   }
 }
